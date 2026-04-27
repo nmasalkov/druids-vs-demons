@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: fd57eb5fa1f9e49419e66aad2a750f39
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 181572
+  packageName: Character Editor (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/FantaziaCharacterEditor/Animation/Character.atlas.txt
+  uploadId: 659889

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0dc523f282e0330498fae5f3bf683800
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 181572
+  packageName: Character Editor (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/FantaziaCharacterEditor/Animation/Character.json
+  uploadId: 659889

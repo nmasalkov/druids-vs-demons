@@ -1,0 +1,2994 @@
+Character.png
+size:2048,2048
+filter:Linear,Linear
+pma:true
+10ARM A3
+bounds:324,563,42,37
+offsets:1,1,44,39
+rotate:90
+10ARM B3F
+bounds:1442,821,30,38
+offsets:1,1,32,40
+rotate:90
+10SHIELD
+bounds:574,1238,192,302
+rotate:90
+11ARM A3
+bounds:1953,2,42,37
+offsets:1,1,44,39
+11ARM B3F
+bounds:152,874,30,38
+offsets:1,1,32,40
+rotate:90
+11MELEE
+bounds:1616,2,202,247
+offsets:1,1,204,249
+rotate:90
+12ARM A3
+bounds:324,519,42,37
+offsets:1,1,44,39
+rotate:90
+12SHIELD
+bounds:1808,1166,162,237
+13ARM A3
+bounds:1997,2,42,37
+offsets:1,1,44,39
+13MELEE
+bounds:527,127,246,272
+offsets:1,1,248,274
+rotate:90
+14MELEE
+bounds:1785,697,201,261
+offsets:1,1,203,263
+rotate:90
+15BOW
+bounds:218,2,117,310
+offsets:1,1,119,312
+rotate:90
+16BOW
+bounds:1093,615,71,361
+offsets:1,1,73,363
+rotate:90
+16MELEE
+bounds:1785,900,261,264
+offsets:1,1,263,266
+17MELEE
+bounds:1818,1828,228,218
+offsets:1,1,230,220
+18HELMET
+bounds:363,128,133,142
+offsets:1,1,135,144
+rotate:90
+18MELEE
+bounds:878,1196,279,275
+offsets:1,1,281,277
+19MELEE
+bounds:527,375,271,268
+offsets:1,1,273,270
+19SHIELD
+bounds:1818,1663,163,228
+rotate:90
+19SHOULDER B
+bounds:977,61,82,97
+offsets:1,1,84,99
+rotate:90
+1BOW
+bounds:1972,1178,73,225
+1STAFF
+bounds:814,600,52,277
+offsets:1,1,54,279
+rotate:90
+20MELEE
+bounds:801,145,244,273
+offsets:1,1,246,275
+rotate:90
+21BOW
+bounds:1785,623,72,261
+offsets:1,1,74,263
+rotate:90
+22BOW
+bounds:1865,2,86,259
+offsets:1,1,88,261
+23SHIELD
+bounds:1805,434,187,241
+rotate:90
+23STAFF
+bounds:1409,206,49,335
+offsets:1,1,51,337
+rotate:90
+25BOW
+bounds:2,2,104,214
+offsets:1,1,106,216
+rotate:90
+25STAFF
+bounds:1093,533,80,372
+offsets:1,1,82,374
+rotate:90
+26STAFF
+bounds:1456,620,98,327
+offsets:1,1,100,329
+rotate:90
+27SHIELD
+bounds:1782,263,169,260
+rotate:90
+27STAFF
+bounds:324,607,195,348
+offsets:1,1,197,350
+30STAFF
+bounds:1442,720,92,341
+offsets:1,1,94,343
+rotate:90
+31STAFF
+bounds:208,515,114,389
+offsets:1,1,116,391
+32BOW
+bounds:1467,519,99,336
+offsets:1,1,101,338
+rotate:90
+32SHIELD
+bounds:277,1268,160,295
+rotate:90
+32STAFF
+bounds:1093,853,88,389
+offsets:1,1,90,391
+rotate:90
+33LEG A2
+bounds:1159,1261,67,117
+offsets:1,1,69,119
+33STAFF
+bounds:113,119,70,391
+offsets:1,1,72,393
+34SHIELD
+bounds:2,899,148,390
+34STAFF
+bounds:185,121,88,389
+offsets:1,1,90,391
+35SHIELD
+bounds:1076,206,172,331
+rotate:90
+35STAFF
+bounds:1159,1380,67,392
+offsets:1,1,69,394
+3LEG A2
+bounds:977,4,55,97
+offsets:1,1,57,99
+rotate:90
+3SHOULDER B
+bounds:1159,1200,67,59
+offsets:1,1,69,61
+3WEAPON
+bounds:800,391,207,282
+offsets:1,1,209,284
+rotate:90
+41MELEE
+bounds:138,512,68,358
+offsets:1,1,70,360
+42MELEE
+bounds:1421,341,78,359
+offsets:1,1,80,361
+rotate:90
+43MELEE
+bounds:152,906,170,359
+offsets:1,1,172,361
+44MELEE
+bounds:1093,688,163,347
+offsets:1,1,165,349
+rotate:90
+46MELEE
+bounds:1084,380,151,335
+offsets:1,1,153,337
+rotate:90
+47MELEE
+bounds:530,3,122,331
+offsets:1,1,124,333
+rotate:90
+48MELEE
+bounds:2,1683,266,363
+offsets:1,1,268,365
+51MELEE
+bounds:2,1291,176,390
+offsets:1,1,178,392
+53MELEE
+bounds:2,512,134,385
+offsets:1,1,136,387
+54MELEE
+bounds:180,1267,95,414
+offsets:1,1,97,416
+55MELEE
+bounds:363,263,162,342
+offsets:1,1,164,344
+5WEAPON
+bounds:1076,2,202,268
+offsets:1,1,204,270
+rotate:90
+6BODY
+bounds:863,2,112,141
+6LEG B1
+bounds:1746,206,49,89
+offsets:1,1,51,91
+rotate:90
+8MELEE
+bounds:1808,1405,233,256
+offsets:1,1,235,258
+9BOW
+bounds:1953,41,93,220
+offsets:1,1,95,222
+STAFF11
+bounds:2,108,109,402
+offsets:1,1,111,404
+STAFF14
+bounds:1421,421,96,358
+offsets:1,1,98,360
+rotate:90
+STAFF6
+bounds:1484,814,56,297
+offsets:1,1,58,299
+rotate:90
+STAFF7
+bounds:1409,257,82,370
+offsets:1,1,84,372
+rotate:90
+STAFF9
+bounds:275,140,86,373
+offsets:1,1,88,375
+STRING
+bounds:275,121,5,205
+rotate:90
+melee22
+bounds:874,944,250,303
+offsets:1,1,252,305
+rotate:90
+melee23
+bounds:1179,943,250,303
+offsets:1,1,252,305
+rotate:90
+melee24
+bounds:324,957,247,309
+offsets:1,1,249,311
+melee25
+bounds:858,1774,272,325
+offsets:1,1,274,327
+rotate:90
+melee26
+bounds:1185,1775,271,325
+offsets:1,1,273,327
+rotate:90
+melee27
+bounds:277,1430,292,299
+offsets:1,1,294,301
+melee28
+bounds:571,1432,292,299
+offsets:1,1,294,301
+melee29
+bounds:564,1733,292,313
+offsets:1,1,294,315
+melee30
+bounds:1512,1754,292,304
+offsets:1,1,294,306
+rotate:90
+melee31
+bounds:865,1473,292,299
+offsets:1,1,294,301
+melee32
+bounds:573,944,292,299
+offsets:1,1,294,301
+rotate:90
+melee33
+bounds:521,645,291,297
+offsets:1,1,293,299
+melee34
+bounds:1507,1460,292,299
+offsets:1,1,294,301
+rotate:90
+melee35
+bounds:1507,1166,292,299
+offsets:1,1,294,301
+rotate:90
+melee36
+bounds:1484,872,292,299
+offsets:1,1,294,301
+rotate:90
+melee37
+bounds:270,1731,292,315
+offsets:1,1,294,317
+melee38
+bounds:1228,1195,277,285
+offsets:1,1,279,287
+melee39
+bounds:814,654,277,288
+offsets:1,1,279,290
+melee40
+bounds:1228,1482,277,291
+offsets:1,1,279,293
+weapon
+bounds:1346,2,202,268
+offsets:1,1,204,270
+rotate:90
+
+Character_2.png
+size:2048,2048
+filter:Linear,Linear
+pma:true
+10ARM A1
+bounds:1504,706,49,70
+offsets:1,1,51,72
+rotate:90
+10ARM B3B
+bounds:794,318,39,38
+offsets:1,1,41,40
+10BODY
+bounds:932,186,107,130
+offsets:0,0,108,130
+10BOW
+bounds:909,1787,92,241
+offsets:1,1,94,243
+rotate:90
+10HAIR
+bounds:1061,558,111,146
+offsets:1,1,113,148
+10MELEE
+bounds:1663,1599,184,182
+offsets:1,1,186,184
+10QUIVER
+bounds:1564,1153,62,209
+offsets:1,1,64,211
+11BOW
+bounds:214,1272,93,267
+offsets:1,1,95,269
+11HAIR
+bounds:496,684,106,91
+offsets:1,1,108,93
+11HELMET
+bounds:1176,211,117,99
+offsets:1,1,119,101
+rotate:90
+11LEG A2
+bounds:1510,757,66,114
+offsets:1,1,68,116
+11QUIVER
+bounds:445,473,62,209
+offsets:1,1,64,211
+11SHIELD
+bounds:741,979,201,179
+12ARM A2
+bounds:1174,529,63,101
+offsets:1,1,65,103
+rotate:90
+12ARM B3F
+bounds:1120,1535,30,38
+offsets:1,1,32,40
+12BODY
+bounds:1855,338,106,131
+offsets:1,0,108,131
+12BOW
+bounds:912,706,92,238
+offsets:1,1,94,240
+rotate:90
+12HAIR
+bounds:531,178,125,124
+offsets:1,1,127,126
+12HELMET
+bounds:857,425,132,135
+offsets:1,1,134,137
+12MELEE
+bounds:538,1561,187,259
+offsets:1,1,189,261
+12QUIVER
+bounds:509,473,62,209
+offsets:1,1,64,211
+12SHOULDER A
+bounds:1955,1114,95,91
+offsets:1,1,97,93
+rotate:90
+12SHOULDER B
+bounds:1963,265,83,82
+offsets:1,1,85,84
+13ARM B3F
+bounds:1120,1495,30,38
+offsets:1,1,32,40
+13BODY
+bounds:1855,205,106,131
+offsets:0,1,107,133
+13BOW
+bounds:496,777,110,244
+offsets:1,1,112,246
+13HAIR
+bounds:1928,640,118,111
+offsets:1,1,120,113
+13QUIVER
+bounds:573,473,62,209
+offsets:1,1,64,211
+13SHIELD
+bounds:272,1828,218,270
+rotate:90
+14ARM A3
+bounds:1322,5,42,37
+offsets:1,1,44,39
+14ARM B2
+bounds:1955,952,91,76
+offsets:1,1,93,78
+14ARM B3F
+bounds:1353,1451,30,38
+offsets:1,1,32,40
+14BOW
+bounds:1120,1380,109,231
+offsets:1,1,111,233
+rotate:90
+14HAIR
+bounds:910,2,118,136
+offsets:1,1,120,138
+rotate:90
+14QUIVER
+bounds:1277,620,62,209
+offsets:1,1,64,211
+rotate:90
+14SHIELD
+bounds:1864,1657,182,222
+15ARM A2
+bounds:1176,146,63,99
+offsets:1,1,65,101
+rotate:90
+15ARM A3
+bounds:1366,5,42,37
+offsets:1,1,44,39
+15ARM B3F
+bounds:306,362,30,38
+offsets:1,1,32,40
+15BODY
+bounds:656,2,104,128
+rotate:90
+15HAIR
+bounds:1152,713,123,126
+offsets:1,1,125,128
+15MELEE
+bounds:2,1798,268,248
+offsets:1,1,270,250
+15QUIVER
+bounds:1277,556,62,209
+offsets:1,1,64,211
+rotate:90
+15SHIELD
+bounds:692,809,168,223
+offsets:0,3,168,230
+rotate:90
+16ARM A3
+bounds:1410,5,42,37
+offsets:1,1,44,39
+16ARM B2
+bounds:1955,874,91,76
+offsets:1,1,93,78
+16ARM B3F
+bounds:991,321,30,38
+offsets:1,1,32,40
+rotate:90
+16HAIR
+bounds:786,2,122,104
+offsets:1,1,124,106
+16HELMET
+bounds:404,191,111,125
+offsets:1,1,113,127
+rotate:90
+16QUIVER
+bounds:340,191,62,209
+offsets:1,1,64,211
+16SHIELD
+bounds:544,1881,165,315
+rotate:90
+16SHOULDER A
+bounds:1744,471,113,133
+offsets:1,1,115,135
+17ARM B3F
+bounds:641,1027,30,38
+offsets:1,1,32,40
+rotate:90
+17BODY
+bounds:1744,73,105,129
+17BOW
+bounds:1152,1491,84,234
+offsets:1,1,86,236
+rotate:90
+17HAIR
+bounds:1744,204,129,109
+offsets:1,1,131,111
+rotate:90
+17LEG A3
+bounds:404,692,86,50
+offsets:1,1,88,52
+17LEG B3
+bounds:692,980,77,46
+offsets:1,1,79,48
+rotate:90
+17QUIVER
+bounds:1277,492,62,209
+offsets:1,1,64,211
+rotate:90
+17SHIELD
+bounds:944,979,206,182
+rotate:90
+17SHOULDER B
+bounds:1682,2,69,87
+offsets:1,1,71,89
+rotate:90
+18ARM B3F
+bounds:1454,4,30,38
+offsets:1,1,32,40
+18BOW
+bounds:403,1023,99,247
+offsets:1,1,101,249
+18QUIVER
+bounds:1488,473,62,209
+offsets:1,1,64,211
+18SHIELD
+bounds:1130,841,145,192
+18SHOULDER B
+bounds:1966,1316,80,117
+offsets:1,1,82,119
+19ARM A2
+bounds:1578,2,69,102
+offsets:1,1,71,104
+rotate:90
+19BOW
+bounds:625,1307,109,252
+offsets:1,1,111,254
+19HELMET
+bounds:517,52,124,137
+offsets:1,1,126,139
+rotate:90
+19QUIVER
+bounds:793,358,62,209
+offsets:1,1,64,211
+1HAIR
+bounds:1057,431,125,115
+offsets:1,1,127,117
+rotate:90
+1HEAD EYES CLOSED
+bounds:387,8,43,34
+offsets:1,1,45,36
+1HELMET
+bounds:1174,422,101,105
+offsets:1,1,103,107
+1QUIVER
+bounds:1277,428,62,209
+rotate:90
+1SHIELD
+bounds:657,331,137,134
+rotate:90
+1SHOULDER A
+bounds:974,125,63,59
+offsets:1,1,65,61
+1WEAPON
+bounds:1126,1210,168,200
+offsets:1,1,170,202
+rotate:90
+20BOW
+bounds:1727,1240,87,207
+offsets:1,1,89,209
+20HAIR
+bounds:791,569,139,116
+offsets:1,1,141,118
+rotate:90
+20QUIVER
+bounds:1277,364,62,209
+offsets:1,1,64,211
+rotate:90
+20SHIELD
+bounds:736,1379,169,227
+20SHOULDER B
+bounds:608,710,71,75
+offsets:1,1,73,77
+rotate:90
+21HAIR
+bounds:637,470,147,94
+offsets:1,1,149,96
+21HELMET
+bounds:1816,1176,103,137
+offsets:1,1,105,139
+rotate:90
+21LEG A2
+bounds:453,58,62,131
+offsets:1,1,64,133
+21QUIVER
+bounds:1277,300,62,209
+offsets:1,1,64,211
+rotate:90
+21SHIELD
+bounds:481,1281,142,265
+21STAFF
+bounds:1153,1829,51,346
+offsets:1,1,53,348
+rotate:90
+22HAIR
+bounds:1928,753,118,119
+offsets:1,1,120,121
+22HELMET
+bounds:543,304,112,139
+offsets:1,1,114,141
+22QUIVER
+bounds:1488,262,62,209
+offsets:1,1,64,211
+22SHIELD
+bounds:215,1019,186,251
+22SHOULDER A
+bounds:1532,991,94,96
+offsets:1,1,96,98
+22SHOULDER B
+bounds:1955,1030,82,91
+offsets:1,1,84,93
+rotate:90
+22STAFF
+bounds:1501,1783,45,345
+offsets:1,1,47,347
+rotate:90
+23BOW
+bounds:306,402,93,284
+offsets:1,1,95,286
+23QUIVER
+bounds:1277,236,62,209
+offsets:1,1,64,211
+rotate:90
+23SHOULDER A
+bounds:1963,2,101,80
+offsets:1,1,103,82
+rotate:90
+24BOW
+bounds:1388,1448,83,236
+offsets:1,1,85,238
+rotate:90
+24HELMET
+bounds:1041,184,133,124
+offsets:1,1,135,126
+24QUIVER
+bounds:1277,172,62,209
+offsets:1,1,64,211
+rotate:90
+24SHIELD
+bounds:309,1272,170,267
+24STAFF
+bounds:1510,1884,46,354
+offsets:1,1,48,356
+rotate:90
+25BODY
+bounds:1855,73,106,130
+25HELMET
+bounds:1839,1067,107,114
+offsets:1,1,109,116
+rotate:90
+25QUIVER
+bounds:1628,1090,62,209
+offsets:1,1,64,211
+rotate:90
+25SHIELD
+bounds:1637,1449,148,209
+rotate:90
+25SHOULDER A
+bounds:658,108,82,103
+offsets:1,1,84,105
+rotate:90
+25SHOULDER B
+bounds:1963,437,83,96
+offsets:1,1,85,98
+26BODY
+bounds:857,318,105,132
+offsets:0,0,105,133
+rotate:90
+26BOW
+bounds:1298,1057,120,216
+offsets:1,1,122,218
+rotate:90
+26HELMET
+bounds:1057,310,119,115
+offsets:1,1,121,117
+rotate:90
+26QUIVER
+bounds:1628,1026,62,209
+offsets:1,1,64,211
+rotate:90
+26SHIELD
+bounds:1136,1622,162,266
+rotate:90
+27BOW
+bounds:692,710,97,218
+offsets:1,1,99,220
+rotate:90
+27QUIVER
+bounds:1628,962,62,209
+offsets:1,1,64,211
+rotate:90
+28BOW
+bounds:1328,1179,75,234
+offsets:1,1,77,236
+rotate:90
+28QUIVER
+bounds:1277,108,62,209
+offsets:1,1,64,211
+rotate:90
+28SHIELD
+bounds:246,1541,191,255
+28STAFF
+bounds:147,317,72,354
+offsets:1,1,74,356
+29BOW
+bounds:1298,968,87,232
+offsets:1,1,89,234
+rotate:90
+29QUIVER
+bounds:1488,51,62,209
+offsets:1,1,64,211
+29SHIELD
+bounds:2,1268,210,271
+29STAFF
+bounds:249,17,89,315
+offsets:1,1,91,317
+2BOW
+bounds:1277,787,77,231
+rotate:90
+2HAIR
+bounds:1048,2,104,96
+offsets:1,1,106,98
+rotate:90
+2HEAD EYES CLOSED
+bounds:1590,1401,45,34
+offsets:1,1,47,36
+rotate:90
+3HEAD EYES CLOSED
+bounds:1590,1401,45,34
+offsets:1,1,47,36
+rotate:90
+5HEAD EYES CLOSED
+bounds:1590,1401,45,34
+offsets:1,1,47,36
+rotate:90
+2HELMET
+bounds:1628,1154,169,84
+offsets:1,1,171,86
+2QUIVER
+bounds:763,122,62,209
+rotate:90
+2SHIELD
+bounds:909,562,150,142
+2STAFF
+bounds:1136,1577,43,250
+offsets:1,1,45,252
+rotate:90
+2WEAPON
+bounds:907,1364,211,209
+offsets:1,1,213,211
+30BOW
+bounds:608,783,82,241
+offsets:1,1,84,243
+30HELMET
+bounds:340,44,145,111
+offsets:1,1,147,113
+rotate:90
+30QUIVER
+bounds:1277,44,62,209
+offsets:1,1,64,211
+rotate:90
+30SHIELD
+bounds:861,1881,165,290
+rotate:90
+30SHOULDER A
+bounds:1174,330,90,101
+offsets:1,1,92,103
+rotate:90
+30SHOULDER B
+bounds:1963,184,83,79
+offsets:1,1,85,81
+31BOW
+bounds:404,744,90,277
+offsets:1,1,92,279
+31HELMET
+bounds:1839,943,122,114
+offsets:1,1,124,116
+rotate:90
+31QUIVER
+bounds:1578,898,62,209
+offsets:1,1,64,211
+rotate:90
+31SHIELD
+bounds:1128,1035,168,173
+31SHOULDER A
+bounds:1928,535,118,103
+offsets:1,1,120,105
+32HELMET
+bounds:1744,335,109,134
+offsets:1,1,111,136
+32QUIVER
+bounds:1578,834,62,209
+offsets:1,1,64,211
+rotate:90
+33BOW
+bounds:641,1059,98,246
+offsets:1,1,100,248
+33LEG B2
+bounds:1516,1089,62,110
+offsets:1,1,64,112
+rotate:90
+33QUIVER
+bounds:1578,770,62,209
+offsets:1,1,64,211
+rotate:90
+33SHIELD
+bounds:1404,1616,165,257
+rotate:90
+33SHOULDER A
+bounds:1966,1211,103,80
+offsets:1,1,105,82
+rotate:90
+33SHOULDER B
+bounds:1963,105,83,77
+offsets:1,1,85,79
+34BOW
+bounds:439,1548,97,278
+offsets:1,1,99,280
+34QUIVER
+bounds:1578,706,62,209
+offsets:1,1,64,211
+rotate:90
+34SHOULDER B
+bounds:1963,349,83,86
+offsets:1,1,85,88
+35BOW
+bounds:2,18,116,285
+offsets:1,1,118,287
+35QUIVER
+bounds:1552,495,62,209
+offsets:1,1,64,211
+3BOW
+bounds:1328,1256,106,234
+rotate:90
+3LEG B1
+bounds:542,6,44,107
+offsets:1,1,46,109
+rotate:90
+3QUIVER
+bounds:1552,284,62,209
+3SHIELD
+bounds:658,192,137,134
+rotate:90
+3SHOULDER A
+bounds:1771,2,69,59
+offsets:1,1,71,61
+rotate:90
+3STAFF
+bounds:120,12,42,291
+offsets:1,1,44,293
+45MELEE
+bounds:1525,1932,42,361
+offsets:1,1,44,363
+rotate:90
+49MELEE
+bounds:206,673,84,344
+offsets:1,1,86,346
+4BOW
+bounds:1277,866,100,229
+rotate:90
+4HAIR
+bounds:794,186,136,130
+offsets:1,1,138,132
+4HEAD EYES CLOSED
+bounds:1277,8,43,34
+offsets:1,1,45,36
+4HELMET
+bounds:1174,594,101,117
+offsets:1,1,103,119
+4LEG A2
+bounds:1859,471,52,97
+offsets:1,1,54,99
+rotate:90
+4LEG B2
+bounds:1488,2,47,88
+offsets:1,1,49,90
+rotate:90
+4QUIVER
+bounds:1616,495,62,209
+4SHIELD
+bounds:1816,1281,148,152
+4SHOULDER A
+bounds:1832,2,69,59
+offsets:1,1,71,61
+rotate:90
+4STAFF
+bounds:164,6,43,309
+offsets:1,1,45,311
+4WEAPON
+bounds:2,1019,211,247
+offsets:1,1,213,249
+50MELEE
+bounds:1510,1830,52,352
+offsets:1,1,54,354
+rotate:90
+52MELEE
+bounds:544,1822,57,363
+offsets:1,1,59,365
+rotate:90
+5BOW
+bounds:1388,1533,81,247
+rotate:90
+5LEG B2
+bounds:453,2,48,87
+offsets:1,1,50,89
+rotate:90
+5LEG B3
+bounds:1744,628,76,43
+offsets:1,1,78,45
+rotate:90
+5QUIVER
+bounds:1552,73,62,209
+5SHIELD
+bounds:1888,1881,158,165
+5SHOULDER A
+bounds:1893,2,69,59
+offsets:1,1,71,61
+rotate:90
+5STAFF
+bounds:209,27,38,288
+offsets:1,1,40,290
+6BOW
+bounds:1628,1240,97,207
+offsets:1,1,99,209
+6MELEE
+bounds:741,1160,155,217
+offsets:1,1,157,219
+6QUIVER
+bounds:1616,284,62,209
+offsets:1,1,64,211
+6SHIELD
+bounds:504,1026,135,253
+6SHOULDER B
+bounds:1859,525,67,79
+offsets:1,1,69,81
+7BOW
+bounds:1277,684,101,225
+offsets:1,1,103,227
+rotate:90
+7HAIR
+bounds:1146,27,117,129
+offsets:1,1,119,131
+rotate:90
+7HELMET
+bounds:404,304,137,139
+offsets:1,1,139,141
+7MELEE
+bounds:898,1187,175,226
+offsets:1,1,177,228
+rotate:90
+7QUIVER
+bounds:1680,495,62,209
+offsets:1,1,64,211
+7SHIELD
+bounds:909,1575,210,225
+rotate:90
+7SHOULDER A
+bounds:1048,108,95,74
+offsets:1,1,97,76
+8BOW
+bounds:1353,1364,82,235
+offsets:1,1,84,237
+rotate:90
+8HELMET
+bounds:1789,606,137,109
+offsets:1,1,139,111
+8HELMET B
+bounds:1789,828,137,113
+8HELMET C
+bounds:1789,717,137,109
+8QUIVER
+bounds:1616,73,62,209
+offsets:1,1,64,211
+8SHIELD
+bounds:1849,1435,197,220
+9MELEE
+bounds:2,1541,242,255
+offsets:1,1,244,257
+9QUIVER
+bounds:1680,284,62,209
+offsets:1,1,64,211
+9SHIELD
+bounds:727,1608,180,212
+9SHOULDER A
+bounds:1508,873,93,68
+offsets:1,1,95,70
+rotate:90
+ARROW
+bounds:445,445,26,180
+rotate:90
+BOW NO STRING
+bounds:991,353,64,207
+HEAD EYES CLOSED
+bounds:340,8,45,34
+offsets:1,1,47,36
+QUIVER
+bounds:1680,73,62,209
+SHIELD
+bounds:637,566,152,142
+STAFF
+bounds:401,451,42,235
+offsets:0,1,42,238
+STAFF10
+bounds:103,673,101,344
+offsets:1,1,103,346
+STAFF12
+bounds:2,305,86,358
+offsets:1,1,88,360
+STAFF13
+bounds:1525,1976,70,358
+offsets:1,1,72,360
+rotate:90
+STAFF15
+bounds:221,334,83,337
+offsets:1,1,85,339
+STAFF16
+bounds:2,665,99,352
+offsets:1,1,101,354
+STAFF17
+bounds:1153,1882,81,355
+offsets:1,1,83,357
+rotate:90
+STAFF18
+bounds:292,688,110,329
+offsets:1,1,112,331
+STAFF19
+bounds:1152,1786,41,338
+offsets:1,1,43,340
+rotate:90
+STAFF20
+bounds:90,305,55,358
+offsets:1,1,57,360
+STAFF8
+bounds:1153,1965,81,370
+offsets:1,1,83,372
+rotate:90
+melee21
+bounds:917,800,177,211
+offsets:1,1,179,213
+rotate:90
+
+Character_3.png
+size:1828,1828
+filter:Linear,Linear
+pma:true
+0HAIR
+bounds:110,1391,110,113
+offsets:1,1,112,115
+0HEAD EYES OPEN
+bounds:666,1203,78,65
+offsets:1,1,80,67
+10ARM A2
+bounds:666,1270,68,102
+offsets:1,1,70,104
+10ARM B1
+bounds:946,1047,44,64
+offsets:1,1,46,66
+10ARM B2
+bounds:109,120,93,79
+offsets:1,1,95,81
+10EYES
+bounds:846,894,77,63
+offsets:1,1,79,65
+10HELMET
+bounds:746,1181,94,93
+offsets:1,1,96,95
+10HIP
+bounds:351,445,75,86
+offsets:3,0,78,87
+rotate:90
+10LEG A1
+bounds:339,918,50,94
+offsets:1,1,52,96
+rotate:90
+10LEG A2
+bounds:1635,1602,62,117
+offsets:1,1,64,119
+10LEG A3
+bounds:535,502,84,49
+offsets:1,1,86,51
+rotate:90
+10LEG B1
+bounds:840,959,44,86
+offsets:1,1,46,88
+10LEG B2
+bounds:551,1051,59,111
+offsets:1,1,61,113
+10LEG B3
+bounds:1497,1249,76,44
+offsets:1,1,78,46
+rotate:90
+10SHOULDER A
+bounds:206,26,102,92
+offsets:1,1,104,94
+10SHOULDER B
+bounds:852,806,81,86
+offsets:1,1,83,88
+11ARM A1
+bounds:840,114,49,70
+offsets:1,1,51,72
+rotate:90
+11ARM A2
+bounds:744,894,63,100
+offsets:1,1,65,102
+rotate:90
+11ARM B1
+bounds:677,649,44,64
+offsets:1,1,46,66
+rotate:90
+11ARM B2
+bounds:914,1289,86,73
+offsets:1,1,88,75
+rotate:90
+11ARM B3B
+bounds:1323,411,39,38
+offsets:1,1,41,40
+11BODY
+bounds:775,1721,105,130
+rotate:90
+11EYES
+bounds:925,894,77,63
+offsets:1,1,79,65
+11HIP
+bounds:309,279,74,85
+rotate:90
+11LEG A1
+bounds:337,776,50,94
+offsets:1,1,52,96
+rotate:90
+11LEG A3
+bounds:706,254,84,49
+offsets:1,1,86,51
+rotate:90
+11LEG B1
+bounds:947,959,45,86
+offsets:1,1,47,88
+11LEG B2
+bounds:266,682,60,109
+offsets:1,1,62,111
+11LEG B3
+bounds:1075,428,76,44
+offsets:1,1,78,46
+rotate:90
+11SHOULDER A
+bounds:315,119,85,80
+offsets:1,1,87,82
+11SHOULDER B
+bounds:528,427,75,73
+offsets:1,1,77,75
+12ARM A1
+bounds:1494,1089,49,70
+offsets:1,1,51,72
+12ARM B1
+bounds:1185,1229,44,64
+offsets:1,1,46,66
+12ARM B2
+bounds:396,353,90,76
+offsets:1,1,92,78
+rotate:90
+12ARM B3B
+bounds:635,790,39,38
+offsets:1,1,41,40
+12EYES
+bounds:974,1377,77,63
+offsets:1,1,79,65
+12HIP
+bounds:401,36,75,86
+offsets:4,1,79,88
+rotate:90
+12LEG A1
+bounds:481,204,50,94
+offsets:1,1,52,96
+rotate:90
+12LEG A2
+bounds:189,320,62,119
+offsets:1,1,64,121
+12LEG A3
+bounds:1138,83,84,49
+offsets:1,1,86,51
+rotate:90
+12LEG B1
+bounds:1409,1208,44,86
+offsets:1,1,46,88
+rotate:90
+12LEG B2
+bounds:1269,1548,59,109
+offsets:1,1,61,111
+rotate:90
+12LEG B3
+bounds:1185,1151,76,44
+offsets:1,1,78,46
+rotate:90
+13ARM A1
+bounds:1502,1017,49,70
+offsets:1,1,51,72
+13ARM A2
+bounds:1765,1451,61,94
+offsets:1,1,63,96
+13ARM B1
+bounds:1248,171,44,64
+offsets:1,1,46,66
+rotate:90
+13ARM B2
+bounds:1031,635,80,73
+offsets:1,1,82,75
+13ARM B3B
+bounds:1736,201,39,38
+offsets:1,1,41,40
+13EYES
+bounds:849,1114,81,63
+offsets:1,1,83,65
+rotate:90
+13HELMET
+bounds:907,1607,122,112
+offsets:1,1,124,114
+13HIP
+bounds:672,1115,72,86
+offsets:0,0,72,87
+13LEG A1
+bounds:551,838,61,98
+offsets:1,1,63,100
+13LEG A2
+bounds:182,201,60,117
+offsets:1,1,62,119
+13LEG A3
+bounds:1327,981,84,49
+offsets:1,1,86,51
+13LEG B1
+bounds:886,959,59,86
+offsets:1,1,61,88
+13LEG B2
+bounds:1256,1490,56,109
+offsets:1,1,58,111
+rotate:90
+13LEG B3
+bounds:1365,903,76,44
+offsets:1,1,78,46
+rotate:90
+13SHOULDER A
+bounds:402,113,88,79
+offsets:1,1,90,81
+rotate:90
+13SHOULDER B
+bounds:839,348,75,74
+offsets:1,1,77,76
+14ARM A1
+bounds:1129,1132,49,70
+offsets:1,1,51,72
+14ARM A2
+bounds:402,582,63,98
+offsets:1,1,65,100
+14ARM B1
+bounds:1291,17,44,64
+offsets:1,1,46,66
+14ARM B3B
+bounds:1736,161,39,38
+offsets:1,1,41,40
+14BODY
+bounds:247,1615,102,130
+rotate:90
+14EYES
+bounds:1004,894,77,63
+offsets:1,1,79,65
+14HELMET
+bounds:1699,1605,108,117
+offsets:1,1,110,119
+rotate:90
+14HIP
+bounds:914,1113,74,86
+offsets:2,0,76,86
+14LEG A1
+bounds:1053,1378,50,94
+offsets:1,1,52,96
+rotate:90
+14LEG A2
+bounds:222,1387,62,117
+offsets:1,1,64,119
+14LEG A3
+bounds:1134,1204,84,49
+offsets:1,1,86,51
+rotate:90
+14LEG B1
+bounds:1409,1162,44,86
+offsets:1,1,46,88
+rotate:90
+14LEG B2
+bounds:614,830,60,107
+offsets:1,1,62,109
+14LEG B3
+bounds:1361,825,76,44
+offsets:1,1,78,46
+rotate:90
+14SHOULDER A
+bounds:474,256,82,78
+offsets:1,1,84,80
+rotate:90
+14SHOULDER B
+bounds:605,427,73,76
+offsets:1,1,75,78
+rotate:90
+15ARM A1
+bounds:1180,1079,49,70
+offsets:1,1,51,72
+15ARM B1
+bounds:1766,1188,44,64
+offsets:1,1,46,66
+15ARM B2
+bounds:261,446,88,74
+offsets:1,1,90,76
+15ARM B3B
+bounds:1777,157,39,38
+offsets:1,1,41,40
+15EYES
+bounds:1548,1390,77,63
+offsets:1,1,79,65
+15HELMET
+bounds:2,1699,117,127
+offsets:1,1,119,129
+15HIP
+bounds:1065,1430,74,85
+offsets:2,1,76,87
+rotate:90
+15LEG A1
+bounds:839,754,50,94
+offsets:1,1,52,96
+rotate:90
+15LEG A2
+bounds:244,201,62,117
+offsets:1,1,64,119
+15LEG A3
+bounds:1134,993,84,49
+offsets:1,1,86,51
+15LEG B1
+bounds:1497,1161,44,86
+offsets:1,1,46,88
+15LEG B2
+bounds:744,832,60,106
+offsets:1,1,62,108
+rotate:90
+15LEG B3
+bounds:1545,1094,76,44
+offsets:1,1,78,46
+rotate:90
+15SHOULDER A
+bounds:339,1066,94,94
+offsets:1,1,96,96
+15SHOULDER B
+bounds:935,806,70,86
+offsets:1,1,72,88
+16ARM A2
+bounds:842,1197,63,96
+offsets:1,1,65,98
+16ARM B3B
+bounds:1620,148,39,38
+offsets:1,1,41,40
+16EYES
+bounds:761,195,77,63
+offsets:1,1,79,65
+16LEG A2
+bounds:364,1445,62,117
+offsets:1,1,64,119
+rotate:90
+16LEG A3
+bounds:1156,733,84,49
+offsets:1,1,86,51
+rotate:90
+16LEG B2
+bounds:1256,1428,60,109
+offsets:1,1,62,111
+rotate:90
+16LEG B3
+bounds:1682,1143,76,44
+offsets:1,1,78,46
+16SHOULDER B
+bounds:109,565,88,119
+offsets:1,1,90,121
+17ARM A1
+bounds:1304,303,49,70
+offsets:1,1,51,72
+rotate:90
+17ARM A2
+bounds:1249,1365,61,94
+offsets:1,1,63,96
+rotate:90
+17ARM A3
+bounds:1325,367,42,37
+offsets:1,1,44,39
+rotate:90
+17ARM B1
+bounds:1668,939,44,64
+offsets:1,1,46,66
+rotate:90
+17ARM B2
+bounds:1031,558,80,75
+offsets:1,1,82,77
+17ARM B3B
+bounds:1693,145,39,38
+offsets:1,1,41,40
+17EYES
+bounds:1133,18,77,63
+offsets:1,1,79,65
+17HELMET
+bounds:483,1503,112,108
+offsets:1,1,114,110
+17HIP
+bounds:989,1289,74,86
+17LEG A1
+bounds:935,754,50,94
+offsets:1,1,52,96
+rotate:90
+17LEG A2
+bounds:483,1439,62,117
+offsets:1,1,64,119
+rotate:90
+17LEG B1
+bounds:1098,507,44,86
+offsets:1,1,46,88
+rotate:90
+17LEG B2
+bounds:1627,1451,55,106
+offsets:1,1,57,108
+17SHOULDER A
+bounds:439,445,82,87
+offsets:1,1,84,89
+rotate:90
+18ARM A1
+bounds:1668,888,49,70
+offsets:1,1,51,72
+rotate:90
+18ARM A2
+bounds:1627,1388,61,94
+offsets:1,1,63,96
+rotate:90
+18ARM A3
+bounds:1635,1563,42,37
+offsets:1,1,44,39
+18ARM B1
+bounds:1622,892,44,64
+offsets:1,1,46,66
+18ARM B2
+bounds:762,424,80,74
+offsets:1,1,82,76
+rotate:90
+18ARM B3B
+bounds:1734,121,39,38
+offsets:1,1,41,40
+18BODY
+bounds:2,912,105,130
+18EYES
+bounds:1113,553,77,63
+offsets:1,1,79,65
+18HAIR
+bounds:2,2,108,116
+offsets:1,1,110,118
+18HIP
+bounds:990,1113,72,86
+offsets:0,0,72,87
+18LEG A1
+bounds:493,831,56,98
+offsets:1,1,58,100
+18LEG A2
+bounds:358,1383,60,117
+offsets:1,1,62,119
+rotate:90
+18LEG A3
+bounds:1490,897,84,49
+offsets:1,1,86,51
+18LEG B1
+bounds:857,1047,64,87
+offsets:1,1,66,89
+rotate:90
+18LEG B2
+bounds:1367,1328,56,107
+offsets:1,1,58,109
+18LEG B3
+bounds:1591,1097,76,44
+offsets:1,1,78,46
+18SHOULDER A
+bounds:120,1506,93,126
+offsets:1,1,95,128
+rotate:90
+19ARM A1
+bounds:1755,1091,49,70
+offsets:1,1,51,72
+rotate:90
+19ARM A3
+bounds:912,121,42,37
+offsets:1,1,44,39
+rotate:90
+19ARM B1
+bounds:1576,863,44,64
+offsets:1,1,46,66
+19ARM B2
+bounds:489,29,85,76
+offsets:1,1,87,78
+rotate:90
+19ARM B3B
+bounds:1775,117,39,38
+offsets:1,1,41,40
+19ARM B3F
+bounds:1327,1333,30,38
+offsets:1,1,32,40
+rotate:90
+19BODY
+bounds:907,1721,105,130
+rotate:90
+19EYES
+bounds:1121,428,77,63
+offsets:1,1,79,65
+rotate:90
+19HAIR
+bounds:1388,1613,120,106
+offsets:1,1,122,108
+19HIP
+bounds:986,1201,75,86
+offsets:0,0,75,87
+19LEG A1
+bounds:532,588,50,94
+offsets:1,1,52,96
+19LEG A2
+bounds:477,1375,62,117
+offsets:1,1,64,119
+rotate:90
+19LEG A3
+bounds:1207,736,84,49
+offsets:1,1,86,51
+19LEG B1
+bounds:1189,83,44,86
+offsets:1,1,46,88
+19LEG B2
+bounds:709,1438,57,108
+offsets:1,1,59,110
+rotate:90
+19LEG B3
+bounds:1664,1046,76,44
+offsets:1,1,78,46
+19SHOULDER A
+bounds:110,1030,99,112
+offsets:1,1,101,114
+1ARM A1
+bounds:1734,948,49,70
+offsets:1,1,51,72
+rotate:90
+1ARM A2
+bounds:743,717,50,94
+offsets:1,1,52,96
+rotate:90
+1ARM A3
+bounds:1697,229,42,37
+offsets:1,1,44,39
+rotate:90
+1ARM B1
+bounds:1296,787,44,63
+offsets:1,1,46,65
+rotate:90
+1ARM B2
+bounds:992,1047,77,64
+offsets:1,1,79,66
+1ARM B3B
+bounds:1450,599,39,38
+offsets:1,1,41,40
+rotate:90
+1ARM B3F
+bounds:1180,1047,30,38
+offsets:1,1,32,40
+rotate:90
+1BODY
+bounds:2,780,105,130
+1HEAD EYES OPEN
+bounds:1139,267,77,63
+offsets:1,1,79,65
+1HIP
+bounds:604,340,71,85
+1LEG A1
+bounds:839,702,50,94
+offsets:1,1,52,96
+rotate:90
+1LEG A2
+bounds:435,927,56,114
+offsets:1,1,58,116
+1LEG A3
+bounds:1358,728,84,49
+offsets:1,1,86,51
+1LEG B1
+bounds:1235,83,44,86
+offsets:1,1,46,88
+1LEG B2
+bounds:1425,1327,51,103
+offsets:1,1,53,105
+rotate:90
+1LEG B3
+bounds:1622,958,76,44
+offsets:1,1,78,46
+rotate:90
+1SHOULDER B
+bounds:819,1445,63,59
+offsets:1,1,65,61
+20ARM A1
+bounds:1740,897,49,70
+offsets:1,1,51,72
+rotate:90
+20ARM A2
+bounds:746,1114,65,101
+offsets:1,1,67,103
+rotate:90
+20ARM A3
+bounds:1736,241,42,37
+offsets:1,1,44,39
+rotate:90
+20ARM B1
+bounds:1760,1142,44,64
+offsets:1,1,46,66
+rotate:90
+20ARM B2
+bounds:496,684,81,72
+offsets:1,1,83,74
+rotate:90
+20ARM B3B
+bounds:1419,107,39,38
+offsets:1,1,41,40
+rotate:90
+20ARM B3F
+bounds:1314,177,30,38
+offsets:1,1,32,40
+20BODY
+bounds:247,1719,107,130
+offsets:17,0,127,130
+rotate:90
+20EYES
+bounds:1248,1055,77,63
+offsets:1,1,79,65
+20HELMET
+bounds:1699,1715,124,111
+offsets:1,1,126,113
+20HIP
+bounds:677,340,73,85
+20LEG A1
+bounds:935,702,50,94
+offsets:1,1,52,96
+rotate:90
+20LEG A2
+bounds:709,1497,66,114
+offsets:1,1,68,116
+20LEG A3
+bounds:1355,612,84,49
+offsets:1,1,86,51
+20LEG B1
+bounds:1134,1044,44,86
+offsets:1,1,46,88
+20LEG B2
+bounds:715,1374,62,108
+offsets:1,1,64,110
+rotate:90
+20LEG B3
+bounds:1742,1045,76,44
+offsets:1,1,78,46
+20SHOULDER A
+bounds:828,1295,84,80
+offsets:1,1,86,82
+21ARM A1
+bounds:1727,692,49,70
+offsets:1,1,51,72
+21ARM A2
+bounds:565,1215,63,99
+offsets:1,1,65,101
+rotate:90
+21ARM A3
+bounds:635,674,42,37
+offsets:1,1,44,39
+rotate:90
+21ARM B1
+bounds:1741,764,44,64
+offsets:1,1,46,66
+rotate:90
+21ARM B2
+bounds:325,582,98,75
+offsets:1,1,100,77
+rotate:90
+21ARM B3B
+bounds:1419,148,39,38
+offsets:1,1,41,40
+rotate:90
+21ARM B3F
+bounds:1449,785,30,38
+offsets:1,1,32,40
+21BODY
+bounds:1039,1721,105,130
+rotate:90
+21EYES
+bounds:1327,1032,77,63
+offsets:1,1,79,65
+21HIP
+bounds:308,201,76,86
+offsets:0,0,77,86
+rotate:90
+21LEG A1
+bounds:1031,710,50,94
+offsets:1,1,52,96
+21LEG A3
+bounds:1192,555,84,49
+offsets:1,1,86,51
+21LEG B1
+bounds:1165,645,44,86
+offsets:1,1,46,88
+21LEG B2
+bounds:1510,1559,55,123
+offsets:1,1,57,125
+rotate:90
+21LEG B3
+bounds:1733,999,76,44
+offsets:1,1,78,46
+21SHOULDER A
+bounds:355,1289,102,92
+offsets:1,1,104,94
+21SHOULDER B
+bounds:744,959,94,86
+offsets:1,1,96,88
+22ARM A1
+bounds:1727,620,49,70
+offsets:1,1,51,72
+22ARM A2
+bounds:1723,1388,61,94
+offsets:1,1,63,96
+rotate:90
+22ARM A3
+bounds:635,630,42,37
+offsets:1,1,44,39
+rotate:90
+22ARM B1
+bounds:1778,698,44,64
+offsets:1,1,46,66
+22ARM B2
+bounds:683,427,77,73
+offsets:1,1,79,75
+22ARM B3B
+bounds:1429,66,39,38
+offsets:1,1,41,40
+rotate:90
+22ARM B3F
+bounds:433,777,30,38
+offsets:1,1,32,40
+rotate:90
+22BODY
+bounds:2,648,105,130
+22EYES
+bounds:1248,990,77,63
+offsets:1,1,79,65
+22HIP
+bounds:752,348,74,85
+rotate:90
+22LEG A1
+bounds:577,204,50,94
+offsets:1,1,52,96
+rotate:90
+22LEG A2
+bounds:109,201,71,117
+offsets:1,1,73,119
+22LEG A3
+bounds:1278,553,84,49
+offsets:1,1,86,51
+22LEG B1
+bounds:1208,787,44,86
+offsets:1,1,46,88
+rotate:90
+22LEG B2
+bounds:676,941,66,108
+offsets:1,1,68,110
+22LEG B3
+bounds:1571,785,76,44
+offsets:1,1,78,46
+rotate:90
+23ARM A1
+bounds:1727,548,49,70
+offsets:1,1,51,72
+23ARM A2
+bounds:743,769,61,94
+offsets:1,1,63,96
+rotate:90
+23ARM A3
+bounds:1778,527,42,37
+offsets:1,1,44,39
+23ARM B1
+bounds:1778,632,44,64
+offsets:1,1,46,66
+23ARM B2
+bounds:916,345,79,74
+offsets:1,1,81,76
+rotate:90
+23ARM B3B
+bounds:1459,139,39,38
+offsets:1,1,41,40
+23ARM B3F
+bounds:635,598,30,38
+offsets:1,1,32,40
+rotate:90
+23BODY
+bounds:1171,1721,105,130
+rotate:90
+23EYES
+bounds:1212,18,77,63
+offsets:1,1,79,65
+23HAIR
+bounds:110,1269,120,103
+offsets:1,1,122,105
+rotate:90
+23HELMET
+bounds:2,1572,125,116
+offsets:1,1,127,118
+rotate:90
+23HIP
+bounds:204,120,79,109
+offsets:4,0,83,109
+rotate:90
+23LEG A1
+bounds:633,108,50,94
+offsets:1,1,52,96
+23LEG A2
+bounds:355,1227,60,117
+offsets:1,1,62,119
+rotate:90
+23LEG A3
+bounds:1364,561,84,49
+offsets:1,1,86,51
+23LEG B1
+bounds:1361,779,44,86
+offsets:1,1,46,88
+rotate:90
+23LEG B2
+bounds:209,686,55,105
+offsets:1,1,57,107
+23LEG B3
+bounds:1617,785,76,44
+offsets:1,1,78,46
+rotate:90
+23SHOULDER B
+bounds:1007,806,86,74
+offsets:1,1,88,76
+rotate:90
+24ARM A1
+bounds:493,780,49,70
+offsets:1,1,51,72
+rotate:90
+29ARM A1
+bounds:493,780,49,70
+offsets:1,1,51,72
+rotate:90
+24ARM A2
+bounds:743,654,61,94
+offsets:1,1,63,96
+rotate:90
+24ARM A3
+bounds:1717,483,42,37
+offsets:1,1,44,39
+rotate:90
+29ARM A3
+bounds:1717,483,42,37
+offsets:1,1,44,39
+rotate:90
+24ARM B1
+bounds:1778,566,44,64
+offsets:1,1,46,66
+29ARM B1
+bounds:1778,566,44,64
+offsets:1,1,46,66
+24ARM B2
+bounds:989,265,78,73
+offsets:1,1,80,75
+rotate:90
+24ARM B3B
+bounds:1500,139,39,38
+offsets:1,1,41,40
+29ARM B3B
+bounds:1500,139,39,38
+offsets:1,1,41,40
+24ARM B3F
+bounds:1337,5,30,38
+offsets:1,1,32,40
+rotate:90
+29ARM B3F
+bounds:1337,5,30,38
+offsets:1,1,32,40
+rotate:90
+24BODY
+bounds:2,516,105,130
+24HIP
+bounds:838,424,71,85
+24LEG A1
+bounds:839,650,50,94
+offsets:1,1,52,96
+rotate:90
+29LEG A1
+bounds:839,650,50,94
+offsets:1,1,52,96
+rotate:90
+24LEG A2
+bounds:596,1374,62,117
+offsets:1,1,64,119
+rotate:90
+24LEG A3
+bounds:1364,510,84,49
+offsets:1,1,86,51
+29LEG A3
+bounds:1364,510,84,49
+offsets:1,1,86,51
+24LEG B1
+bounds:1186,465,44,86
+offsets:1,1,46,88
+29LEG B1
+bounds:1186,465,44,86
+offsets:1,1,46,88
+24LEG B2
+bounds:614,939,60,110
+offsets:1,1,62,112
+24LEG B3
+bounds:1663,810,76,44
+offsets:1,1,78,46
+rotate:90
+29LEG B3
+bounds:1663,810,76,44
+offsets:1,1,78,46
+rotate:90
+24SHOULDER A
+bounds:337,828,94,88
+offsets:1,1,96,90
+24SHOULDER B
+bounds:994,959,75,86
+offsets:1,1,77,88
+25ARM A1
+bounds:570,700,49,70
+offsets:1,1,51,72
+25ARM A2
+bounds:935,639,61,94
+offsets:1,1,63,96
+rotate:90
+25ARM A3
+bounds:1756,488,42,37
+offsets:1,1,44,39
+25ARM B1
+bounds:565,772,44,64
+offsets:1,1,46,66
+25ARM B2
+bounds:763,2,79,75
+offsets:1,1,81,77
+rotate:90
+25ARM B3B
+bounds:1541,139,39,38
+offsets:1,1,41,40
+25ARM B3F
+bounds:1377,5,30,38
+offsets:1,1,32,40
+rotate:90
+25HIP
+bounds:1066,341,71,85
+25LEG A1
+bounds:743,602,50,94
+offsets:1,1,52,96
+rotate:90
+25LEG A2
+bounds:289,1269,64,117
+offsets:1,1,66,119
+25LEG A3
+bounds:1278,502,84,49
+offsets:1,1,86,51
+25LEG B1
+bounds:1232,467,44,86
+offsets:1,1,46,88
+25LEG B2
+bounds:433,809,58,107
+offsets:1,1,60,109
+25LEG B3
+bounds:1709,810,76,44
+offsets:1,1,78,46
+rotate:90
+26ARM A1
+bounds:584,628,49,70
+offsets:1,1,51,72
+26ARM A2
+bounds:467,582,63,100
+offsets:1,1,65,102
+26ARM A3
+bounds:1071,1099,42,37
+offsets:1,1,44,39
+26ARM B1
+bounds:1493,264,44,64
+offsets:1,1,46,66
+26ARM B2
+bounds:474,1212,89,75
+offsets:1,1,91,77
+26ARM B3B
+bounds:1499,99,39,38
+offsets:1,1,41,40
+26ARM B3F
+bounds:1412,190,30,38
+offsets:1,1,32,40
+26HIP
+bounds:1065,1290,75,86
+26LEG A1
+bounds:839,598,50,94
+offsets:1,1,52,96
+rotate:90
+26LEG A2
+bounds:210,1150,62,117
+offsets:1,1,64,119
+26LEG A3
+bounds:1278,451,84,49
+offsets:1,1,86,51
+26LEG B1
+bounds:1364,413,44,86
+offsets:1,1,46,88
+rotate:90
+26LEG B2
+bounds:884,1442,58,110
+offsets:1,1,60,112
+rotate:90
+26LEG B3
+bounds:1755,819,76,44
+offsets:1,1,78,46
+rotate:90
+26SHOULDER A
+bounds:364,1509,117,102
+offsets:1,1,119,104
+26SHOULDER B
+bounds:997,1506,99,98
+offsets:1,1,101,100
+27ARM A1
+bounds:621,718,49,70
+offsets:1,1,51,72
+27ARM A2
+bounds:935,576,61,94
+offsets:1,1,63,96
+rotate:90
+27ARM A3
+bounds:1444,189,42,37
+offsets:1,1,44,39
+27ARM B1
+bounds:1539,264,44,64
+offsets:1,1,46,66
+27ARM B2
+bounds:1327,1097,78,73
+offsets:1,1,80,75
+27ARM B3B
+bounds:1540,99,39,38
+offsets:1,1,41,40
+27ARM B3F
+bounds:685,87,30,38
+offsets:1,1,32,40
+rotate:90
+27BODY
+bounds:2,1440,106,130
+27HELMET
+bounds:120,1601,96,125
+offsets:1,1,98,127
+rotate:90
+27HIP
+bounds:987,433,71,86
+rotate:90
+27LEG A1
+bounds:586,502,50,94
+offsets:1,1,52,96
+27LEG A2
+bounds:355,1162,63,117
+offsets:1,1,65,119
+rotate:90
+27LEG A3
+bounds:1364,459,84,49
+offsets:1,1,86,51
+27LEG B1
+bounds:1191,377,44,86
+offsets:1,1,46,88
+27LEG B2
+bounds:1425,1438,60,108
+offsets:1,1,62,110
+27LEG B3
+bounds:1663,764,76,44
+offsets:1,1,78,46
+27SHOULDER A
+bounds:736,1276,96,90
+offsets:1,1,98,92
+rotate:90
+27SHOULDER B
+bounds:483,116,82,86
+offsets:1,1,84,88
+28ARM A1
+bounds:1450,525,49,70
+offsets:1,1,51,72
+28ARM A2
+bounds:638,502,61,94
+offsets:1,1,63,96
+28ARM A3
+bounds:1488,179,42,37
+offsets:1,1,44,39
+28ARM B1
+bounds:1493,218,44,64
+offsets:1,1,46,66
+rotate:90
+28ARM B2
+bounds:840,2,79,75
+offsets:1,1,81,77
+rotate:90
+28ARM B3B
+bounds:1581,99,39,38
+offsets:1,1,41,40
+28ARM B3F
+bounds:310,4,30,38
+offsets:1,1,32,40
+rotate:90
+28BODY
+bounds:1303,1721,105,130
+rotate:90
+28HELMET
+bounds:109,915,100,113
+offsets:1,1,102,115
+28HIP
+bounds:992,346,72,85
+offsets:0,1,72,87
+28LEG A1
+bounds:777,506,50,94
+offsets:1,1,52,96
+28LEG A2
+bounds:275,816,60,117
+offsets:1,1,62,119
+28LEG A3
+bounds:1237,400,84,49
+offsets:1,1,86,51
+28LEG B1
+bounds:1237,354,44,86
+offsets:1,1,46,88
+rotate:90
+28LEG B2
+bounds:1367,1437,56,109
+offsets:1,1,58,111
+28LEG B3
+bounds:1571,739,76,44
+offsets:1,1,78,46
+28SHOULDER A
+bounds:274,1173,94,79
+offsets:1,1,96,81
+rotate:90
+28SHOULDER B
+bounds:1142,1295,87,74
+offsets:1,1,89,76
+29ARM A2
+bounds:906,513,61,94
+offsets:1,1,63,96
+rotate:90
+29ARM B2
+bounds:1327,1172,80,75
+offsets:1,1,82,77
+29BODY
+bounds:2,384,105,130
+29HELMET
+bounds:109,686,98,112
+offsets:1,1,100,114
+29HIP
+bounds:757,260,73,86
+offsets:1,0,75,86
+29LEG A2
+bounds:211,1031,62,117
+offsets:1,1,64,119
+29LEG B2
+bounds:612,1051,58,111
+offsets:1,1,60,113
+29SHOULDER A
+bounds:112,13,105,92
+offsets:1,1,107,94
+rotate:90
+29SHOULDER B
+bounds:309,355,85,88
+offsets:1,1,87,90
+2ARM A1
+bounds:1501,525,49,70
+offsets:1,1,51,72
+2ARM A2
+bounds:396,203,51,83
+offsets:1,1,53,85
+rotate:90
+2ARM B1
+bounds:1585,264,44,64
+offsets:1,1,46,66
+2ARM B2
+bounds:1500,948,74,67
+offsets:1,1,76,69
+2ARM B3B
+bounds:1622,108,39,38
+offsets:1,1,41,40
+2ARM B3F
+bounds:350,4,30,38
+offsets:1,1,32,40
+rotate:90
+2BODY
+bounds:1435,1721,105,130
+rotate:90
+2HEAD EYES OPEN
+bounds:676,863,76,66
+offsets:1,1,78,68
+rotate:90
+2HIP
+bounds:1051,96,71,85
+rotate:90
+2LEG A1
+bounds:1002,506,50,94
+offsets:1,1,52,96
+rotate:90
+2LEG A2
+bounds:436,529,51,97
+offsets:1,1,53,99
+rotate:90
+2LEG A3
+bounds:1218,303,84,49
+offsets:1,1,86,51
+2LEG B2
+bounds:474,1164,46,87
+offsets:1,1,48,89
+rotate:90
+2LEG B3
+bounds:1553,1017,75,44
+offsets:1,1,77,46
+rotate:90
+2SHOULDER A
+bounds:1293,726,63,59
+offsets:1,1,65,61
+2SHOULDER B
+bounds:1290,604,63,59
+offsets:1,1,65,61
+30ARM A1
+bounds:1450,474,49,70
+offsets:1,1,51,72
+rotate:90
+30ARM A2
+bounds:1231,1235,61,94
+offsets:1,1,63,96
+rotate:90
+30ARM A3
+bounds:1532,179,42,37
+offsets:1,1,44,39
+30ARM B1
+bounds:1559,218,44,64
+offsets:1,1,46,66
+rotate:90
+30ARM B2
+bounds:1327,1249,80,77
+offsets:1,1,82,79
+30ARM B3B
+bounds:1622,68,39,38
+offsets:1,1,41,40
+30ARM B3F
+bounds:390,4,30,38
+offsets:1,1,32,40
+rotate:90
+30BODY
+bounds:2,252,105,130
+30HIP
+bounds:527,340,75,85
+offsets:9,0,84,85
+30LEG A1
+bounds:903,165,50,94
+offsets:1,1,52,96
+30LEG A2
+bounds:195,446,64,117
+offsets:1,1,66,119
+30LEG A3
+bounds:1248,217,84,49
+offsets:1,1,86,51
+rotate:90
+30LEG B1
+bounds:1281,83,44,86
+offsets:1,1,46,88
+30LEG B2
+bounds:1487,1438,59,108
+offsets:1,1,61,110
+30LEG B3
+bounds:1493,735,76,44
+offsets:1,1,78,46
+31ARM A1
+bounds:1452,402,49,70
+offsets:1,1,51,72
+31ARM A2
+bounds:1152,1371,63,95
+offsets:1,1,65,97
+rotate:90
+31ARM A3
+bounds:1576,179,42,37
+offsets:1,1,44,39
+31ARM B1
+bounds:1631,273,44,64
+offsets:1,1,46,66
+31ARM B2
+bounds:417,684,90,77
+offsets:1,1,92,79
+rotate:90
+31ARM B3B
+bounds:1663,105,39,38
+offsets:1,1,41,40
+31ARM B3F
+bounds:430,4,30,38
+offsets:1,1,32,40
+rotate:90
+31BODY
+bounds:1567,1721,105,130
+rotate:90
+31HIP
+bounds:832,261,73,85
+offsets:2,0,75,85
+31LEG A1
+bounds:955,169,50,94
+offsets:1,1,52,96
+31LEG A2
+bounds:211,912,62,117
+offsets:1,1,64,119
+31LEG A3
+bounds:1299,217,84,49
+offsets:1,1,86,51
+rotate:90
+31LEG B1
+bounds:1350,215,44,86
+offsets:1,1,46,88
+31LEG B2
+bounds:325,522,58,109
+offsets:1,1,60,111
+rotate:90
+31LEG B3
+bounds:1649,718,76,44
+offsets:1,1,78,46
+31SHOULDER B
+bounds:339,970,94,94
+offsets:1,1,96,96
+32ARM A1
+bounds:1503,402,49,70
+offsets:1,1,51,72
+32ARM A2
+bounds:840,165,61,94
+offsets:1,1,63,96
+32ARM A3
+bounds:1697,185,42,37
+offsets:1,1,44,39
+rotate:90
+32ARM B1
+bounds:1677,273,44,64
+offsets:1,1,46,66
+32ARM B2
+bounds:758,117,80,76
+offsets:1,1,82,78
+32ARM B3B
+bounds:1663,65,39,38
+offsets:1,1,41,40
+32ARM B3F
+bounds:1753,417,30,38
+offsets:1,1,32,40
+rotate:90
+32BODY
+bounds:2,120,105,130
+32HIP
+bounds:1046,23,71,85
+rotate:90
+32LEG A1
+bounds:955,117,50,94
+offsets:1,1,52,96
+rotate:90
+32LEG A2
+bounds:286,1388,70,117
+offsets:1,1,72,119
+32LEG A3
+bounds:1376,316,84,49
+offsets:1,1,86,51
+32LEG B1
+bounds:1364,367,44,86
+offsets:1,1,46,88
+rotate:90
+32LEG B2
+bounds:746,1047,65,109
+offsets:1,1,67,111
+rotate:90
+32LEG B3
+bounds:1571,693,76,44
+offsets:1,1,78,46
+32SHOULDER A
+bounds:109,800,100,113
+offsets:1,1,102,115
+32SHOULDER B
+bounds:459,1289,84,104
+offsets:1,1,86,106
+rotate:90
+33ARM A1
+bounds:1522,474,49,70
+offsets:1,1,51,72
+rotate:90
+33ARM A2
+bounds:1007,169,61,94
+offsets:1,1,63,96
+33ARM A3
+bounds:1438,684,42,37
+offsets:1,1,44,39
+rotate:90
+33ARM B1
+bounds:1707,417,44,64
+offsets:1,1,46,66
+33ARM B2
+bounds:684,2,79,77
+offsets:1,1,81,79
+rotate:90
+33ARM B3B
+bounds:1704,81,39,38
+offsets:1,1,41,40
+33ARM B3F
+bounds:912,89,30,38
+offsets:1,1,32,40
+rotate:90
+33BODY
+bounds:379,1613,105,130
+rotate:90
+33HELMET
+bounds:597,1503,108,110
+offsets:1,1,110,112
+rotate:90
+33HIP
+bounds:1409,1254,71,86
+offsets:0,0,71,87
+rotate:90
+33LEG A1
+bounds:632,5,50,94
+offsets:1,1,52,96
+33LEG A3
+bounds:1396,230,84,49
+offsets:1,1,86,51
+rotate:90
+33LEG B1
+bounds:1447,228,44,86
+offsets:1,1,46,88
+33LEG B3
+bounds:1493,689,76,44
+offsets:1,1,78,46
+34ARM A1
+bounds:1554,402,49,70
+offsets:1,1,51,72
+34ARM A2
+bounds:1231,1298,65,94
+offsets:1,1,67,96
+rotate:90
+34ARM A3
+bounds:1441,640,42,37
+offsets:1,1,44,39
+rotate:90
+34ARM B1
+bounds:1717,351,44,64
+offsets:1,1,46,66
+34ARM B2
+bounds:907,265,80,78
+offsets:1,1,82,80
+34ARM B3B
+bounds:1704,41,39,38
+offsets:1,1,41,40
+34ARM B3F
+bounds:952,85,30,38
+offsets:1,1,32,40
+rotate:90
+34BODY
+bounds:511,1613,105,130
+rotate:90
+34HELMET
+bounds:110,1144,98,123
+offsets:1,1,100,125
+34HIP
+bounds:685,119,71,86
+34LEG A1
+bounds:1133,169,50,94
+offsets:1,1,52,96
+34LEG A2
+bounds:211,793,62,117
+offsets:1,1,64,119
+34LEG A3
+bounds:1485,781,84,49
+offsets:1,1,86,51
+34LEG B1
+bounds:1536,1344,44,86
+offsets:1,1,46,88
+rotate:90
+34LEG B2
+bounds:1699,1547,56,109
+offsets:1,1,58,111
+rotate:90
+34LEG B3
+bounds:1649,672,76,44
+offsets:1,1,78,46
+34SHOULDER A
+bounds:328,682,87,92
+offsets:1,1,89,94
+35ARM A1
+bounds:1594,483,49,70
+offsets:1,1,51,72
+35ARM A2
+bounds:676,767,65,94
+offsets:1,1,67,96
+35ARM A3
+bounds:263,531,42,37
+offsets:1,1,44,39
+35ARM B1
+bounds:1723,285,44,64
+offsets:1,1,46,66
+35ARM B2
+bounds:917,2,79,75
+offsets:1,1,81,77
+rotate:90
+35ARM B3B
+bounds:1745,77,39,38
+offsets:1,1,41,40
+35ARM B3F
+bounds:1661,148,30,38
+offsets:1,1,32,40
+35BODY
+bounds:643,1613,105,130
+rotate:90
+35HELMET
+bounds:121,1706,124,120
+offsets:1,1,126,122
+35HIP
+bounds:1407,1089,71,85
+rotate:90
+35LEG A1
+bounds:994,21,50,94
+offsets:1,1,52,96
+35LEG A2
+bounds:109,320,78,119
+offsets:1,1,80,121
+35LEG A3
+bounds:1543,1258,84,49
+offsets:1,1,86,51
+rotate:90
+35LEG B1
+bounds:1624,1342,44,86
+offsets:1,1,46,88
+rotate:90
+35LEG B2
+bounds:215,1273,72,112
+offsets:1,1,74,114
+35LEG B3
+bounds:1571,647,76,44
+offsets:1,1,78,46
+35SHOULDER A
+bounds:565,1280,92,99
+offsets:1,1,94,101
+rotate:90
+35SHOULDER B
+bounds:1684,1451,79,94
+offsets:1,1,81,96
+3ARM A1
+bounds:1645,483,49,70
+offsets:1,1,51,72
+rotate:90
+3ARM A2
+bounds:1070,169,61,94
+offsets:1,1,63,96
+3ARM A3
+bounds:1756,449,42,37
+offsets:1,1,44,39
+3ARM B1
+bounds:825,1379,45,64
+offsets:1,1,47,66
+3ARM B2
+bounds:1283,833,76,72
+offsets:1,1,78,74
+3ARM B3B
+bounds:1745,37,39,38
+offsets:1,1,41,40
+3ARM B3F
+bounds:1417,5,30,38
+offsets:1,1,32,40
+rotate:90
+3BODY
+bounds:379,1720,106,130
+rotate:90
+3HAIR
+bounds:1510,1616,103,123
+offsets:1,1,105,125
+rotate:90
+3HEAD EYES OPEN
+bounds:1071,1217,71,61
+offsets:1,1,73,63
+rotate:90
+3HELMET
+bounds:887,1502,108,103
+offsets:1,1,110,105
+3HIP
+bounds:1083,714,71,85
+3LEG A1
+bounds:435,1043,50,117
+offsets:1,1,52,119
+3LEG A3
+bounds:1543,1172,84,49
+offsets:1,1,86,51
+rotate:90
+3LEG B2
+bounds:565,1164,49,87
+offsets:1,1,51,89
+rotate:90
+3LEG B3
+bounds:1649,534,75,44
+offsets:1,1,77,46
+4ARM A1
+bounds:1605,411,49,70
+offsets:1,1,51,72
+4ARM A2
+bounds:1231,1172,61,94
+offsets:1,1,63,96
+rotate:90
+4ARM A3
+bounds:1763,373,42,37
+offsets:1,1,44,39
+rotate:90
+4ARM B1
+bounds:1631,227,44,64
+offsets:1,1,46,66
+rotate:90
+4ARM B2
+bounds:1208,833,77,73
+offsets:1,1,79,75
+rotate:90
+4ARM B3B
+bounds:1786,76,39,38
+offsets:1,1,41,40
+rotate:90
+4ARM B3F
+bounds:1459,107,30,38
+offsets:1,1,32,40
+rotate:90
+4BODY
+bounds:2,1308,106,130
+4HEAD
+bounds:1064,1138,77,63
+offsets:1,1,79,65
+rotate:90
+4HIP
+bounds:1413,964,71,85
+rotate:90
+4LEG A1
+bounds:1231,1120,50,94
+offsets:1,1,52,96
+rotate:90
+4LEG A3
+bounds:1594,1291,84,49
+offsets:1,1,86,51
+4LEG B1
+bounds:1712,1342,44,86
+offsets:1,1,46,88
+rotate:90
+4LEG B3
+bounds:1493,643,76,44
+offsets:1,1,78,46
+4SHOULDER B
+bounds:1290,665,67,59
+offsets:1,1,69,61
+5ARM A1
+bounds:1656,411,49,70
+offsets:1,1,51,72
+5ARM A2
+bounds:1071,993,61,94
+offsets:1,1,63,96
+5ARM A3
+bounds:1769,329,42,37
+offsets:1,1,44,39
+rotate:90
+5ARM B1
+bounds:677,602,45,64
+offsets:1,1,47,66
+rotate:90
+5ARM B2
+bounds:1407,825,76,72
+offsets:1,1,78,74
+5ARM B3B
+bounds:1786,36,39,38
+offsets:1,1,41,40
+5ARM B3F
+bounds:1582,139,30,38
+offsets:1,1,32,40
+5BODY
+bounds:511,1720,106,130
+rotate:90
+5HAIR
+bounds:1031,1606,119,113
+offsets:1,1,121,115
+5HEAD
+bounds:1411,899,77,63
+offsets:1,1,79,65
+5HELMET
+bounds:777,1506,108,106
+offsets:1,1,110,108
+5HIP
+bounds:1135,906,71,85
+5LEG A1
+bounds:1083,897,50,94
+offsets:1,1,52,96
+5LEG A2
+bounds:1098,1507,52,97
+offsets:1,1,54,99
+5LEG A3
+bounds:1594,1240,84,49
+offsets:1,1,86,51
+5LEG B1
+bounds:673,207,45,86
+offsets:1,1,47,88
+rotate:90
+5SHOULDER B
+bounds:996,1442,67,58
+offsets:1,1,69,60
+6ARM A1
+bounds:1462,330,49,70
+offsets:1,1,51,72
+6ARM A2
+bounds:872,1377,63,100
+offsets:1,1,65,102
+rotate:90
+6ARM A3
+bounds:1769,285,42,37
+offsets:1,1,44,39
+rotate:90
+6ARM B1
+bounds:1346,169,44,64
+offsets:1,1,46,66
+rotate:90
+6ARM B2
+bounds:554,256,82,72
+offsets:1,1,84,74
+rotate:90
+6ARM B3B
+bounds:1469,59,39,38
+offsets:1,1,41,40
+6ARM B3F
+bounds:1539,19,30,38
+offsets:1,1,32,40
+6HAIR
+bounds:248,1507,114,106
+offsets:1,1,116,108
+6HEAD
+bounds:1485,832,77,63
+offsets:1,1,79,65
+6HELMET
+bounds:109,441,122,84
+offsets:1,1,124,86
+rotate:90
+6HIP
+bounds:911,426,74,85
+offsets:2,0,76,85
+6LEG A1
+bounds:567,2,63,97
+offsets:1,1,65,99
+6LEG A2
+bounds:487,1047,62,115
+offsets:1,1,64,117
+6LEG A3
+bounds:1680,1291,84,49
+offsets:1,1,86,51
+6LEG B2
+bounds:253,335,54,109
+offsets:1,1,56,111
+6LEG B3
+bounds:1649,626,76,44
+offsets:1,1,78,46
+6NECK
+bounds:1152,1436,102,70
+offsets:1,1,104,72
+6SHOULDER A
+bounds:1064,265,74,73
+offsets:1,1,76,75
+rotate:90
+7ARM A1
+bounds:1513,330,49,70
+offsets:1,1,51,72
+7ARM A2
+bounds:567,101,64,101
+offsets:1,1,66,103
+7ARM A3
+bounds:1775,241,42,37
+offsets:1,1,44,39
+rotate:90
+7ARM B1
+bounds:1327,103,44,64
+offsets:1,1,46,66
+7ARM B2
+bounds:628,256,82,76
+offsets:1,1,84,78
+rotate:90
+7ARM B3B
+bounds:1510,59,39,38
+offsets:1,1,41,40
+7ARM B3F
+bounds:1571,19,30,38
+offsets:1,1,32,40
+7BODY
+bounds:2,1176,106,130
+offsets:0,0,107,130
+7HEAD
+bounds:1211,671,77,63
+offsets:1,1,79,65
+7HIP
+bounds:907,1201,77,86
+offsets:0,0,77,87
+7LEG A1
+bounds:1083,801,50,94
+offsets:1,1,52,96
+7LEG A2
+bounds:199,565,62,119
+offsets:1,1,64,121
+7LEG A3
+bounds:1594,1189,84,49
+offsets:1,1,86,51
+7LEG B1
+bounds:1576,929,44,86
+offsets:1,1,46,88
+7LEG B2
+bounds:1425,1380,56,109
+offsets:1,1,58,111
+rotate:90
+7LEG B3
+bounds:1571,601,76,44
+offsets:1,1,78,46
+7SHOULDER B
+bounds:672,1051,72,62
+offsets:1,1,74,64
+8ARM A1
+bounds:1564,330,49,70
+offsets:1,1,51,72
+8ARM A2
+bounds:1388,1548,63,102
+offsets:1,1,65,104
+rotate:90
+8ARM A3
+bounds:1777,197,42,37
+offsets:1,1,44,39
+rotate:90
+8ARM B1
+bounds:1373,103,44,64
+offsets:1,1,46,66
+8ARM B2
+bounds:396,256,95,76
+offsets:1,1,97,78
+rotate:90
+8ARM B3B
+bounds:1551,59,39,38
+offsets:1,1,41,40
+8ARM B3F
+bounds:1603,28,30,38
+offsets:1,1,32,40
+8BODY
+bounds:643,1720,106,130
+offsets:0,0,107,130
+rotate:90
+8HAIR
+bounds:1152,1508,102,95
+offsets:1,1,104,97
+8HEAD
+bounds:1359,663,77,63
+offsets:1,1,79,65
+8HIP
+bounds:701,514,74,86
+8LEG A1
+bounds:1113,618,50,94
+offsets:1,1,52,96
+8LEG A2
+bounds:275,1054,62,117
+offsets:1,1,64,119
+8LEG A3
+bounds:1680,1240,84,49
+offsets:1,1,86,51
+8LEG B1
+bounds:1766,1254,44,86
+offsets:1,1,46,88
+8LEG B2
+bounds:551,938,61,111
+offsets:1,1,63,113
+8LEG B3
+bounds:1493,597,76,44
+offsets:1,1,78,46
+8SHOULDER A
+bounds:310,36,89,81
+offsets:1,1,91,83
+8SHOULDER B
+bounds:1208,912,76,76
+offsets:1,1,78,78
+9ARM A1
+bounds:1615,339,49,70
+offsets:1,1,51,72
+9ARM A2
+bounds:602,1438,63,105
+offsets:1,1,65,107
+rotate:90
+9ARM A3
+bounds:1444,735,42,37
+offsets:1,1,44,39
+rotate:90
+9ARM B1
+bounds:1337,37,44,64
+offsets:1,1,46,66
+9ARM B2
+bounds:1548,1455,102,77
+offsets:1,1,104,79
+rotate:90
+9ARM B3B
+bounds:1457,19,39,38
+offsets:1,1,41,40
+9ARM B3F
+bounds:1635,33,30,38
+offsets:1,1,32,40
+rotate:90
+9BODY
+bounds:2,1044,106,130
+offsets:0,0,107,130
+9EYES
+bounds:1211,606,77,63
+offsets:1,1,79,65
+9HAIR
+bounds:1152,1605,115,114
+offsets:1,1,117,116
+9HELMET
+bounds:1269,1609,117,110
+offsets:1,1,119,112
+9HIP
+bounds:829,511,75,85
+offsets:0,1,75,87
+9LEG A1
+bounds:1139,332,50,94
+offsets:1,1,52,96
+9LEG A2
+bounds:275,935,62,117
+offsets:1,1,64,119
+9LEG A3
+bounds:1680,1189,84,49
+offsets:1,1,86,51
+9LEG B1
+bounds:1594,1143,44,86
+offsets:1,1,46,88
+rotate:90
+9LEG B2
+bounds:263,570,60,110
+offsets:1,1,62,112
+9LEG B3
+bounds:1649,580,76,44
+offsets:1,1,78,46
+9SHOULDER B
+bounds:677,695,70,64
+offsets:1,1,72,66
+rotate:90
+ARM A1
+bounds:1666,339,49,70
+offsets:1,1,51,72
+ARM A2
+bounds:1185,171,61,94
+offsets:1,1,63,96
+ARM A3
+bounds:1625,188,42,37
+offsets:1,1,44,39
+ARM B1
+bounds:1383,37,44,64
+offsets:1,1,46,66
+ARM B2
+bounds:1286,907,77,72
+offsets:1,1,79,74
+ARM B3B
+bounds:1498,19,39,38
+offsets:1,1,41,40
+ARM B3F
+bounds:725,85,30,38
+offsets:1,1,32,40
+rotate:90
+BODY
+bounds:775,1614,105,130
+rotate:90
+HIP
+bounds:1135,819,71,85
+LEG A1
+bounds:1406,1037,50,94
+offsets:1,1,52,96
+rotate:90
+LEG A2
+bounds:493,931,56,114
+offsets:1,1,58,116
+LEG A3
+bounds:1669,1092,84,49
+offsets:1,1,86,51
+LEG B2
+bounds:474,340,51,103
+offsets:1,1,53,105
+LEG B3
+bounds:1571,555,76,44
+offsets:1,1,78,46
+SHOULDER A
+bounds:1599,1036,63,59
+offsets:1,1,65,61
+SHOULDER B
+bounds:1668,985,63,59
+offsets:1,1,65,61

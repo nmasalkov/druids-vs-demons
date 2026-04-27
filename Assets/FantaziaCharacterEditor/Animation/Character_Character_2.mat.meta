@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 47228311f0378dd49a81ef48c3a3a3cb
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 181572
+  packageName: Character Editor (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/FantaziaCharacterEditor/Animation/Character_Character_2.mat
+  uploadId: 659889

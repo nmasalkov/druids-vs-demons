@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d757c04600c957b4d8001489aeeb22e6
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 181572
+  packageName: Character Editor (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/FantaziaCharacterEditor/Animation/Character_SkeletonData.asset
+  uploadId: 659889

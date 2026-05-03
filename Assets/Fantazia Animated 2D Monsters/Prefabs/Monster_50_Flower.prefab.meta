@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 8478378d7c761f44a8720aae7881cd9f
+timeCreated: 1594254041
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_50_Flower.prefab
+  uploadId: 694418

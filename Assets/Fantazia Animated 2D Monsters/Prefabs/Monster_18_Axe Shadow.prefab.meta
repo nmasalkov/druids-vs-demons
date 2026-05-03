@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 92852cad7fd785846901ea17f710f78a
+timeCreated: 1594253434
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_18_Axe Shadow.prefab
+  uploadId: 694418

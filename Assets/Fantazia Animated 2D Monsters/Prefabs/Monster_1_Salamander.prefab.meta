@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: e0dc5b9c5a1759b4983be5f02a62649c
+timeCreated: 1594253100
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_1_Salamander.prefab
+  uploadId: 694418

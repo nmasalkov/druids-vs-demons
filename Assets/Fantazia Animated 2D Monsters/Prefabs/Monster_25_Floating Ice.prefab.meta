@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 3e808fcae6115f7489a5af746a3fbff3
+timeCreated: 1594253598
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_25_Floating Ice.prefab
+  uploadId: 694418

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 7ff7d45b1c04ed64d9e8deca2d34d0b2
+timeCreated: 1594253991
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_48_Purple Planet.prefab
+  uploadId: 694418

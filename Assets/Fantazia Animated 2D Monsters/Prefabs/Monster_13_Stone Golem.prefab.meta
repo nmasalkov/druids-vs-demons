@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 727fdd4eaaa917045abd4a9ac2e81719
+timeCreated: 1594253484
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_13_Stone Golem.prefab
+  uploadId: 694418

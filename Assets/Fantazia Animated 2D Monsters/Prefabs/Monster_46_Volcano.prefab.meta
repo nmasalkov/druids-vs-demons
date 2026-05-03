@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 38095b6b270154d4eb62423e9a03e49b
+timeCreated: 1594253987
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_46_Volcano.prefab
+  uploadId: 694418

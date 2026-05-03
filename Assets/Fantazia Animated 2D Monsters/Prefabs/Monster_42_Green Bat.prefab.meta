@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 9d95d0048a70e18428d813b08634ca86
+timeCreated: 1594253886
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_42_Green Bat.prefab
+  uploadId: 694418

@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c897eb2d016403daa021a87c833115a, type: 3}
+  m_Name: _DefaultCreatures
+  m_EditorClassIdentifier: 
+  archer: {fileID: 11400000, guid: 7f42a857e4e2a3140bde869c0f7659c6, type: 2}
+  tank: {fileID: 11400000, guid: 3cb6685293d849949aac28de6c62237e, type: 2}
+  mage: {fileID: 11400000, guid: 7d91ea82ce928ac41ae9d0a743a516aa, type: 2}

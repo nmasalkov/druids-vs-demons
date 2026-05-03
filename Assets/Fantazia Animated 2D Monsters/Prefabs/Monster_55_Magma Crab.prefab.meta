@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: da3c444575063364c9c1bc0200686da4
+timeCreated: 1594254097
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_55_Magma Crab.prefab
+  uploadId: 694418

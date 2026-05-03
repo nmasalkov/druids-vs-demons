@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 5661936bc8a47214f94343e285552162
+timeCreated: 1594254043
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_51_Dark Flower.prefab
+  uploadId: 694418

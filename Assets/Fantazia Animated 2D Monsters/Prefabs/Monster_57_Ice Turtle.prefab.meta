@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 395495ef58a80f64897eebe64b5bd692
+timeCreated: 1594254164
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_57_Ice Turtle.prefab
+  uploadId: 694418

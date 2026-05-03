@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 38b352992cf71374584c5086c809fc06
+timeCreated: 1594253547
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_22_Skeleton King.prefab
+  uploadId: 694418

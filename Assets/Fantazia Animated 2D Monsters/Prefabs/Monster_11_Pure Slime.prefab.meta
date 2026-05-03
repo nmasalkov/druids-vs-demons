@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 165c405f8e726434582cbc2bf03bb773
+timeCreated: 1594253265
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_11_Pure Slime.prefab
+  uploadId: 694418

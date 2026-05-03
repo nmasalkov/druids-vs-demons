@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 327f350b43ef80c4295fdc080e3635d1
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Example/MonsterSpawner_Fantazia.cs
+  uploadId: 694418

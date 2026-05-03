@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: e2b4bedb01b39fc489a557f32e83226d
+timeCreated: 1594254162
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_56_Magma Turtle.prefab
+  uploadId: 694418

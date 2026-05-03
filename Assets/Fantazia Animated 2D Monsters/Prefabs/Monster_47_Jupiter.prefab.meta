@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 9a1ccdd4395defe42beeeedab6495676
+timeCreated: 1594253989
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 174782
+  packageName: Animated 2D Monsters (Fantazia)
+  packageVersion: 2.2
+  assetPath: Assets/Fantazia Animated 2D Monsters/Prefabs/Monster_47_Jupiter.prefab
+  uploadId: 694418

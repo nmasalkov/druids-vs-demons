@@ -4,7 +4,7 @@ public partial class SlotColumn
 {
     [SerializeField] private RectTransform columnContainer;
     [SerializeField] private GameObject cardPrefab;
-    [SerializeField] private CreatureSO winningCreature;
+    public CreatureSO WinningCreature { get; private set; }
 
     private const int CardCount = 30;
     private const float CellHeight = 150f;
@@ -163,7 +163,7 @@ public partial class SlotColumn
         int centerChild = CardCount / 2;
         int targetChild = ((centerChild - totalRecycles % CardCount) + CardCount) % CardCount;
         Card winningCard = columnContainer.GetChild(targetChild).GetComponent<Card>();
-        winningCard.SetSprite(winningCreature.cardSprite);
+        winningCard.SetSprite(WinningCreature.cardSprite);
     }
 
     private void Spin(float speed)

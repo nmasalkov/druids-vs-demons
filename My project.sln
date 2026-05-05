@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoreMountains.Tools", "MoreMountains.Tools.csproj", "{ed0a8503-ffb5-f8d4-7a4b-a70a76f77adb}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "spine-unity-examples", "spine-unity-examples.csproj", "{3155c3ca-b163-8b91-98c1-daf366799c42}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "Assembly-CSharp.csproj", "{e6bdc332-25e1-2831-82c1-25d0441455a3}"
@@ -9,11 +11,31 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "spine-unity-editor", "spine
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "spine-csharp", "spine-csharp.csproj", "{93fa321c-283a-1ea8-87a4-11426e5cbbc2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoreMountains.Tools.Editor", "MoreMountains.Tools.Editor.csproj", "{b2db0da4-e67b-d6f5-86aa-54cb8ca8f11f}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "spine-unity", "spine-unity.csproj", "{77ddec63-a9b2-25ed-e8e8-13d2d2f24151}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lofelt.NiceVibrations", "Lofelt.NiceVibrations.csproj", "{06effda8-e72d-f5af-4ef9-eeaeac537a72}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CFXRRuntime", "CFXRRuntime.csproj", "{d9bbcf15-cd7f-0aa6-5565-769f3bd8c869}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AllIn1SpriteShaderAssembly", "AllIn1SpriteShaderAssembly.csproj", "{18a99773-d80a-9d43-c0bf-95a0fb5d02ce}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CFXRDemo", "CFXRDemo.csproj", "{700f3f3e-2032-fbe9-d6ec-bdf61becc680}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CFXREditor", "CFXREditor.csproj", "{ddb52eef-501d-8b06-c85e-5a2eb60fea54}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lofelt.NiceVibrations.Demo", "Lofelt.NiceVibrations.Demo.csproj", "{c02248b0-ac96-e380-33d5-9487e547be3d}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KinoBloom.Runtime", "KinoBloom.Runtime.csproj", "{0127f983-3db9-7690-8e78-9ec3c16cfdb2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lofelt.NiceVibrations.Editor", "Lofelt.NiceVibrations.Editor.csproj", "{94f1a7a4-9d2d-451a-2ce4-40cdc74f79f1}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "spine-unity-examples-editor", "spine-unity-examples-editor.csproj", "{ba65dcef-d3aa-c9fd-1ca8-f29ac9ea672c}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CFXR.WelcomeScreen", "CFXR.WelcomeScreen.csproj", "{991329ed-5273-1120-e4fb-7d3873a7657d}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToonyColorsPro.Demo.Editor", "ToonyColorsPro.Demo.Editor.csproj", "{974e3f68-5be9-83ba-9167-01b8e7d98d8c}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp-Editor", "Assembly-CSharp-Editor.csproj", "{0910a9e8-8671-82a3-4fe4-3c21ba335f00}"
 EndProject
@@ -22,6 +44,8 @@ Global
 		Debug|Any CPU = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ed0a8503-ffb5-f8d4-7a4b-a70a76f77adb}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ed0a8503-ffb5-f8d4-7a4b-a70a76f77adb}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3155c3ca-b163-8b91-98c1-daf366799c42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3155c3ca-b163-8b91-98c1-daf366799c42}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{e6bdc332-25e1-2831-82c1-25d0441455a3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -30,12 +54,32 @@ Global
 		{87f725f1-296f-376d-20c2-e8af068221a4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93fa321c-283a-1ea8-87a4-11426e5cbbc2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{93fa321c-283a-1ea8-87a4-11426e5cbbc2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{b2db0da4-e67b-d6f5-86aa-54cb8ca8f11f}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{b2db0da4-e67b-d6f5-86aa-54cb8ca8f11f}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{77ddec63-a9b2-25ed-e8e8-13d2d2f24151}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{77ddec63-a9b2-25ed-e8e8-13d2d2f24151}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06effda8-e72d-f5af-4ef9-eeaeac537a72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06effda8-e72d-f5af-4ef9-eeaeac537a72}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{d9bbcf15-cd7f-0aa6-5565-769f3bd8c869}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{d9bbcf15-cd7f-0aa6-5565-769f3bd8c869}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{18a99773-d80a-9d43-c0bf-95a0fb5d02ce}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{18a99773-d80a-9d43-c0bf-95a0fb5d02ce}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{700f3f3e-2032-fbe9-d6ec-bdf61becc680}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{700f3f3e-2032-fbe9-d6ec-bdf61becc680}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ddb52eef-501d-8b06-c85e-5a2eb60fea54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ddb52eef-501d-8b06-c85e-5a2eb60fea54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{c02248b0-ac96-e380-33d5-9487e547be3d}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{c02248b0-ac96-e380-33d5-9487e547be3d}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0127f983-3db9-7690-8e78-9ec3c16cfdb2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0127f983-3db9-7690-8e78-9ec3c16cfdb2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94f1a7a4-9d2d-451a-2ce4-40cdc74f79f1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94f1a7a4-9d2d-451a-2ce4-40cdc74f79f1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ba65dcef-d3aa-c9fd-1ca8-f29ac9ea672c}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{ba65dcef-d3aa-c9fd-1ca8-f29ac9ea672c}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{991329ed-5273-1120-e4fb-7d3873a7657d}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{991329ed-5273-1120-e4fb-7d3873a7657d}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{974e3f68-5be9-83ba-9167-01b8e7d98d8c}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{974e3f68-5be9-83ba-9167-01b8e7d98d8c}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0910a9e8-8671-82a3-4fe4-3c21ba335f00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0910a9e8-8671-82a3-4fe4-3c21ba335f00}.Debug|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection

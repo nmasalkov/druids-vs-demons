@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   actionName: Dragon
   cardSprite: {fileID: 3428391033546482049, guid: 8bbd0405a7f5eb2429f3e6ac541dd2e9, type: 3}
-  creaturePrefab: {fileID: 0}
+  creaturePrefab: {fileID: 7684626903797532360, guid: a66158dfe983dc44bbe99cd21bef922e, type: 3}

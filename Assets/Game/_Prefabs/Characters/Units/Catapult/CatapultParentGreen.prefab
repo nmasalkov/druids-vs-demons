@@ -86,6 +86,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4121985675320168, guid: 1181620bde801d84ca473f4afe26e9fc, type: 3}
   m_PrefabInstance: {fileID: 2885454018799038340}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &2998747509113378462 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 114421626161281306, guid: 1181620bde801d84ca473f4afe26e9fc, type: 3}
+  m_PrefabInstance: {fileID: 2885454018799038340}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d247ba06193faa74d9335f5481b2b56c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &3501316948662407369
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -138,6 +149,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: CatapultParentGreen
       objectReference: {fileID: 0}
+    - target: {fileID: 6873974151599759703, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: idle
+      value: Idle
+      objectReference: {fileID: 0}
+    - target: {fileID: 6873974151599759703, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: skeletonAnimation
+      value: 
+      objectReference: {fileID: 2998747509113378462}
     - target: {fileID: 7029924513901446375, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.6529851

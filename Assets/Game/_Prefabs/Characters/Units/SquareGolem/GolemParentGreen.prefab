@@ -86,6 +86,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4031435662524752, guid: 3dac2e426de035d4aaa0b68a6e5498e8, type: 3}
   m_PrefabInstance: {fileID: 585150963876810875}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &687844384250451759 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 114113231875999572, guid: 3dac2e426de035d4aaa0b68a6e5498e8, type: 3}
+  m_PrefabInstance: {fileID: 585150963876810875}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d247ba06193faa74d9335f5481b2b56c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &7849539099627135744
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -142,6 +153,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: GolemParentGreen
       objectReference: {fileID: 0}
+    - target: {fileID: 6873974151599759703, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: skeletonAnimation
+      value: 
+      objectReference: {fileID: 687844384250451759}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 4523031359181361346, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}

@@ -53,9 +53,17 @@ public partial class SlotColumn : MonoBehaviour
     public void StartSpin()
     {
         if (_state != State.Idle) return;
+        PickRandomWinningCreature();
         _state = State.Spinning;
         _currentSpeed = spinSpeed;
         _distanceSinceLastRecycle = 0f;
+    }
+
+    private void PickRandomWinningCreature()
+    {
+        var dc = G.DefaultCreatures;
+        CreatureSO[] options = { dc.tank, dc.mage, dc.archer };
+        WinningCreature = options[UnityEngine.Random.Range(0, options.Length)];
     }
 
     public void StopSpin()

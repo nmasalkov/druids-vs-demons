@@ -23,8 +23,9 @@ public class SlotMachine : MonoBehaviour
     public event Action OnSlotMachineStop;
     public event Action OnPostRollsEnter;
     public event Action OnPostRollsExit;
+    public event Action<List<CreatureSO>> OnFinishRollCompleted;
 
-    void Start()
+    void Awake()
     {
         for (int i = 0; i < columns.Count; i++)
         {
@@ -159,7 +160,16 @@ public class SlotMachine : MonoBehaviour
 
     private void OnFinishRollClicked()
     {
-        gameObject.SetActive(false);
+        FinishRoll();
+    }
+
+    public void FinishRoll()
+    {
+        var rolledCreatures = new List<CreatureSO>();
+        foreach (var col in columns)
+            rolledCreatures.Add(col.WinningCreature);
+
+        OnFinishRollCompleted?.Invoke(rolledCreatures);
     }
 
     public void Reset()

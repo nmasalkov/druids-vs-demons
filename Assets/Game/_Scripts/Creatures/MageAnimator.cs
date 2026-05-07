@@ -1,3 +1,4 @@
+using Game._Scripts.Creatures;
 using UnityEngine;
 
 namespace _Scripts.Creatures
@@ -8,17 +9,45 @@ namespace _Scripts.Creatures
         [SerializeField] private float freezeAfter = 0.3f;
         [SerializeField] private float freezeDuration = 1.5f;
 
+        [Header("Beam")]
+        [SerializeField] private BeamAnimator beamAnimator;
+
         public override void PlayAttack()
         {
             base.PlayAttack();
+            StartFreezeSequence(null);
+        }
 
+        public override void AttackCreature(Creature target)
+        {
+            // Call base PlayAttack directly to avoid triggering PlayAttack override
+            base.PlayAttack();
+            StartFreezeSequence(target);
+        }
+
+        private void StartFreezeSequence(Creature target)
+        {
             Utils.DoAfterDelay.Execute(() =>
             {
                 skeletonAnimation.timeScale = 0f;
 
+                if (target != null && beamAnimator != null)
+                {
+                    beamAnimator.PlayMissileAnimation(target.transform);
+                }
+                else
+                {
+                    Debug.LogWarning($"[MageAnimator] Cannot fire missile. Target: {target}, BeamAnimator: {beamAnimator}", this);
+                }
+
                 Utils.DoAfterDelay.Execute(() =>
                 {
                     skeletonAnimation.timeScale = 1f;
+
+                    if (beamAnimator != null)
+                    {
+                        beamAnimator.StopMissileAnimation();
+                    }
                 }, freezeDuration);
             }, freezeAfter);
         }

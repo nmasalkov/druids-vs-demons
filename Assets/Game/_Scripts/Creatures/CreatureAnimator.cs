@@ -1,4 +1,5 @@
-﻿using Spine.Unity;
+﻿using Game._Scripts.Creatures;
+using Spine.Unity;
 using UnityEngine;
 
 namespace _Scripts.Creatures
@@ -24,6 +25,8 @@ namespace _Scripts.Creatures
         public Spine.AnimationState spineAnimationState;
 
         public string CurrentAnimation;
+
+        protected bool suppressAutoIdle;
 
         // private void Awake()
         // {
@@ -61,7 +64,7 @@ namespace _Scripts.Creatures
 
         private void HandleAnimationComplete(Spine.TrackEntry trackEntry)
         {
-            if (!trackEntry.Loop)
+            if (!trackEntry.Loop && !suppressAutoIdle)
                 PlayIdle();
         }
 
@@ -87,6 +90,11 @@ namespace _Scripts.Creatures
         {
             CurrentAnimation = attack;
             SetAnimation(attack, false);
+        }
+
+        public virtual void AttackCreature(Creature target)
+        {
+            PlayAttack();
         }
 
         public virtual float GetAttackDuration()

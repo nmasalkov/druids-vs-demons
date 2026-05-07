@@ -145,6 +145,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5123550418709476886, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1.43
+      objectReference: {fileID: 0}
+    - target: {fileID: 5123550418709476886, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.37
+      objectReference: {fileID: 0}
     - target: {fileID: 5356506428025112429, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: m_Name
       value: CatapultParentGreen
@@ -173,17 +181,71 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: -0.0223
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 6873974151599759703, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
     m_RemovedGameObjects:
     - {fileID: 4523031359181361346, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 7735959585792193120, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       insertIndex: 0
       addedObject: {fileID: 2883875826884883692}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5356506428025112429, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3817625367810960161}
+    - targetCorrespondingSourceObject: {fileID: 5356506428025112429, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6997451703810949427}
   m_SourcePrefab: {fileID: 100100000, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
 --- !u!4 &6614815297678877353 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7735959585792193120, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
   m_PrefabInstance: {fileID: 3501316948662407369}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &8614731615964800735 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5123550418709476886, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+  m_PrefabInstance: {fileID: 3501316948662407369}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8845367642594957220 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5356506428025112429, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+  m_PrefabInstance: {fileID: 3501316948662407369}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3817625367810960161
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8845367642594957220}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e72122e841f43ddb9d9640be6712ca4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  skeletonAnimation: {fileID: 2998747509113378462}
+  idle: Idle
+  dead: Dead
+  walk: Walk
+  attack: Attack
+  CurrentAnimation: 
+  missileAnimator: {fileID: 6997451703810949427}
+  shotCount: 3
+  totalDuration: 2
+  fireAtPercent: 63.1
+--- !u!114 &6997451703810949427
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8845367642594957220}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63b4872c04b44d239ce974656b023318, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  projectilePrefab: {fileID: -4368918054190501382, guid: 2bdd37c1208f9ba4486e7b97a5cdfadf, type: 3}
+  spawnPoint: {fileID: 8614731615964800735}
+  projectileSpeed: 15

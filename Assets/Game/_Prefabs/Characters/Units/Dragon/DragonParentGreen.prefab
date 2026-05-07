@@ -52,6 +52,26 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 5123550418709476886, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1.38
+      objectReference: {fileID: 0}
+    - target: {fileID: 5123550418709476886, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.08
+      objectReference: {fileID: 0}
+    - target: {fileID: 5123550418709476886, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5123550418709476886, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5123550418709476886, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
     - target: {fileID: 5356506428025112429, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: m_Name
       value: DragonParentGreen
@@ -64,7 +84,26 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5356506428025112429, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2521326349233012728}
+    - targetCorrespondingSourceObject: {fileID: 5356506428025112429, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6732630189540977280}
   m_SourcePrefab: {fileID: 100100000, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+--- !u!114 &2280744047766688153 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4563749389036933180, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+  m_PrefabInstance: {fileID: 2374352767525028261}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d247ba06193faa74d9335f5481b2b56c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &7487767329442428851 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5123550418709476886, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+  m_PrefabInstance: {fileID: 2374352767525028261}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &7684626903797532360 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5356506428025112429, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
@@ -82,7 +121,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 660a4d6434df4521915be43ceff886df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  skeletonAnimation: {fileID: 0}
+  skeletonAnimation: {fileID: 2280744047766688153}
   idle: Idle
   dead: Dead
   walk: Walk
@@ -90,3 +129,20 @@ MonoBehaviour:
   CurrentAnimation: Idle
   freezeAfter: 0.6
   freezeDuration: 1
+  beamAnimator: {fileID: 6732630189540977280}
+--- !u!114 &6732630189540977280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7684626903797532360}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ebefdcbb59c460fbad72e89ace085fb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  projectilePrefab: {fileID: -4368918054190501382, guid: 234610558b755374bafff84783fbcf74, type: 3}
+  spawnPoint: {fileID: 7487767329442428851}
+  projectileSpeed: 50
+  fireRate: 0.13

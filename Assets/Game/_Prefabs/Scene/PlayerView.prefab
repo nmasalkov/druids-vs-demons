@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8049268695935814466}
+  - component: {fileID: 1235650258738309492}
   m_Layer: 0
   m_Name: SpawnPlace1Archer
   m_TagString: Untagged
@@ -28,9 +29,70 @@ Transform:
   m_LocalPosition: {x: -0.82, y: 4.82, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 4570460141701872408}
   m_Father: {fileID: 1098030663341417978}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1235650258738309492
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1386204070754649781}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f81f3058a8e443cdbb568b7ec2808849, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  <Creature>k__BackingField: {fileID: 0}
+  meleeAttackerPosition: {fileID: 4570460141701872408}
+--- !u!1 &2173501428184446755
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4570460141701872408}
+  - component: {fileID: 5107561654963553875}
+  m_Layer: 0
+  m_Name: AttackerPosition
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4570460141701872408
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2173501428184446755}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 2.67, y: -0.04, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8049268695935814466}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5107561654963553875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2173501428184446755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f81f3058a8e443cdbb568b7ec2808849, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  <Creature>k__BackingField: {fileID: 0}
+  meleeAttackerPosition: {fileID: 0}
 --- !u!1 &2264934050648336754
 GameObject:
   m_ObjectHideFlags: 0
@@ -40,6 +102,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1338580900143048247}
+  - component: {fileID: 8356073702731102687}
   m_Layer: 0
   m_Name: SpawnPlace2Tank
   m_TagString: Untagged
@@ -59,9 +122,24 @@ Transform:
   m_LocalPosition: {x: -0.85, y: 0.96, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 2276858349781475190}
   m_Father: {fileID: 1098030663341417978}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8356073702731102687
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2264934050648336754}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f81f3058a8e443cdbb568b7ec2808849, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  <Creature>k__BackingField: {fileID: 0}
+  meleeAttackerPosition: {fileID: 2276858349781475190}
 --- !u!1 &2792154029023979138
 GameObject:
   m_ObjectHideFlags: 0
@@ -94,6 +172,52 @@ Transform:
   - {fileID: 2566372664305089003}
   m_Father: {fileID: 1521751991612928398}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3109831971703565181
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3421605466228365698}
+  - component: {fileID: 7057073531263573375}
+  m_Layer: 0
+  m_Name: AttackerPosition
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3421605466228365698
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3109831971703565181}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 2.22, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 653123675098633230}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7057073531263573375
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3109831971703565181}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f81f3058a8e443cdbb568b7ec2808849, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  <Creature>k__BackingField: {fileID: 0}
+  meleeAttackerPosition: {fileID: 0}
 --- !u!1 &3197047178022927814
 GameObject:
   m_ObjectHideFlags: 0
@@ -140,12 +264,55 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3027475a1506472a9b3ede98ae8b9394, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  magePosition: {fileID: 653123675098633230}
-  archerPosition: {fileID: 8049268695935814466}
-  tankPosition: {fileID: 1338580900143048247}
-  <Mage>k__BackingField: {fileID: 0}
-  <Archer>k__BackingField: {fileID: 0}
-  <Tank>k__BackingField: {fileID: 0}
+  mageSlot: {fileID: 6979986077732927449}
+  archerSlot: {fileID: 1235650258738309492}
+  tankSlot: {fileID: 8356073702731102687}
+--- !u!1 &7768078481712193996
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2276858349781475190}
+  - component: {fileID: 1387816357179392506}
+  m_Layer: 0
+  m_Name: AttackerPosition
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2276858349781475190
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7768078481712193996}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 2.18, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1338580900143048247}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1387816357179392506
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7768078481712193996}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f81f3058a8e443cdbb568b7ec2808849, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  <Creature>k__BackingField: {fileID: 0}
+  meleeAttackerPosition: {fileID: 2276858349781475190}
 --- !u!1 &7916416707366716925
 GameObject:
   m_ObjectHideFlags: 0
@@ -189,6 +356,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 653123675098633230}
+  - component: {fileID: 6979986077732927449}
   m_Layer: 0
   m_Name: SpawnPlace3Mage
   m_TagString: Untagged
@@ -208,9 +376,24 @@ Transform:
   m_LocalPosition: {x: -2.03, y: -2.49, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 3421605466228365698}
   m_Father: {fileID: 1098030663341417978}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6979986077732927449
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8858192605843584552}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f81f3058a8e443cdbb568b7ec2808849, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  <Creature>k__BackingField: {fileID: 0}
+  meleeAttackerPosition: {fileID: 3421605466228365698}
 --- !u!1001 &8645012217969048429
 PrefabInstance:
   m_ObjectHideFlags: 0

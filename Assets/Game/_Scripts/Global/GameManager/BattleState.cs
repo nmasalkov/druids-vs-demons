@@ -5,7 +5,6 @@ public class BattleState : GameState
 {
     public override void OnStateStart()
     {
-        // Delay one frame so all creatures' Start() has run
         Utils.DoAfterDelay.Execute(BeginBattle, 0f);
     }
 
@@ -14,40 +13,29 @@ public class BattleState : GameState
         var playerCreatures = G.PlayerCreaturesManager.GetAllCreatures();
         var enemyCreatures = G.EnemyCreaturesManager.GetAllCreatures();
 
-        var allCreatures = new List<Creature>();
-        allCreatures.AddRange(playerCreatures);
-        allCreatures.AddRange(enemyCreatures);
-
-        if (allCreatures.Count == 0)
+        if (playerCreatures.Count == 0 && enemyCreatures.Count == 0)
         {
             CompleteState();
             return;
         }
 
-        float maxDuration = 0f;
+        var resolver = new AttacksResolver();
+        resolver.Resolve(playerCreatures, enemyCreatures);
 
-        foreach (var creature in playerCreatures)
+        float maxDuration = resolver.ExecuteAttacks(null);
+
+        if (maxDuration <= 0f)
         {
-            Creature target = GetRandomTarget(enemyCreatures);
-            creature.Animator.AttackCreature(target);
-            float duration = creature.Animator.GetAttackDuration();
-            if (duration > maxDuration) maxDuration = duration;
+            CompleteState();
+            return;
         }
 
-        foreach (var creature in enemyCreatures)
+        float cleanUpDelay = maxDuration + 1f;
+        Utils.DoAfterDelay.Execute(() =>
         {
-            Creature target = GetRandomTarget(playerCreatures);
-            creature.Animator.AttackCreature(target);
-            float duration = creature.Animator.GetAttackDuration();
-            if (duration > maxDuration) maxDuration = duration;
-        }
-
-        Utils.DoAfterDelay.Execute(CompleteState, maxDuration);
-    }
-
-    private Creature GetRandomTarget(List<Creature> candidates)
-    {
-        if (candidates == null || candidates.Count == 0) return null;
-        return candidates[UnityEngine.Random.Range(0, candidates.Count)];
+            G.PlayerCreaturesManager.CleanUpDead();
+            G.EnemyCreaturesManager.CleanUpDead();
+            CompleteState();
+        }, cleanUpDelay);
     }
 }

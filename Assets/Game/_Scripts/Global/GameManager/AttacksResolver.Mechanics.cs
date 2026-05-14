@@ -1,0 +1,210 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using _Scripts.Creatures;
+using Game._Scripts.Creatures;
+using UnityEngine;
+
+public partial class AttacksResolver
+{
+    private static readonly Dictionary<Type, int> PriorityOrder = new()
+    {
+        { typeof(MageSO), 0 },
+        { typeof(ArcherSO), 1 },
+        { typeof(TankSO), 2 }
+    };
+
+    private Dictionary<Creature, float> BuildSimulatedHP(List<Creature> creatures)
+    {
+        var hp = new Dictionary<Creature, float>();
+        foreach (var c in creatures)
+            hp[c] = c.Health.CurrentHealth;
+        return hp;
+    }
+
+    private int GetPriority(Creature creature)
+    {
+        var dataType = creature.Data.GetType();
+        return PriorityOrder.TryGetValue(dataType, out int p) ? p : 99;
+    }
+
+    private List<Creature> SortByPriority(List<Creature> creatures)
+    {
+        return creatures.OrderBy(GetPriority).ToList();
+    }
+
+    private Creature GetHighestPriorityAlive(List<Creature> enemies, Dictionary<Creature, float> simHP)
+    {
+        return enemies
+            .Where(e => simHP.TryGetValue(e, out float hp) && hp > 0)
+            .OrderBy(GetPriority)
+            .FirstOrDefault();
+    }
+
+    private List<AttackAssignment> ResolveTeam(
+        List<Creature> attackers,
+        List<Creature> enemies,
+        Dictionary<Creature, float> enemySimHP)
+    {
+        var assignments = new List<AttackAssignment>();
+        var sorted = SortByPriority(attackers);
+
+        foreach (var attacker in sorted)
+        {
+            float dmgPerHit = attacker.Data.damage;
+            int hitCount = 1;
+
+            if (attacker.Data is ArcherSO archerData)
+                hitCount = archerData.numberOfAttacks;
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                var target = GetHighestPriorityAlive(enemies, enemySimHP);
+                if (target == null) break;
+
+                float hpBefore = enemySimHP[target];
+                float hpAfter = Mathf.Max(0f, hpBefore - dmgPerHit);
+                bool fatal = hpAfter <= 0f;
+
+                enemySimHP[target] = hpAfter;
+
+                assignments.Add(new AttackAssignment
+                {
+                    Attacker = attacker,
+                    Target = target,
+                    Damage = dmgPerHit,
+                    ResultHP = hpAfter,
+                    FatalBlow = fatal
+                });
+            }
+        }
+
+        return assignments;
+    }
+
+    private float ExecuteAnimations(List<AttackAssignment> allAttacks)
+    {
+        // Group assignments by attacker to handle multi-hit archers
+        var byAttacker = new Dictionary<Creature, List<AttackAssignment>>();
+        foreach (var a in allAttacks)
+        {
+            if (!byAttacker.ContainsKey(a.Attacker))
+                byAttacker[a.Attacker] = new List<AttackAssignment>();
+            byAttacker[a.Attacker].Add(a);
+        }
+
+        // Build a flat list with one entry per attacker (first target for animation)
+        var uniqueAttacks = new List<AttackAssignment>();
+        foreach (var kvp in byAttacker)
+        {
+            uniqueAttacks.Add(kvp.Value[0]);
+        }
+
+        // Detect mutual tank fight
+        TankAnimator mutualTankA = null;
+        TankAnimator mutualTankB = null;
+        Creature mutualTargetA = null;
+
+        foreach (var a in uniqueAttacks)
+        {
+            if (a.Attacker.Animator is not TankAnimator) continue;
+            foreach (var b in uniqueAttacks)
+            {
+                if (b.Attacker.Animator is not TankAnimator) continue;
+                if (a.Attacker == b.Target && b.Attacker == a.Target && a.Attacker != b.Attacker)
+                {
+                    mutualTankA = (TankAnimator)a.Attacker.Animator;
+                    mutualTankB = (TankAnimator)b.Attacker.Animator;
+                    mutualTargetA = a.Target;
+                    break;
+                }
+            }
+            if (mutualTankA != null) break;
+        }
+
+        var handledTanks = new HashSet<Creature>();
+        float maxDuration = 0f;
+
+        // Handle mutual tank battle
+        if (mutualTankA != null && mutualTankB != null)
+        {
+            var creatureA = mutualTankA.GetComponent<Creature>();
+            var creatureB = mutualTankB.GetComponent<Creature>();
+
+            var hitsA = BuildHitInfos(byAttacker[creatureA]);
+            var hitsB = BuildHitInfos(byAttacker[creatureB]);
+
+            mutualTankA.AttackWithHits(hitsA);
+
+            float arriveTime = mutualTankA.GetRangedDelay() + mutualTankA.GetRunDuration();
+            Utils.DoAfterDelay.Execute(() =>
+            {
+                mutualTankB.SetPendingOnHit(hitsB.Count > 0 ? hitsB[0].OnHit : null);
+                mutualTankB.PlayAttackInPlace(null);
+            }, arriveTime);
+
+            float dur = mutualTankA.GetAttackDuration();
+            if (dur > maxDuration) maxDuration = dur;
+
+            handledTanks.Add(creatureA);
+            handledTanks.Add(creatureB);
+        }
+
+        // Handle one-way tank→tank
+        foreach (var a in uniqueAttacks)
+        {
+            if (a.Attacker.Animator is not TankAnimator thisTank) continue;
+            if (handledTanks.Contains(a.Attacker)) continue;
+            if (a.Target.Animator is not TankAnimator opponentTank) continue;
+
+            var attacker = a.Attacker;
+            var hitsThis = BuildHitInfos(byAttacker[attacker]);
+
+            thisTank.WaitThenAttack(a.Target, hitsThis.Count > 0 ? hitsThis[0].OnHit : null);
+
+            opponentTank.OnLeapBackStarted += () =>
+            {
+                thisTank.StartPendingAttack();
+            };
+
+            float opponentDur = opponentTank.GetAttackDuration();
+            float waitingDur = thisTank.GetRunDuration() + thisTank.GetAttackDuration()
+                               - thisTank.GetRangedDelay() + thisTank.GetRunDuration();
+            float dur = opponentDur + waitingDur;
+            if (dur > maxDuration) maxDuration = dur;
+
+            handledTanks.Add(attacker);
+        }
+
+        // Handle all other attacks
+        foreach (var a in uniqueAttacks)
+        {
+            if (handledTanks.Contains(a.Attacker)) continue;
+
+            var hits = BuildHitInfos(byAttacker[a.Attacker]);
+            a.Attacker.Animator.AttackWithHits(hits);
+
+            float dur = a.Attacker.Animator.GetAttackDuration();
+            if (dur > maxDuration) maxDuration = dur;
+        }
+
+        return maxDuration;
+    }
+
+    private List<HitInfo> BuildHitInfos(List<AttackAssignment> assignments)
+    {
+        var hits = new List<HitInfo>();
+        foreach (var a in assignments)
+        {
+            var target = a.Target;
+            float damage = a.Damage;
+            hits.Add(new HitInfo
+            {
+                Target = target,
+                OnHit = () => target.Health.TakeDamage(damage)
+            });
+        }
+        return hits;
+    }
+}
+

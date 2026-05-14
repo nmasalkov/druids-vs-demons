@@ -15,3 +15,6 @@ MonoBehaviour:
   actionName: Bubka
   cardSprite: {fileID: -8819294810037329985, guid: 83ac536364f903146abb0a5c96457cf5, type: 3}
   creaturePrefab: {fileID: 8845367642594957220, guid: 51c8f9e509545fe4eaac92aa7e371581, type: 3}
+  damage: 3
+  health: 28
+  numberOfAttacks: 2

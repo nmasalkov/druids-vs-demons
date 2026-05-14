@@ -1,4 +1,5 @@
-﻿using Game._Scripts.Creatures;
+﻿using System.Collections.Generic;
+using Game._Scripts.Creatures;
 using UnityEngine;
 
 namespace _Scripts.Creatures
@@ -15,21 +16,33 @@ namespace _Scripts.Creatures
         [SerializeField] private float fireAtPercent = 50f;
 
         private int shotsRemaining;
-        private Transform currentTarget;
         private float currentTimeScale;
         private float scaledFireDelay;
+        private List<HitInfo> pendingHits;
+        private int currentHitIndex;
 
         public override void AttackCreature(Creature target)
         {
+            AttackWithHits(new List<HitInfo>
+            {
+                new HitInfo { Target = target, OnHit = null }
+            });
+        }
+
+        public override void AttackWithHits(List<HitInfo> hits)
+        {
+            pendingHits = hits;
+            currentHitIndex = 0;
+
             float singleAnimDuration = base.GetAttackDuration();
-            float naturalTotal = singleAnimDuration * shotCount;
+            int actualShotCount = hits.Count;
+            float naturalTotal = singleAnimDuration * actualShotCount;
 
             currentTimeScale = naturalTotal > totalDuration ? naturalTotal / totalDuration : 1f;
             float scaledAnimDuration = singleAnimDuration / currentTimeScale;
             scaledFireDelay = scaledAnimDuration * (fireAtPercent / 100f);
 
-            currentTarget = target != null ? target.transform : null;
-            shotsRemaining = shotCount;
+            shotsRemaining = actualShotCount;
 
             suppressAutoIdle = true;
             PlayNextShot();
@@ -48,21 +61,23 @@ namespace _Scripts.Creatures
             shotsRemaining--;
             skeletonAnimation.timeScale = currentTimeScale;
 
-            // Set the animation and get the track entry for event subscription
             base.PlayAttack();
             var entry = spineAnimationState.GetCurrent(0);
 
-            // Schedule projectile fire at the configured percentage
-            if (currentTarget != null)
+            var hit = pendingHits[currentHitIndex];
+            currentHitIndex++;
+
+            if (hit.Target != null)
             {
+                var targetTransform = hit.Target.transform;
+                var onHit = hit.OnHit;
                 Utils.DoAfterDelay.Execute(() =>
                 {
-                    if (currentTarget != null)
-                        missileAnimator.FireOnce(currentTarget);
+                    if (targetTransform != null)
+                        missileAnimator.FireOnce(targetTransform, onHit);
                 }, scaledFireDelay);
             }
 
-            // Listen for THIS specific animation complete to chain next shot
             if (entry != null)
             {
                 entry.Complete += OnShotAnimComplete;

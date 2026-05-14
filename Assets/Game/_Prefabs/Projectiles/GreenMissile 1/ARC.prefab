@@ -44,9 +44,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 041a0a5788e54579a81831ba1652e1f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  projectileParticle: {fileID: 1085063080293798, guid: afbb4cae0ab32cd40aa3f1cd08a796cb, type: 3}
-  muzzleParticle: {fileID: 1891175318246216136, guid: 0c5859ffc1610884c856a7b670712839, type: 3}
-  impactParticle: {fileID: 1774190906356354, guid: b4324d93cce3d3a4084ca2de6fd5f2de, type: 3}
+  projectileParticle: {fileID: 1891175318246216136, guid: 0c5859ffc1610884c856a7b670712839, type: 3}
+  muzzleParticle: {fileID: 156822, guid: 38009958286e64b40ac72f4423ca3315, type: 3}
+  impactParticle: {fileID: 3310440506069473701, guid: 5108f99c0703c3944a63ea56d6b32738, type: 3}
   trailParticles: []
   trajectoryType: 1
-  arcHeight: 20
+  arcHeight: 10

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Game._Scripts.Creatures;
 using UnityEngine;
 
@@ -12,6 +14,8 @@ namespace _Scripts.Creatures
         [Header("Beam")]
         [SerializeField] private BeamAnimator beamAnimator;
 
+        private Action pendingOnHit;
+
         public override void PlayAttack()
         {
             base.PlayAttack();
@@ -25,6 +29,13 @@ namespace _Scripts.Creatures
             StartFreezeSequence(target);
         }
 
+        public override void AttackWithHits(List<HitInfo> hits)
+        {
+            if (hits.Count == 0) return;
+            pendingOnHit = hits[0].OnHit;
+            AttackCreature(hits[0].Target);
+        }
+
         private void StartFreezeSequence(Creature target)
         {
             Utils.DoAfterDelay.Execute(() =>
@@ -33,7 +44,11 @@ namespace _Scripts.Creatures
 
                 if (target != null && beamAnimator != null)
                 {
-                    beamAnimator.PlayMissileAnimation(target.transform);
+                    beamAnimator.PlayMissileAnimation(target.transform, () =>
+                    {
+                        pendingOnHit?.Invoke();
+                        pendingOnHit = null;
+                    });
                 }
                 else
                 {
@@ -58,4 +73,3 @@ namespace _Scripts.Creatures
         }
     }
 }
-

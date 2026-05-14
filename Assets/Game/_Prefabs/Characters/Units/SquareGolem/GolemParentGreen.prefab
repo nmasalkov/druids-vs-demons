@@ -145,6 +145,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1643649320577833555, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: animator
+      value: 
+      objectReference: {fileID: 5171636650904399002}
     - target: {fileID: 4895468980909370703, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -153,21 +157,57 @@ PrefabInstance:
       propertyPath: m_Name
       value: GolemParentGreen
       objectReference: {fileID: 0}
+    - target: {fileID: 6294040680714451051, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: <Data>k__BackingField
+      value: 
+      objectReference: {fileID: 11400000, guid: 3cb6685293d849949aac28de6c62237e, type: 2}
     - target: {fileID: 6873974151599759703, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: skeletonAnimation
       value: 
       objectReference: {fileID: 687844384250451759}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 6873974151599759703, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
     m_RemovedGameObjects:
     - {fileID: 4523031359181361346, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 7735959585792193120, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       insertIndex: -1
       addedObject: {fileID: 581119530429010219}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5356506428025112429, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5171636650904399002}
   m_SourcePrefab: {fileID: 100100000, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
 --- !u!4 &555223106738409824 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7735959585792193120, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
   m_PrefabInstance: {fileID: 7849539099627135744}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2790270307541722221 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5356506428025112429, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+  m_PrefabInstance: {fileID: 7849539099627135744}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5171636650904399002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2790270307541722221}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50d8c3ac36794ac1a2c384c1a287a4e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  creatureVisual: {fileID: 555223106738409824}
+  skeletonAnimation: {fileID: 687844384250451759}
+  idle: Idle
+  dead: Dead
+  walk: Walk
+  attack: Attack
+  CurrentAnimation: 
+  rangedDelay: 2.5
+  runDuration: 0.5
+  returnDuration: 0.3
+  returnJumpPower: 1.5

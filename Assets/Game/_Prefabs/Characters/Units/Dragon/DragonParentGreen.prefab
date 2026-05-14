@@ -48,9 +48,29 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1643649320577833555, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: animator
+      value: 
+      objectReference: {fileID: 2521326349233012728}
+    - target: {fileID: 4132787669293337708, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4132787669293337708, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4132787669293337708, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4518733188208812990, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: m_Mesh
       value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4525666027520411262, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5123550418709476886, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: m_LocalPosition.x
@@ -76,6 +96,22 @@ PrefabInstance:
       propertyPath: m_Name
       value: DragonParentGreen
       objectReference: {fileID: 0}
+    - target: {fileID: 5590096604262324029, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5590096604262324029, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5966096744159500695, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 2.94
+      objectReference: {fileID: 0}
+    - target: {fileID: 6294040680714451051, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: <Data>k__BackingField
+      value: 
+      objectReference: {fileID: 11400000, guid: 7d91ea82ce928ac41ae9d0a743a516aa, type: 2}
     m_RemovedComponents:
     - {fileID: 6873974151599759703, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
     m_RemovedGameObjects: []
@@ -99,6 +135,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d247ba06193faa74d9335f5481b2b56c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!4 &5451821765445579717 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7735959585792193120, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+  m_PrefabInstance: {fileID: 2374352767525028261}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &7487767329442428851 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5123550418709476886, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
@@ -121,6 +162,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 660a4d6434df4521915be43ceff886df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  creatureVisual: {fileID: 5451821765445579717}
   skeletonAnimation: {fileID: 2280744047766688153}
   idle: Idle
   dead: Dead

@@ -10,10 +10,12 @@ namespace _Scripts.Creatures
         private Transform target;
         private bool isFiring;
         private float nextFireTime;
+        private System.Action onBarrageComplete;
 
-        public void PlayMissileAnimation(Transform target)
+        public void PlayMissileAnimation(Transform target, System.Action onBarrageComplete = null)
         {
             this.target = target;
+            this.onBarrageComplete = onBarrageComplete;
             isFiring = true;
             nextFireTime = 0f;
         }
@@ -22,6 +24,8 @@ namespace _Scripts.Creatures
         {
             isFiring = false;
             this.target = null;
+            onBarrageComplete?.Invoke();
+            onBarrageComplete = null;
         }
 
         private void Update()

@@ -1,4 +1,6 @@
-﻿using Game._Scripts.Creatures;
+﻿using System;
+using System.Collections.Generic;
+using Game._Scripts.Creatures;
 using Spine.Unity;
 using UnityEngine;
 
@@ -6,6 +8,9 @@ namespace _Scripts.Creatures
 {
     public class CreatureAnimator : MonoBehaviour
     {
+        [Header("Visual")]
+        [SerializeField] protected Transform creatureVisual;
+
         [Header("Spine")]
         [SerializeField] protected SkeletonAnimation skeletonAnimation;
 
@@ -27,25 +32,16 @@ namespace _Scripts.Creatures
         public string CurrentAnimation;
 
         protected bool suppressAutoIdle;
+        protected bool isDead;
 
-        // private void Awake()
-        // {
-        //     if (skeletonAnimation == null)
-        //     {
-        //         skeletonAnimation = GetComponentInChildren<SkeletonAnimation>();
-        //     }
-        //
-        //     if (skeletonAnimation == null)
-        //     {
-        //         Debug.LogError($"[CreatureAnimator] SkeletonAnimation is not assigned and was not found on '{gameObject.name}' or its children!", this);
-        //         return;
-        //     }
-        //
-        //     spineAnimationState = skeletonAnimation.AnimationState;
-        // }
+        public bool IsDead => isDead;
+        public Transform CreatureVisual => creatureVisual;
 
         private void Start()
         {
+            if (creatureVisual == null)
+                creatureVisual = transform;
+
             if (skeletonAnimation == null)
             {
                 skeletonAnimation = GetComponentInChildren<SkeletonAnimation>();
@@ -64,18 +60,22 @@ namespace _Scripts.Creatures
 
         private void HandleAnimationComplete(Spine.TrackEntry trackEntry)
         {
+            if (isDead) return;
             if (!trackEntry.Loop && !suppressAutoIdle)
                 PlayIdle();
         }
 
         public void PlayIdle()
         {
+            if (isDead) return;
             CurrentAnimation = idle;
             SetAnimation(idle, true);
         }
 
         public void PlayDead()
         {
+            isDead = true;
+            suppressAutoIdle = true;
             CurrentAnimation = dead;
             SetAnimation(dead, false);
         }
@@ -95,6 +95,15 @@ namespace _Scripts.Creatures
         public virtual void AttackCreature(Creature target)
         {
             PlayAttack();
+        }
+
+        /// <summary>
+        /// Attack with per-hit damage callbacks. Each HitInfo contains a target and an onHit action.
+        /// </summary>
+        public virtual void AttackWithHits(List<HitInfo> hits)
+        {
+            if (hits.Count > 0)
+                AttackCreature(hits[0].Target);
         }
 
         public virtual float GetAttackDuration()

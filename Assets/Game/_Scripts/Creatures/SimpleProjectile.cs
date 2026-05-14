@@ -21,11 +21,13 @@ namespace _Scripts.Creatures
 
         private GameObject spawnedProjectileParticle;
         private bool arrived;
+        private System.Action onHit;
 
-        public void Launch(Transform target, float speed)
+        public void Launch(Transform target, float speed, System.Action onHit = null)
         {
             this.target = target;
             this.speed = speed;
+            this.onHit = onHit;
 
             if (projectileParticle != null)
             {
@@ -72,6 +74,7 @@ namespace _Scripts.Creatures
         private void OnArrived()
         {
             arrived = true;
+            onHit?.Invoke();
 
             if (impactParticle != null)
             {

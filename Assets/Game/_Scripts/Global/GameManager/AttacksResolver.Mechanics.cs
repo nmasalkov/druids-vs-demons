@@ -51,11 +51,9 @@ public partial class AttacksResolver
 
         foreach (var attacker in sorted)
         {
-            float dmgPerHit = attacker.Data.damage;
-            int hitCount = 1;
-
-            if (attacker.Data is ArcherSO archerData)
-                hitCount = archerData.numberOfAttacks;
+            var stats = attacker.Data.Stats(attacker.Experience.Level);
+            float dmgPerHit = stats.damage;
+            int hitCount = stats.numberOfAttacks;
 
             for (int i = 0; i < hitCount; i++)
             {

@@ -8,6 +8,7 @@ namespace Game._Scripts.Creatures
 {
     [RequireComponent(typeof(CreatureAnimator))]
     [RequireComponent(typeof(Health))]
+    [RequireComponent(typeof(Experience))]
     public class Creature : MonoBehaviour
     {
         [field: SerializeField] public CreatureSO Data { get; private set; }
@@ -17,17 +18,20 @@ namespace Game._Scripts.Creatures
 
         public CreatureAnimator Animator { get; private set; }
         public Health Health { get; private set; }
+        public Experience Experience { get; private set; }
         public CreatureSlot Slot { get; set; }
 
         void Awake()
         {
             Animator = GetComponent<CreatureAnimator>();
             Health = GetComponent<Health>();
+            Experience = GetComponent<Experience>();
         }
 
         void Start()
         {
-            Health.Init(Data.health);
+            var stats = Data.Stats(Experience.Level);
+            Health.Init(stats.health);
             Health.onDeath += HandleDeath;
         }
 

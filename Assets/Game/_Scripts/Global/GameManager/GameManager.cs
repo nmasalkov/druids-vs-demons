@@ -34,7 +34,8 @@ namespace Game._Scripts.Global
                 new SwitchSideState(ActiveSide.Enemy),
                 new RollState(),
                 new SpawningState(),
-                new BattleState()
+                new BattleState(),
+                new PostBattleState()
             };
 
             AdvanceState();

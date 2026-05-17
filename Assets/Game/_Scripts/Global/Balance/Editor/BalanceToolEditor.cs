@@ -32,7 +32,14 @@ public class BalanceToolEditor : Editor
 
         EditorGUILayout.Space(10);
         EditorGUILayout.LabelField("Battle", EditorStyles.boldLabel);
-        if (GUILayout.Button("Play Battle")) tool.PlayBattle();
+
+        bool battleInProgress = Application.isPlaying && tool.IsBattleInProgress;
+        EditorGUI.BeginDisabledGroup(battleInProgress);
+        if (GUILayout.Button(battleInProgress ? "Battle in progress..." : "Play Battle")) tool.PlayBattle();
+        EditorGUI.EndDisabledGroup();
+
+        if (battleInProgress)
+            Repaint();
     }
 }
 

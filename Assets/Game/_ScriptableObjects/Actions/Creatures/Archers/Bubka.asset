@@ -28,3 +28,5 @@ MonoBehaviour:
   - damage: 6
     health: 50
     numberOfAttacks: 4
+  experienceReward: 1e0000003c00000078000000f0000000
+  xpThresholds: 00000000780000004001000058020000

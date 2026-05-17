@@ -62,8 +62,20 @@ public class BalanceTool : MonoBehaviour
     public void SpawnEnemyArcher() => SpawnEnemy(G.DefaultCreatures.archer);
     public void SpawnEnemyTank() => SpawnEnemy(G.DefaultCreatures.tank);
 
+    public bool IsBattleInProgress { get; private set; }
+
     public void PlayBattle()
     {
-        new BattleState().BeginBattle();
+        if (IsBattleInProgress) return;
+        IsBattleInProgress = true;
+
+        var battle = new BattleState();
+        battle.OnStateCompleted += () =>
+        {
+            var postBattle = new PostBattleState();
+            postBattle.OnStateCompleted += () => IsBattleInProgress = false;
+            postBattle.OnStateStart();
+        };
+        battle.BeginBattle();
     }
 }

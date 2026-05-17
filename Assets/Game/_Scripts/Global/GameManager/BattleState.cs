@@ -30,12 +30,7 @@ public class BattleState : GameState
             return;
         }
 
-        float cleanUpDelay = maxDuration + 1f;
-        Utils.DoAfterDelay.Execute(() =>
-        {
-            G.PlayerCreaturesManager.CleanUpDead();
-            G.EnemyCreaturesManager.CleanUpDead();
-            CompleteState();
-        }, cleanUpDelay);
+        float endDelay = maxDuration + 1f;
+        Utils.DoAfterDelay.Execute(CompleteState, endDelay);
     }
 }

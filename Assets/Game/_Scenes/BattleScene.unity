@@ -167,6 +167,8 @@ GameObject:
   - component: {fileID: 208500271}
   - component: {fileID: 208500270}
   - component: {fileID: 208500272}
+  - component: {fileID: 208500274}
+  - component: {fileID: 208500273}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -227,6 +229,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ec4b1f3fed64b92a9e40572994e4a0b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &208500273
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 208500268}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc67ed3d824942469a7fcda46970c19b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  experienceGemPrefab: {fileID: 4054928600059493256, guid: 1c7c651f16272d141a3786b5a62967d3, type: 3}
+--- !u!114 &208500274
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 208500268}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe0b74b5728d4ebfbf9bf49894bd8ac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cleanUpDelay: 0.5
+  gemCollectionDelay: 0.5
 --- !u!1001 &255697474
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -669,6 +698,7 @@ MonoBehaviour:
   defaultCreatures: {fileID: 11400000, guid: 4e99d11a578938e489166f389317480d, type: 2}
   playerCreaturesManager: {fileID: 3264854098524171688}
   enemyCreaturesManager: {fileID: 255697476}
+  testMode: 1
 --- !u!114 &716968459
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1232,7 +1262,7 @@ Canvas:
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 2016774105
-  m_SortingOrder: 0
+  m_SortingOrder: 1
   m_TargetDisplay: 0
 --- !u!224 &1962064505
 RectTransform:

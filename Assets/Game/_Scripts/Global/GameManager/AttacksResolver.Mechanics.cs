@@ -192,14 +192,27 @@ public partial class AttacksResolver
     private List<HitInfo> BuildHitInfos(List<AttackAssignment> assignments)
     {
         var hits = new List<HitInfo>();
+        var gemSpawned = new HashSet<(Creature attacker, Creature target)>();
+
         foreach (var a in assignments)
         {
             var target = a.Target;
+            var attacker = a.Attacker;
             float damage = a.Damage;
+            bool targetIsDoomed = DoomedTargets.Contains(target);
+            bool shouldSpawnGem = targetIsDoomed && gemSpawned.Add((attacker, target));
+
             hits.Add(new HitInfo
             {
                 Target = target,
-                OnHit = () => target.Health.TakeDamage(damage)
+                OnHit = () =>
+                {
+                    target.Health.TakeDamage(damage);
+                    if (shouldSpawnGem)
+                    {
+                        ExperienceManager.Instance.SpawnGem(target.transform.position, attacker);
+                    }
+                }
             });
         }
         return hits;

@@ -6,13 +6,13 @@ namespace Game._Scripts.PlayerView
 {
     public class CreaturesManager : MonoBehaviour
     {
-        [SerializeField] private CreatureSlot mageSlot;
-        [SerializeField] private CreatureSlot archerSlot;
-        [SerializeField] private CreatureSlot tankSlot;
+        [SerializeField] private UnitSlot mageSlot;
+        [SerializeField] private UnitSlot archerSlot;
+        [SerializeField] private UnitSlot tankSlot;
 
-        public CreatureSlot MageSlot => mageSlot;
-        public CreatureSlot ArcherSlot => archerSlot;
-        public CreatureSlot TankSlot => tankSlot;
+        public UnitSlot MageSlot => mageSlot;
+        public UnitSlot ArcherSlot => archerSlot;
+        public UnitSlot TankSlot => tankSlot;
 
         public Creature Mage => mageSlot.Creature;
         public Creature Archer => archerSlot.Creature;
@@ -55,7 +55,7 @@ namespace Game._Scripts.PlayerView
             CleanSlot(tankSlot);
         }
 
-        private void CleanSlot(CreatureSlot slot)
+        private void CleanSlot(UnitSlot slot)
         {
             if (slot.Creature != null && slot.Creature.Health.IsDead())
                 slot.Creature.DestroyCreature();

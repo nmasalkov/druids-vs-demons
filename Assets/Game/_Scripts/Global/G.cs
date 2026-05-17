@@ -1,4 +1,5 @@
-﻿using Game._Scripts.PlayerView;
+﻿using Game._Scripts.Creatures;
+using Game._Scripts.PlayerView;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -7,13 +8,17 @@ public class G : MonoBehaviour
     public static G Instance { get; private set; }
 
     [SerializeField] private DefaultCreaturesSO defaultCreatures;
-    [SerializeField] private CreaturesManager playerCreaturesManager;
-    [SerializeField] private CreaturesManager enemyCreaturesManager;
+    [SerializeField] private HeroView playerView;
+    [SerializeField] private HeroView enemyView;
     [SerializeField] private bool testMode = true;
 
     public static DefaultCreaturesSO DefaultCreatures => Instance.defaultCreatures;
-    public static CreaturesManager PlayerCreaturesManager => Instance.playerCreaturesManager;
-    public static CreaturesManager EnemyCreaturesManager => Instance.enemyCreaturesManager;
+    public static HeroView PlayerView => Instance.playerView;
+    public static HeroView EnemyView => Instance.enemyView;
+    public static CreaturesManager PlayerCreaturesManager => Instance.playerView.CreaturesManager;
+    public static CreaturesManager EnemyCreaturesManager => Instance.enemyView.CreaturesManager;
+    public static Hero PlayerHero => Instance.playerView.Hero;
+    public static Hero EnemyHero => Instance.enemyView.Hero;
     public static bool TestMode => Instance.testMode;
 
     void Awake()

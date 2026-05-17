@@ -12,15 +12,19 @@ public class BattleState : GameState
     {
         var playerCreatures = G.PlayerCreaturesManager.GetAllCreatures();
         var enemyCreatures = G.EnemyCreaturesManager.GetAllCreatures();
+        var playerHero = G.PlayerHero;
+        var enemyHero = G.EnemyHero;
 
-        if (playerCreatures.Count == 0 && enemyCreatures.Count == 0)
+        if (playerCreatures.Count == 0 && enemyCreatures.Count == 0
+            && (playerHero == null || playerHero.Health.IsDead())
+            && (enemyHero == null || enemyHero.Health.IsDead()))
         {
             CompleteState();
             return;
         }
 
         var resolver = new AttacksResolver();
-        resolver.Resolve(playerCreatures, enemyCreatures);
+        resolver.Resolve(playerCreatures, enemyCreatures, playerHero, enemyHero);
 
         float maxDuration = resolver.ExecuteAttacks(null);
 

@@ -14,11 +14,13 @@ public partial class AttacksResolver
         { typeof(TankSO), 2 }
     };
 
-    private Dictionary<Creature, float> BuildSimulatedHP(List<Creature> creatures)
+    private Dictionary<Unit, float> BuildSimulatedHP(List<Creature> creatures, Hero hero)
     {
-        var hp = new Dictionary<Creature, float>();
+        var hp = new Dictionary<Unit, float>();
         foreach (var c in creatures)
             hp[c] = c.Health.CurrentHealth;
+        if (hero != null && !hero.Health.IsDead())
+            hp[hero] = hero.Health.CurrentHealth;
         return hp;
     }
 
@@ -33,18 +35,31 @@ public partial class AttacksResolver
         return creatures.OrderBy(GetPriority).ToList();
     }
 
-    private Creature GetHighestPriorityAlive(List<Creature> enemies, Dictionary<Creature, float> simHP)
+    /// <summary>
+    /// Returns highest priority alive creature, or hero if all creatures are dead.
+    /// </summary>
+    private Unit GetHighestPriorityAliveTarget(List<Creature> enemies, Hero hero,
+        Dictionary<Unit, float> simHP)
     {
-        return enemies
+        var creature = enemies
             .Where(e => simHP.TryGetValue(e, out float hp) && hp > 0)
             .OrderBy(GetPriority)
             .FirstOrDefault();
+
+        if (creature != null) return creature;
+
+        // Fallback to hero
+        if (hero != null && simHP.TryGetValue(hero, out float heroHp) && heroHp > 0)
+            return hero;
+
+        return null;
     }
 
     private List<AttackAssignment> ResolveTeam(
         List<Creature> attackers,
         List<Creature> enemies,
-        Dictionary<Creature, float> enemySimHP)
+        Hero enemyHero,
+        Dictionary<Unit, float> enemySimHP)
     {
         var assignments = new List<AttackAssignment>();
         var sorted = SortByPriority(attackers);
@@ -57,7 +72,7 @@ public partial class AttacksResolver
 
             for (int i = 0; i < hitCount; i++)
             {
-                var target = GetHighestPriorityAlive(enemies, enemySimHP);
+                var target = GetHighestPriorityAliveTarget(enemies, enemyHero, enemySimHP);
                 if (target == null) break;
 
                 float hpBefore = enemySimHP[target];
@@ -101,7 +116,6 @@ public partial class AttacksResolver
         // Detect mutual tank fight
         TankAnimator mutualTankA = null;
         TankAnimator mutualTankB = null;
-        Creature mutualTargetA = null;
 
         foreach (var a in uniqueAttacks)
         {
@@ -113,7 +127,6 @@ public partial class AttacksResolver
                 {
                     mutualTankA = (TankAnimator)a.Attacker.Animator;
                     mutualTankB = (TankAnimator)b.Attacker.Animator;
-                    mutualTargetA = a.Target;
                     break;
                 }
             }
@@ -192,7 +205,7 @@ public partial class AttacksResolver
     private List<HitInfo> BuildHitInfos(List<AttackAssignment> assignments)
     {
         var hits = new List<HitInfo>();
-        var gemSpawned = new HashSet<(Creature attacker, Creature target)>();
+        var gemSpawned = new HashSet<(Creature attacker, Unit target)>();
 
         foreach (var a in assignments)
         {
@@ -200,7 +213,8 @@ public partial class AttacksResolver
             var attacker = a.Attacker;
             float damage = a.Damage;
             bool targetIsDoomed = DoomedTargets.Contains(target);
-            bool shouldSpawnGem = targetIsDoomed && gemSpawned.Add((attacker, target));
+            bool isHeroTarget = target is Hero;
+            bool shouldSpawnGem = isHeroTarget || (targetIsDoomed && gemSpawned.Add((attacker, target)));
 
             hits.Add(new HitInfo
             {

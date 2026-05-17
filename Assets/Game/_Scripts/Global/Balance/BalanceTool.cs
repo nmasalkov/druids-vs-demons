@@ -29,7 +29,7 @@ public class BalanceTool : MonoBehaviour
         manager.SpawnCreatures(new List<CreatureSO> { creature });
     }
 
-    private CreatureSlot GetSlotForCreature(CreaturesManager manager, CreatureSO creature)
+    private UnitSlot GetSlotForCreature(CreaturesManager manager, CreatureSO creature)
     {
         return creature switch
         {
@@ -40,7 +40,7 @@ public class BalanceTool : MonoBehaviour
         };
     }
 
-    private void HandleExistingCreature(CreatureSlot slot)
+    private void HandleExistingCreature(UnitSlot slot)
     {
         var creature = slot.Creature;
         if (creature.Experience.Level >= 4)

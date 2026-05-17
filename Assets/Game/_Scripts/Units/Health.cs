@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Health : MonoBehaviour
 {
-    [SerializeField] private CreatureAnimator animator;
+    [SerializeField] private UnitAnimator animator;
     [SerializeField] private float maxHealth;
     [SerializeField] private float currentHealth;
     public SliderController healthBar;

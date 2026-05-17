@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using Game._Scripts.Creatures;
 using Spine.Unity;
 using UnityEngine;
 
 namespace _Scripts.Creatures
 {
-    public class CreatureAnimator : MonoBehaviour
+    public abstract class UnitAnimator : MonoBehaviour
     {
         [Header("Visual")]
         [SerializeField] protected Transform creatureVisual;
@@ -20,15 +17,11 @@ namespace _Scripts.Creatures
 
         [SpineAnimation(dataField: "skeletonAnimation")]
         [SerializeField] private string dead = "Dead";
-        
-        [SpineAnimation(dataField: "skeletonAnimation")]
-        [SerializeField] private string walk = "Walk";
-        
+
         [SpineAnimation(dataField: "skeletonAnimation")]
         [SerializeField] private string attack = "Attack";
 
         public Spine.AnimationState spineAnimationState;
-
         public string CurrentAnimation;
 
         protected bool suppressAutoIdle;
@@ -37,16 +30,14 @@ namespace _Scripts.Creatures
         public bool IsDead => isDead;
         public Transform CreatureVisual => creatureVisual;
 
-        private void Start()
+        protected virtual void Start()
         {
             if (creatureVisual == null)
                 creatureVisual = transform;
 
             if (skeletonAnimation == null)
-            {
                 skeletonAnimation = GetComponentInChildren<SkeletonAnimation>();
-            }
-            
+
             spineAnimationState = skeletonAnimation.AnimationState;
             spineAnimationState.Complete += HandleAnimationComplete;
             PlayIdle();
@@ -80,30 +71,10 @@ namespace _Scripts.Creatures
             SetAnimation(dead, false);
         }
 
-        public void PlayWalk()
-        {
-            CurrentAnimation = walk;
-            SetAnimation(walk, true);
-        }
-
         public virtual void PlayAttack()
         {
             CurrentAnimation = attack;
             SetAnimation(attack, false);
-        }
-
-        public virtual void AttackCreature(Creature target)
-        {
-            PlayAttack();
-        }
-
-        /// <summary>
-        /// Attack with per-hit damage callbacks. Each HitInfo contains a target and an onHit action.
-        /// </summary>
-        public virtual void AttackWithHits(List<HitInfo> hits)
-        {
-            if (hits.Count > 0)
-                AttackCreature(hits[0].Target);
         }
 
         public virtual float GetAttackDuration()
@@ -118,7 +89,7 @@ namespace _Scripts.Creatures
             return anim?.Duration ?? 0f;
         }
 
-        private void SetAnimation(string animationName, bool loop, int trackIndex = 0)
+        protected void SetAnimation(string animationName, bool loop, int trackIndex = 0)
         {
             if (string.IsNullOrEmpty(animationName)) return;
             if (spineAnimationState == null) return;
@@ -126,3 +97,4 @@ namespace _Scripts.Creatures
         }
     }
 }
+

@@ -1,38 +1,36 @@
-﻿using _Scripts.Creatures;
+using _Scripts.Creatures;
 using Game._Scripts.PlayerView;
 using MoreMountains.Feedbacks;
-using TMPro;
 using UnityEngine;
 
 namespace Game._Scripts.Creatures
 {
-    [RequireComponent(typeof(CreatureAnimator))]
     [RequireComponent(typeof(Health))]
-    [RequireComponent(typeof(Experience))]
-    public class Creature : MonoBehaviour
+    public abstract class Unit : MonoBehaviour
     {
-        [field: SerializeField] public CreatureSO Data { get; private set; }
         [SerializeField] private MMF_Player onDeathFeedback;
         [SerializeField] private MMF_Player onBodyCleanUpFeedback;
-        [SerializeField] private TMP_Text levelIndicator;
 
-        public CreatureAnimator Animator { get; private set; }
+        public UnitAnimator Animator { get; private set; }
         public Health Health { get; private set; }
-        public Experience Experience { get; private set; }
-        public CreatureSlot Slot { get; set; }
+        public UnitSlot Slot { get; set; }
 
-        void Awake()
+        protected virtual void Awake()
         {
-            Animator = GetComponent<CreatureAnimator>();
+            Animator = GetComponent<UnitAnimator>();
             Health = GetComponent<Health>();
-            Experience = GetComponent<Experience>();
         }
 
-        void Start()
+        protected virtual void Start()
         {
-            var stats = Data.Stats(Experience.Level);
-            Health.Init(stats.health);
             Health.onDeath += HandleDeath;
+        }
+
+        protected abstract float GetMaxHealth();
+
+        public void InitHealth()
+        {
+            Health.Init(GetMaxHealth());
         }
 
         private void HandleDeath()
@@ -41,9 +39,9 @@ namespace Game._Scripts.Creatures
                 onDeathFeedback.PlayFeedbacks();
         }
 
-        public void DestroyCreature()
+        public void DestroyUnit()
         {
-            Slot.Creature = null;
+            Slot.Unit = null;
 
             if (onBodyCleanUpFeedback != null)
             {
@@ -57,3 +55,6 @@ namespace Game._Scripts.Creatures
         }
     }
 }
+
+
+

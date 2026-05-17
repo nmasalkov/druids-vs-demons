@@ -22,7 +22,7 @@ namespace _Scripts.Creatures
 
         private Transform targetMeleePosition;
         private Vector3 originalPosition;
-        private Creature pendingTarget;
+        private Unit pendingTarget;
         private Action pendingOnHit;
         private Creature ownerCreature;
 
@@ -31,7 +31,7 @@ namespace _Scripts.Creatures
             ownerCreature = GetComponent<Creature>();
         }
 
-        public override void AttackCreature(Creature target)
+        public override void AttackCreature(Unit target)
         {
             AttackCreatureInternal(target, rangedDelay);
         }
@@ -43,7 +43,7 @@ namespace _Scripts.Creatures
             AttackCreature(hits[0].Target);
         }
 
-        private void AttackCreatureInternal(Creature target, float delay)
+        private void AttackCreatureInternal(Unit target, float delay)
         {
             IsWaiting = false;
             suppressAutoIdle = true;
@@ -58,7 +58,7 @@ namespace _Scripts.Creatures
                 RunToTarget();
         }
 
-        public void WaitThenAttack(Creature target, Action onHit = null)
+        public void WaitThenAttack(Unit target, Action onHit = null)
         {
             IsWaiting = true;
             pendingTarget = target;

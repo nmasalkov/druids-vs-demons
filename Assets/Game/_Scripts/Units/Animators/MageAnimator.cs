@@ -22,7 +22,7 @@ namespace _Scripts.Creatures
             StartFreezeSequence(null);
         }
 
-        public override void AttackCreature(Creature target)
+        public override void AttackCreature(Unit target)
         {
             // Call base PlayAttack directly to avoid triggering PlayAttack override
             base.PlayAttack();
@@ -36,7 +36,7 @@ namespace _Scripts.Creatures
             AttackCreature(hits[0].Target);
         }
 
-        private void StartFreezeSequence(Creature target)
+        private void StartFreezeSequence(Unit target)
         {
             Utils.DoAfterDelay.Execute(() =>
             {

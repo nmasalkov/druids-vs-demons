@@ -6,7 +6,7 @@ using Game._Scripts.Creatures;
 public struct AttackAssignment
 {
     public Creature Attacker;
-    public Creature Target;
+    public Unit Target;
     public float Damage;
     public float ResultHP;
     public bool FatalBlow;
@@ -21,15 +21,16 @@ public partial class AttacksResolver
     /// <summary>
     /// Set of targets that will die this battle (have at least one FatalBlow assignment).
     /// </summary>
-    public HashSet<Creature> DoomedTargets { get; private set; }
+    public HashSet<Unit> DoomedTargets { get; private set; }
 
-    public void Resolve(List<Creature> playerCreatures, List<Creature> enemyCreatures)
+    public void Resolve(List<Creature> playerCreatures, List<Creature> enemyCreatures,
+        Hero playerHero, Hero enemyHero)
     {
-        var enemySimHP = BuildSimulatedHP(enemyCreatures);
-        var playerSimHP = BuildSimulatedHP(playerCreatures);
+        var enemySimHP = BuildSimulatedHP(enemyCreatures, enemyHero);
+        var playerSimHP = BuildSimulatedHP(playerCreatures, playerHero);
 
-        PlayerAttacks = ResolveTeam(playerCreatures, enemyCreatures, enemySimHP);
-        EnemyAttacks = ResolveTeam(enemyCreatures, playerCreatures, playerSimHP);
+        PlayerAttacks = ResolveTeam(playerCreatures, enemyCreatures, enemyHero, enemySimHP);
+        EnemyAttacks = ResolveTeam(enemyCreatures, playerCreatures, playerHero, playerSimHP);
 
         AllAttacks = new List<AttackAssignment>();
         AllAttacks.AddRange(PlayerAttacks);
@@ -41,22 +42,31 @@ public partial class AttacksResolver
 
     private void BuildDoomedTargets()
     {
-        DoomedTargets = new HashSet<Creature>(
+        DoomedTargets = new HashSet<Unit>(
             AllAttacks.Where(a => a.FatalBlow).Select(a => a.Target)
         );
     }
 
     private void RegisterExperienceRewards()
     {
-        var rewarded = new HashSet<(Creature attacker, Creature target)>();
+        var rewarded = new HashSet<(Creature attacker, Unit target)>();
 
         foreach (var a in AllAttacks)
         {
-            if (!DoomedTargets.Contains(a.Target)) continue;
-            if (!rewarded.Add((a.Attacker, a.Target))) continue;
+            if (a.Target is Hero)
+            {
+                // Hero hit: damage × 10 XP per shot, regardless of death
+                int xp = (int)(a.Damage * 10f);
+                ExperienceManager.Instance.RegisterPendingXp(a.Attacker, xp);
+            }
+            else if (a.Target is Creature targetCreature)
+            {
+                if (!DoomedTargets.Contains(a.Target)) continue;
+                if (!rewarded.Add((a.Attacker, a.Target))) continue;
 
-            int xp = a.Target.Data.GetExperienceReward(a.Target.Experience.Level);
-            ExperienceManager.Instance.RegisterPendingXp(a.Attacker, xp);
+                int xp = targetCreature.Data.GetExperienceReward(targetCreature.Experience.Level);
+                ExperienceManager.Instance.RegisterPendingXp(a.Attacker, xp);
+            }
         }
     }
 

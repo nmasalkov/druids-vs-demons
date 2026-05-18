@@ -134,6 +134,13 @@ public class SlotMachine : MonoBehaviour
                 _stopping = false;
                 _columnsStopped = 0;
                 spinButton.gameObject.SetActive(false);
+
+                if (IsTriple())
+                {
+                    FinishRoll();
+                    return;
+                }
+
                 finishRollButton.gameObject.SetActive(true);
                 TurnOnFinishButton();
                 OnPostRollsEnter?.Invoke();
@@ -145,6 +152,13 @@ public class SlotMachine : MonoBehaviour
             if (_rerollingCount <= 0)
             {
                 _rerollingCount = 0;
+
+                if (IsTriple())
+                {
+                    FinishRoll();
+                    return;
+                }
+
                 TurnOnFinishButton();
             }
         }
@@ -172,6 +186,17 @@ public class SlotMachine : MonoBehaviour
         OnFinishRollCompleted?.Invoke(rolledCreatures);
     }
 
+    private bool IsTriple()
+    {
+        if (columns.Count < 3) return false;
+        var first = columns[0].WinningCreature;
+        for (int i = 1; i < columns.Count; i++)
+        {
+            if (columns[i].WinningCreature != first) return false;
+        }
+        return true;
+    }
+
     public void Reset()
     {
         _machineState = MachineState.FirstRoll;
@@ -183,6 +208,20 @@ public class SlotMachine : MonoBehaviour
         foreach (var col in columns)
             col.ResetColumn();
 
+        spinButton.gameObject.SetActive(true);
+        finishRollButton.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// Lightweight reset: only resets UI state so the player must spin again.
+    /// Does not touch columns. Safe to call while machine is inactive.
+    /// </summary>
+    public void ResetUI()
+    {
+        _machineState = MachineState.FirstRoll;
+        _stopping = false;
+        _columnsStopped = 0;
+        _rerollingCount = 0;
         spinButton.gameObject.SetActive(true);
         finishRollButton.gameObject.SetActive(false);
     }

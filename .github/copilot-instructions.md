@@ -10,3 +10,4 @@
 8. **Use the New Input System.** For keyboard/gamepad input use `UnityEngine.InputSystem` (e.g., `Keyboard.current.jKey.wasPressedThisFrame`), not the legacy `Input` class.
 9. **Cache sibling RequireComponent references in `Awake()`.** If a MonoBehaviour uses `[RequireComponent]` to guarantee a sibling exists (e.g., Creature requires Health, Experience), cache the reference via `GetComponent` in `Awake()` and use the cached field everywhere. Never call `GetComponent` repeatedly at runtime.
 10. **Use `[RequireComponent]` for essential components.** If a component will almost certainly always be needed on a GameObject (e.g., Health on a unit, Experience on a creature), mark it with `[RequireComponent]` so Unity auto-adds it in the Editor and guarantees it at runtime.
+11. **Avoid nested ifs, especially in loops.** Extract logic into separate methods and use early returns / guard clauses to keep code flat and readable.

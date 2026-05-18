@@ -30,6 +30,9 @@ public class CreatureSO : ActionSO
     [Tooltip("Cumulative XP needed for each level (index 0 = level 1, index 1 = level 2, etc.)")]
     public int[] xpThresholds = { 0, 120, 320, 600 };
 
+    [Tooltip("Heal amount when a matching roll doesn't promote (index 0 = single card, index 1 = pair, etc.)")]
+    public float[] healAmounts = { 3f, 7f, 10f, 24f };
+
     public CreatureStats Stats(int level)
     {
         int index = Mathf.Clamp(level - 1, 0, levelStats.Length - 1);

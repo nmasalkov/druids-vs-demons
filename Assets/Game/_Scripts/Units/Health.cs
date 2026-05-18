@@ -11,6 +11,9 @@ public class Health : MonoBehaviour
 
     public event Action onDamageTaken;
     public event Action onDeath;
+    public event Action onHealed;
+
+    [SerializeField] private MoreMountains.Feedbacks.MMF_Player healFeedback;
 
     /// <summary>
     /// When true, death animation is deferred until ExecutePostponedDeath() is called.
@@ -73,6 +76,15 @@ public class Health : MonoBehaviour
         deathPostponed = false;
         PostponeDeath = false;
         onDeath?.Invoke();
+    }
+
+    public void Heal(float amount)
+    {
+        if (IsDead() || amount <= 0f) return;
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        healthBar.SetValue(currentHealth, maxHealth);
+        onHealed?.Invoke();
+        if (healFeedback != null) healFeedback.PlayFeedbacks();
     }
 
     public float CurrentHealth => currentHealth;

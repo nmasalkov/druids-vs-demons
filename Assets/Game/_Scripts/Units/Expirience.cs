@@ -31,11 +31,7 @@ namespace Game._Scripts.Creatures
         {
             int targetLevel = creature.Data.GetLevelForXp(TotalExperience);
             if (targetLevel <= Level) return;
-
-            Level = targetLevel;
-            var stats = creature.Data.Stats(Level);
-            creature.Health.Init(stats.health);
-            UpdateLevelText();
+            ApplyLevel(targetLevel);
         }
 
         /// <summary>
@@ -43,7 +39,25 @@ namespace Game._Scripts.Creatures
         /// </summary>
         public void Promote()
         {
-            Level++;
+            ApplyLevel(Level + 1);
+        }
+
+        /// <summary>
+        /// Sets XP to the threshold for the given level and promotes.
+        /// Used when rolling matching cards.
+        /// </summary>
+        public void PromoteToLevel(int targetLevel)
+        {
+            targetLevel = Mathf.Clamp(targetLevel, 1, creature.Data.xpThresholds.Length);
+            if (targetLevel <= Level) return;
+
+            TotalExperience = creature.Data.xpThresholds[targetLevel - 1];
+            ApplyLevel(targetLevel);
+        }
+
+        private void ApplyLevel(int newLevel)
+        {
+            Level = newLevel;
             var stats = creature.Data.Stats(Level);
             creature.Health.Init(stats.health);
             UpdateLevelText();

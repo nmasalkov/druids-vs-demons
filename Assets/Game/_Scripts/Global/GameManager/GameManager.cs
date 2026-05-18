@@ -49,6 +49,13 @@ namespace Game._Scripts.Global
                 _states[_currentStateIndex].OnStateEnd();
             }
 
+            // After a SpawningState, if triple was rolled, insert another Roll+Spawn cycle
+            if (_currentStateIndex >= 0 && _states[_currentStateIndex] is SpawningState && RollStateManager.Instance.TripleRolled)
+            {
+                _states.Insert(_currentStateIndex + 1, new RollState());
+                _states.Insert(_currentStateIndex + 2, new SpawningState());
+            }
+
             _currentStateIndex++;
 
             if (_currentStateIndex < _states.Count)

@@ -10,9 +10,16 @@ public class SlotMachine : MonoBehaviour
     [SerializeField] private float stopDelayBetweenColumns = 0.5f;
     [SerializeField] private Button spinButton;
     [SerializeField] private Button finishRollButton;
+    [SerializeField] private Button creatureRollButton;
+    [SerializeField] private Button nukeRollButton;
+    [SerializeField] private float typeSwitchSettleDelay = 0.5f;
 
     public enum MachineState { FirstRoll, Rolling, PostRolls }
+    public enum RollType { Creature, Nuke }
     private MachineState _machineState = MachineState.FirstRoll;
+
+    public RollType CurrentRollType { get; private set; } = RollType.Creature;
+    private bool _typeButtonsLocked;
 
     private bool _stopping;
     private int _columnsStopped;
@@ -23,7 +30,7 @@ public class SlotMachine : MonoBehaviour
     public event Action OnSlotMachineStop;
     public event Action OnPostRollsEnter;
     public event Action OnPostRollsExit;
-    public event Action<List<CreatureSO>> OnFinishRollCompleted;
+    public event Action<List<ActionSO>, RollType> OnFinishRollCompleted;
 
     void Awake()
     {
@@ -41,7 +48,10 @@ public class SlotMachine : MonoBehaviour
 
         spinButton.onClick.AddListener(OnSpinButtonClicked);
         finishRollButton.onClick.AddListener(OnFinishRollClicked);
+        creatureRollButton.onClick.AddListener(() => SwitchRollType(RollType.Creature));
+        nukeRollButton.onClick.AddListener(() => SwitchRollType(RollType.Nuke));
         finishRollButton.gameObject.SetActive(false);
+        UpdateTypeButtonsVisibility();
     }
 
     void OnDestroy()
@@ -58,6 +68,55 @@ public class SlotMachine : MonoBehaviour
 
         spinButton.onClick.RemoveListener(OnSpinButtonClicked);
         finishRollButton.onClick.RemoveListener(OnFinishRollClicked);
+        creatureRollButton.onClick.RemoveAllListeners();
+        nukeRollButton.onClick.RemoveAllListeners();
+    }
+
+    public ActionSO[] GetActionOptions()
+    {
+        switch (CurrentRollType)
+        {
+            case RollType.Nuke:
+            {
+                var dn = G.DefaultNukes;
+                return new ActionSO[] { dn.nukeA, dn.nukeB, dn.nukeC };
+            }
+            default:
+            {
+                var dc = G.DefaultCreatures;
+                return new ActionSO[] { dc.tank, dc.mage, dc.archer };
+            }
+        }
+    }
+
+    private void SwitchRollType(RollType newType)
+    {
+        if (_typeButtonsLocked) return;
+        if (_machineState != MachineState.FirstRoll) return;
+        if (newType == CurrentRollType) return;
+
+        CurrentRollType = newType;
+        _typeButtonsLocked = true;
+        HideTypeButtons();
+        Reset();
+        Utils.DoAfterDelay.Execute(() =>
+        {
+            _typeButtonsLocked = false;
+            UpdateTypeButtonsVisibility();
+        }, typeSwitchSettleDelay);
+    }
+
+    private void UpdateTypeButtonsVisibility()
+    {
+        bool show = !_typeButtonsLocked && _machineState == MachineState.FirstRoll;
+        creatureRollButton.gameObject.SetActive(show);
+        nukeRollButton.gameObject.SetActive(show);
+    }
+
+    private void HideTypeButtons()
+    {
+        creatureRollButton.gameObject.SetActive(false);
+        nukeRollButton.gameObject.SetActive(false);
     }
 
     void Update()
@@ -80,6 +139,7 @@ public class SlotMachine : MonoBehaviour
         _stopping = false;
         _columnsStopped = 0;
         _spinningCount = columns.Count;
+        HideTypeButtons();
         OnSlotMachineStart?.Invoke();
     }
 
@@ -99,21 +159,11 @@ public class SlotMachine : MonoBehaviour
     private void TurnOffFinishButton()
     {
         finishRollButton.interactable = false;
-        var colors = finishRollButton.colors;
-        var c = colors.normalColor;
-        c.a = 99f / 255f;
-        colors.normalColor = c;
-        finishRollButton.colors = colors;
     }
 
     private void TurnOnFinishButton()
     {
         finishRollButton.interactable = true;
-        var colors = finishRollButton.colors;
-        var c = colors.normalColor;
-        c.a = 1f;
-        colors.normalColor = c;
-        finishRollButton.colors = colors;
     }
 
     private void HandleRerollStarted()
@@ -179,20 +229,20 @@ public class SlotMachine : MonoBehaviour
 
     public void FinishRoll()
     {
-        var rolledCreatures = new List<CreatureSO>();
+        var rolledActions = new List<ActionSO>();
         foreach (var col in columns)
-            rolledCreatures.Add(col.WinningCreature);
+            rolledActions.Add(col.WinningAction);
 
-        OnFinishRollCompleted?.Invoke(rolledCreatures);
+        OnFinishRollCompleted?.Invoke(rolledActions, CurrentRollType);
     }
 
     private bool IsTriple()
     {
         if (columns.Count < 3) return false;
-        var first = columns[0].WinningCreature;
+        var first = columns[0].WinningAction;
         for (int i = 1; i < columns.Count; i++)
         {
-            if (columns[i].WinningCreature != first) return false;
+            if (columns[i].WinningAction != first) return false;
         }
         return true;
     }
@@ -210,19 +260,29 @@ public class SlotMachine : MonoBehaviour
 
         spinButton.gameObject.SetActive(true);
         finishRollButton.gameObject.SetActive(false);
+        UpdateTypeButtonsVisibility();
     }
 
     /// <summary>
-    /// Lightweight reset: only resets UI state so the player must spin again.
-    /// Does not touch columns. Safe to call while machine is inactive.
+    /// Lightweight reset: resets UI and column PostRolls state so the player must spin again.
+    /// Does not reshuffle cards. Safe to call while machine is inactive.
     /// </summary>
     public void ResetUI()
     {
+        if (_machineState == MachineState.PostRolls)
+            OnPostRollsExit?.Invoke();
+
         _machineState = MachineState.FirstRoll;
         _stopping = false;
         _columnsStopped = 0;
         _rerollingCount = 0;
+        _spinningCount = 0;
+
+        foreach (var col in columns)
+            col.ResetState();
+
         spinButton.gameObject.SetActive(true);
         finishRollButton.gameObject.SetActive(false);
+        UpdateTypeButtonsVisibility();
     }
 }

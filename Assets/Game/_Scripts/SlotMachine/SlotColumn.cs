@@ -8,12 +8,16 @@ public partial class SlotColumn : MonoBehaviour
 
     private bool _postRollsEnabled;
     private bool _isReroll;
+    private SlotMachine _slotMachine;
 
     public event Action OnColumnStopped;
     public event Action OnRerollStarted;
 
     void Start()
     {
+        if (_slotMachine == null)
+            _slotMachine = GetComponentInParent<SlotMachine>();
+
         PlaceCards();
         rerollButton.onClick.AddListener(OnRerollClicked);
         rerollButton.gameObject.SetActive(false);
@@ -50,20 +54,31 @@ public partial class SlotColumn : MonoBehaviour
         Utils.DoAfterDelay.Execute(StopSpin, 0.44f);
     }
 
+    /// <summary>
+    /// Resets runtime state (spinning, reroll flags, PostRolls UI) without reshuffling cards.
+    /// </summary>
+    public void ResetState()
+    {
+        _state = State.Idle;
+        _isReroll = false;
+        _postRollsEnabled = false;
+        _distanceSinceLastRecycle = 0f;
+        rerollButton.gameObject.SetActive(false);
+    }
+
     public void StartSpin()
     {
         if (_state != State.Idle) return;
-        PickRandomWinningCreature();
+        PickRandomWinningAction();
         _state = State.Spinning;
         _currentSpeed = spinSpeed;
         _distanceSinceLastRecycle = 0f;
     }
 
-    private void PickRandomWinningCreature()
+    private void PickRandomWinningAction()
     {
-        var dc = G.DefaultCreatures;
-        CreatureSO[] options = { dc.tank, dc.mage, dc.archer };
-        WinningCreature = options[UnityEngine.Random.Range(0, options.Length)];
+        var options = _slotMachine.GetActionOptions();
+        WinningAction = options[UnityEngine.Random.Range(0, options.Length)];
     }
 
     public void StopSpin()

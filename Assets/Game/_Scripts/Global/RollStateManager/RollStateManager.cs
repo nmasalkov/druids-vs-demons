@@ -12,14 +12,24 @@ public class RollStateManager : MonoBehaviour
     [SerializeField] private SlotMachine enemySlotMachine;
 
     /// <summary>
-    /// After roll is finished, contains distinct creature types to spawn/promote with their target levels.
+    /// After a creature roll is finished, contains distinct creature types to spawn/promote with their target levels.
     /// </summary>
     public List<SpawnEntry> SpawnEntries { get; private set; } = new();
+
+    /// <summary>
+    /// After a nuke roll is finished, contains distinct nukes with their match counts (1, 2, or 3).
+    /// </summary>
+    public List<NukeEntry> NukeEntries { get; private set; } = new();
 
     /// <summary>
     /// True if the last roll was a triple (3 same cards). Used to trigger re-roll.
     /// </summary>
     public bool TripleRolled { get; private set; }
+
+    /// <summary>
+    /// Roll type of the last finished roll.
+    /// </summary>
+    public SlotMachine.RollType LastRollType { get; private set; } = SlotMachine.RollType.Creature;
 
     public event Action OnRollFinished;
 
@@ -27,6 +37,12 @@ public class RollStateManager : MonoBehaviour
     {
         public CreatureSO Creature;
         public int Level; // target level (1 = single, 2 = pair, 3 = triple)
+    }
+
+    public struct NukeEntry
+    {
+        public NukeSO Nuke;
+        public int Count; // 1, 2, or 3
     }
 
     void Awake()
@@ -59,9 +75,10 @@ public class RollStateManager : MonoBehaviour
             Utils.DoAfterDelay.Execute(() => AIController.Instance.TakeControl(machine), 0f);
     }
 
-    private void HandleFinishRoll(List<CreatureSO> creatures)
+    private void HandleFinishRoll(List<ActionSO> actions, SlotMachine.RollType rollType)
     {
-        AnalyzeRoll(creatures);
+        LastRollType = rollType;
+        AnalyzeRoll(actions, rollType);
 
         var isPlayer = GameManager.Instance.ActiveSide == ActiveSide.Player;
         var activeMachine = isPlayer ? playerSlotMachine : enemySlotMachine;
@@ -74,19 +91,33 @@ public class RollStateManager : MonoBehaviour
         OnRollFinished?.Invoke();
     }
 
-    private void AnalyzeRoll(List<CreatureSO> creatures)
+    private void AnalyzeRoll(List<ActionSO> actions, SlotMachine.RollType rollType)
     {
         SpawnEntries.Clear();
+        NukeEntries.Clear();
 
-        var groups = creatures.GroupBy(c => c).ToList();
+        var groups = actions.GroupBy(a => a).ToList();
         TripleRolled = groups.Any(g => g.Count() >= 3);
+
+        if (rollType == SlotMachine.RollType.Nuke)
+        {
+            foreach (var group in groups)
+            {
+                NukeEntries.Add(new NukeEntry
+                {
+                    Nuke = (NukeSO)group.Key,
+                    Count = group.Count()
+                });
+            }
+            return;
+        }
 
         foreach (var group in groups)
         {
             SpawnEntries.Add(new SpawnEntry
             {
-                Creature = group.Key,
-                Level = group.Count() // 1, 2, or 3
+                Creature = (CreatureSO)group.Key,
+                Level = group.Count()
             });
         }
     }

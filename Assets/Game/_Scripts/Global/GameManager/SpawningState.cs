@@ -2,7 +2,7 @@
 using Game._Scripts.PlayerView;
 using UnityEngine;
 
-public class SpawningState : GameState
+public class SpawningState : ActionState
 {
     public override void OnStateStart()
     {

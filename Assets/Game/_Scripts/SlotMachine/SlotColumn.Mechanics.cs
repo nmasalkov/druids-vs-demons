@@ -4,7 +4,7 @@ public partial class SlotColumn
 {
     [SerializeField] private RectTransform columnContainer;
     [SerializeField] private GameObject cardPrefab;
-    public CreatureSO WinningCreature { get; private set; }
+    public ActionSO WinningAction { get; private set; }
 
     private const int CardCount = 30;
     private const float CellHeight = 150f;
@@ -32,11 +32,14 @@ public partial class SlotColumn
 
     private void PlaceCards()
     {
-        var dc = G.DefaultCreatures;
+        var options = _slotMachine.GetActionOptions();
         Sprite[] sprites = new Sprite[CardCount];
-        for (int i = 0; i < 10; i++) sprites[i] = dc.tank.cardSprite;
-        for (int i = 10; i < 20; i++) sprites[i] = dc.mage.cardSprite;
-        for (int i = 20; i < 30; i++) sprites[i] = dc.archer.cardSprite;
+        int perOption = CardCount / options.Length;
+        for (int i = 0; i < CardCount; i++)
+        {
+            int optIndex = Mathf.Min(i / perOption, options.Length - 1);
+            sprites[i] = options[optIndex].cardSprite;
+        }
 
         for (int i = sprites.Length - 1; i > 0; i--)
         {
@@ -163,7 +166,7 @@ public partial class SlotColumn
         int centerChild = CardCount / 2;
         int targetChild = ((centerChild - totalRecycles % CardCount) + CardCount) % CardCount;
         Card winningCard = columnContainer.GetChild(targetChild).GetComponent<Card>();
-        winningCard.SetSprite(WinningCreature.cardSprite);
+        winningCard.SetSprite(WinningAction.cardSprite);
     }
 
     private void Spin(float speed)

@@ -7,14 +7,14 @@ namespace _Scripts.Creatures
         [Header("Beam Settings")]
         [SerializeField] private float fireRate = 0.2f;
 
-        private Transform target;
+        private Vector3 targetPosition;
         private bool isFiring;
         private float nextFireTime;
         private System.Action onBarrageComplete;
 
-        public void PlayMissileAnimation(Transform target, System.Action onBarrageComplete = null)
+        public void PlayMissileAnimation(Vector3 targetPosition, System.Action onBarrageComplete = null)
         {
-            this.target = target;
+            this.targetPosition = targetPosition;
             this.onBarrageComplete = onBarrageComplete;
             isFiring = true;
             nextFireTime = 0f;
@@ -23,29 +23,19 @@ namespace _Scripts.Creatures
         public void StopMissileAnimation()
         {
             isFiring = false;
-            this.target = null;
             onBarrageComplete?.Invoke();
             onBarrageComplete = null;
         }
 
         private void Update()
         {
-            if (!isFiring || target == null) return;
+            if (!isFiring) return;
 
             if (Time.time >= nextFireTime)
             {
                 nextFireTime = Time.time + fireRate;
-                FireProjectile(target);
+                FireProjectile(targetPosition);
             }
         }
     }
 }
-
-
-
-
-
-
-
-
-

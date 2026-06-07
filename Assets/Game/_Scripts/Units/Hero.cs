@@ -8,6 +8,7 @@ namespace Game._Scripts.Creatures
     public class Hero : Unit
     {
         [field: SerializeField] public HeroSO Data { get; private set; }
+        [field: SerializeField] public Transform CastOrigin { get; private set; }
 
         public static event Action<Hero> OnHeroDied;
 

@@ -149,6 +149,14 @@ PrefabInstance:
       propertyPath: animator
       value: 
       objectReference: {fileID: 5171636650904399002}
+    - target: {fileID: 2798009421166961344, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.603
+      objectReference: {fileID: 0}
+    - target: {fileID: 2798009421166961344, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.198
+      objectReference: {fileID: 0}
     - target: {fileID: 4895468980909370703, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -204,9 +212,9 @@ MonoBehaviour:
   skeletonAnimation: {fileID: 687844384250451759}
   idle: Idle
   dead: Dead
-  walk: Walk
   attack: Attack
   CurrentAnimation: 
+  walk: Walk
   rangedDelay: 2.5
   runDuration: 0.5
   returnDuration: 0.3

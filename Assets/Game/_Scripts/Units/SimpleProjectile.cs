@@ -15,7 +15,7 @@ namespace _Scripts.Creatures
         public TrajectoryType trajectoryType = TrajectoryType.Direct;
         public float arcHeight = 3f;
 
-        private Transform target;
+        private Vector3 targetPosition;
         private float speed;
         private float reachThreshold = 0.2f;
 
@@ -23,9 +23,9 @@ namespace _Scripts.Creatures
         private bool arrived;
         private System.Action onHit;
 
-        public void Launch(Transform target, float speed, System.Action onHit = null)
+        public void Launch(Vector3 targetPosition, float speed, System.Action onHit = null)
         {
-            this.target = target;
+            this.targetPosition = targetPosition;
             this.speed = speed;
             this.onHit = onHit;
 
@@ -49,23 +49,23 @@ namespace _Scripts.Creatures
 
         private void LaunchBallistic()
         {
-            float distance = Vector3.Distance(transform.position, target.position);
+            float distance = Vector3.Distance(transform.position, targetPosition);
             float duration = distance / speed;
 
-            BallisticTrajectory.Apply(transform, target.position, duration, arcHeight)
+            BallisticTrajectory.Apply(transform, targetPosition, duration, arcHeight)
                 .OnComplete(OnArrived);
         }
 
         private void Update()
         {
-            if (arrived || target == null) return;
+            if (arrived) return;
             if (trajectoryType != TrajectoryType.Direct) return;
 
-            Vector3 direction = (target.position - transform.position).normalized;
+            Vector3 direction = (targetPosition - transform.position).normalized;
             transform.position += direction * (speed * Time.deltaTime);
             transform.rotation = Quaternion.LookRotation(direction);
 
-            if (Vector3.Distance(transform.position, target.position) <= reachThreshold)
+            if (Vector3.Distance(transform.position, targetPosition) <= reachThreshold)
             {
                 OnArrived();
             }
@@ -105,5 +105,3 @@ namespace _Scripts.Creatures
         }
     }
 }
-
-

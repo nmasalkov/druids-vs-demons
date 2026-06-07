@@ -19,14 +19,14 @@ namespace _Scripts.Creatures
         public override void PlayAttack()
         {
             base.PlayAttack();
-            StartFreezeSequence(null);
+            StartFreezeSequence(fireBeam: false, Vector3.zero);
         }
 
         public override void AttackCreature(Unit target)
         {
             // Call base PlayAttack directly to avoid triggering PlayAttack override
             base.PlayAttack();
-            StartFreezeSequence(target);
+            StartFreezeSequence(fireBeam: true, target.HitFeedback.HitPlacePosition.position);
         }
 
         public override void AttackWithHits(List<HitInfo> hits)
@@ -36,33 +36,25 @@ namespace _Scripts.Creatures
             AttackCreature(hits[0].Target);
         }
 
-        private void StartFreezeSequence(Unit target)
+        private void StartFreezeSequence(bool fireBeam, Vector3 targetPosition)
         {
             Utils.DoAfterDelay.Execute(() =>
             {
                 skeletonAnimation.timeScale = 0f;
 
-                if (target != null && beamAnimator != null)
+                if (fireBeam)
                 {
-                    beamAnimator.PlayMissileAnimation(target.transform, () =>
+                    beamAnimator.PlayMissileAnimation(targetPosition, () =>
                     {
                         pendingOnHit?.Invoke();
                         pendingOnHit = null;
                     });
                 }
-                else
-                {
-                    Debug.LogWarning($"[MageAnimator] Cannot fire missile. Target: {target}, BeamAnimator: {beamAnimator}", this);
-                }
 
                 Utils.DoAfterDelay.Execute(() =>
                 {
                     skeletonAnimation.timeScale = 1f;
-
-                    if (beamAnimator != null)
-                    {
-                        beamAnimator.StopMissileAnimation();
-                    }
+                    beamAnimator.StopMissileAnimation();
                 }, freezeDuration);
             }, freezeAfter);
         }

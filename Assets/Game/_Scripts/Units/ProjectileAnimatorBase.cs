@@ -9,15 +9,14 @@ namespace _Scripts.Creatures
         [SerializeField] private Transform spawnPoint;
         [SerializeField] private float projectileSpeed = 10f;
 
-        protected void FireProjectile(Transform target, System.Action onHit = null)
+        protected void FireProjectile(Vector3 targetPosition, System.Action onHit = null)
         {
             Vector3 origin = spawnPoint.position;
-            Vector3 direction = (target.position - origin).normalized;
+            Vector3 direction = (targetPosition - origin).normalized;
             Quaternion rotation = Quaternion.LookRotation(direction);
 
             SimpleProjectile projectile = Instantiate(projectilePrefab, origin, rotation);
-            projectile.Launch(target, projectileSpeed, onHit);
+            projectile.Launch(targetPosition, projectileSpeed, onHit);
         }
     }
 }
-

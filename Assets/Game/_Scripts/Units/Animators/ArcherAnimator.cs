@@ -69,12 +69,11 @@ namespace _Scripts.Creatures
 
             if (hit.Target != null)
             {
-                var targetTransform = hit.Target.transform;
+                Vector3 targetPos = hit.Target.HitFeedback.HitPlacePosition.position;
                 var onHit = hit.OnHit;
                 Utils.DoAfterDelay.Execute(() =>
                 {
-                    if (targetTransform != null)
-                        missileAnimator.FireOnce(targetTransform, onHit);
+                    missileAnimator.FireOnce(targetPos, onHit);
                 }, scaledFireDelay);
             }
 
@@ -103,4 +102,3 @@ namespace _Scripts.Creatures
         }
     }
 }
-

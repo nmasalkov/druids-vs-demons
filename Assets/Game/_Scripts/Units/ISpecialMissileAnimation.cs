@@ -4,7 +4,7 @@ namespace _Scripts.Creatures
 {
     public interface ISpecialMissileAnimation
     {
-        void PlayMissileAnimation(Transform target, System.Action onBarrageComplete = null);
+        void PlayMissileAnimation(Vector3 targetPosition, System.Action onBarrageComplete = null);
         void StopMissileAnimation();
     }
 }

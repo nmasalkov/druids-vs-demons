@@ -97,18 +97,13 @@ public class SlotMachine : MonoBehaviour
 
         CurrentRollType = newType;
         _typeButtonsLocked = true;
-        HideTypeButtons();
         Reset();
-        Utils.DoAfterDelay.Execute(() =>
-        {
-            _typeButtonsLocked = false;
-            UpdateTypeButtonsVisibility();
-        }, typeSwitchSettleDelay);
+        Utils.DoAfterDelay.Execute(() => _typeButtonsLocked = false, typeSwitchSettleDelay);
     }
 
     private void UpdateTypeButtonsVisibility()
     {
-        bool show = !_typeButtonsLocked && _machineState == MachineState.FirstRoll;
+        bool show = _machineState == MachineState.FirstRoll;
         creatureRollButton.gameObject.SetActive(show);
         nukeRollButton.gameObject.SetActive(show);
     }

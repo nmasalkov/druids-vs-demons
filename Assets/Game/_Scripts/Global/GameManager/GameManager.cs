@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections;
 using UnityEngine;
 
 namespace Game._Scripts.Global
@@ -10,16 +11,11 @@ namespace Game._Scripts.Global
         public static GameManager Instance { get; private set; }
 
         public ActiveSide ActiveSide { get; private set; } = ActiveSide.Player;
+        public void SetActiveSide(ActiveSide side) => ActiveSide = side;
 
-        public void SetActiveSide(ActiveSide side)
-        {
-            ActiveSide = side;
-        }
-
-        private List<GameState> _states;
-        private int _currentStateIndex = -1;
+        private GameState _currentState;
+        private Coroutine _mainCoroutine;
         private bool _gameOver;
-        private bool _firstRound = true;
 
         void Awake()
         {
@@ -28,15 +24,8 @@ namespace Game._Scripts.Global
 
         void Start()
         {
-            _states = new List<GameState>
-            {
-                new GameStartState()
-            };
-
             Creatures.Hero.OnHeroDied += HandleHeroDied;
-
-            AppendRoundStates();
-            AdvanceState();
+            _mainCoroutine = StartCoroutine(RunGameLoop());
         }
 
         void OnDestroy()
@@ -44,65 +33,113 @@ namespace Game._Scripts.Global
             Creatures.Hero.OnHeroDied -= HandleHeroDied;
         }
 
-        private void AppendRoundStates()
+        // ============================================================
+        //  Round script — single source of truth for game-flow order.
+        //  Read top-to-bottom to see exactly what happens in a round.
+        //  No dynamic List<GameState> insertions: every step is here.
+        // ============================================================
+
+        private IEnumerator RunGameLoop()
         {
-            _states.Add(new SwitchSideState(ActiveSide.Player));
-            _states.Add(new RollState());
+            yield return Run(new GameStartState());
 
-            if (!_firstRound)
+            bool firstRound = true;
+            while (!_gameOver)
             {
-                _states.Add(new BattleState());
-                _states.Add(new PostBattleState());
+                // Player turn. On round 1 the post-turn battle is skipped — the player just
+                // summoned units and shouldn't immediately attack.
+                yield return PlaySide(ActiveSide.Player, runBattleAfter: !firstRound);
+                if (_gameOver) yield break;
+
+                // Enemy turn. Battle always runs after, including on round 1.
+                yield return PlaySide(ActiveSide.Enemy, runBattleAfter: true);
+                if (_gameOver) yield break;
+
+                yield return Run(new EndOfRoundState());
+                firstRound = false;
             }
-
-            _states.Add(new SwitchSideState(ActiveSide.Enemy));
-            _states.Add(new RollState());
-            _states.Add(new BattleState());
-            _states.Add(new PostBattleState());
-            _states.Add(new EndOfRoundState());
-
-            _firstRound = false;
         }
 
-        public void AdvanceState()
+        private IEnumerator PlaySide(ActiveSide side, bool runBattleAfter)
+        {
+            yield return Run(new SwitchSideState(side));
+            yield return TakeTurn();
+            if (runBattleAfter) yield return RunBattle();
+        }
+
+        /// <summary>
+        /// One side's turn: roll → action (nuke OR spawn — chosen polymorphically via
+        /// <see cref="ActionState"/>). On a triple roll, re-roll and replay the action.
+        /// </summary>
+        private IEnumerator TakeTurn()
+        {
+            do
+            {
+                yield return Run(new RollState());
+                yield return Run(CreateActionState());
+            }
+            while (RollStateManager.Instance.TripleRolled);
+        }
+
+        private IEnumerator RunBattle()
+        {
+            yield return Run(new BattleState());
+            yield return Run(new PostBattleState());
+        }
+
+        /// <summary>
+        /// Polymorphic action factory: returns the matching <see cref="ActionState"/> subclass
+        /// for the just-finished roll. Both subclasses self-contain their cleanup (dead-body
+        /// removal lives inside <c>NukeState</c>), so no extra "post" state is needed in the
+        /// round script above.
+        /// </summary>
+        private static ActionState CreateActionState()
+        {
+            if (RollStateManager.Instance.LastRollType == SlotMachine.RollType.Nuke)
+                return new NukeState();
+            return new SpawningState();
+        }
+
+        // ============================================================
+        //  State runner: starts a state, waits for completion, cleans up.
+        // ============================================================
+
+        private IEnumerator Run(GameState state)
+        {
+            _currentState = state;
+            bool done = false;
+            Action onDone = () => done = true;
+            state.OnStateCompleted += onDone;
+
+            state.OnStateStart();
+            while (!done) yield return null;
+
+            state.OnStateCompleted -= onDone;
+            state.OnStateEnd();
+            _currentState = null;
+        }
+
+        // ============================================================
+        //  Game over — interrupts the main loop on hero death.
+        // ============================================================
+
+        private void HandleHeroDied(Creatures.Hero hero)
         {
             if (_gameOver) return;
+            if (!IsGameOver()) return;
 
-            if (_currentStateIndex >= 0 && _currentStateIndex < _states.Count)
+            _gameOver = true;
+
+            if (_mainCoroutine != null)
             {
-                _states[_currentStateIndex].OnStateCompleted -= AdvanceState;
-                _states[_currentStateIndex].OnStateEnd();
+                StopCoroutine(_mainCoroutine);
+                _mainCoroutine = null;
             }
 
-            // After a RollState, insert the proper ActionState based on the captured roll type.
-            if (_currentStateIndex >= 0 && _states[_currentStateIndex] is RollState)
-            {
-                ActionState actionState = RollStateManager.Instance.LastRollType == SlotMachine.RollType.Nuke
-                    ? new NukeState()
-                    : (ActionState)new SpawningState();
-                _states.Insert(_currentStateIndex + 1, actionState);
-            }
+            _currentState?.OnStateEnd();
+            _currentState = null;
 
-            // After an ActionState, if triple was rolled, insert another Roll + Action cycle.
-            if (_currentStateIndex >= 0 && _states[_currentStateIndex] is ActionState && RollStateManager.Instance.TripleRolled)
-            {
-                _states.Insert(_currentStateIndex + 1, new RollState());
-            }
-
-            // After end of round, check game over or start new round
-            if (_currentStateIndex >= 0 && _states[_currentStateIndex] is EndOfRoundState)
-            {
-                if (TryGameOver()) return;
-                AppendRoundStates();
-            }
-
-            _currentStateIndex++;
-
-            if (_currentStateIndex < _states.Count)
-            {
-                _states[_currentStateIndex].OnStateCompleted += AdvanceState;
-                _states[_currentStateIndex].OnStateStart();
-            }
+            new GameOverState().OnStateStart();
         }
 
         private bool IsGameOver()
@@ -116,32 +153,6 @@ namespace Game._Scripts.Global
         {
             if (hero != null && !hero.Health.IsDead()) return true;
             return creatures.GetAllCreatures().Count > 0;
-        }
-
-        private bool TryGameOver()
-        {
-            if (_gameOver) return true;
-            if (!IsGameOver()) return false;
-
-            _gameOver = true;
-
-            if (_currentStateIndex >= 0 && _currentStateIndex < _states.Count)
-            {
-                _states[_currentStateIndex].OnStateCompleted -= AdvanceState;
-                _states[_currentStateIndex].OnStateEnd();
-            }
-
-            var gameOverState = new GameOverState();
-            _states.Clear();
-            _states.Add(gameOverState);
-            _currentStateIndex = 0;
-            gameOverState.OnStateStart();
-            return true;
-        }
-
-        private void HandleHeroDied(Creatures.Hero hero)
-        {
-            TryGameOver();
         }
     }
 }

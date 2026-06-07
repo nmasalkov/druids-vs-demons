@@ -149,6 +149,14 @@ PrefabInstance:
       propertyPath: animator
       value: 
       objectReference: {fileID: 3817625367810960161}
+    - target: {fileID: 2798009421166961344, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.24
+      objectReference: {fileID: 0}
+    - target: {fileID: 2798009421166961344, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.12
+      objectReference: {fileID: 0}
     - target: {fileID: 5123550418709476886, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: m_LocalPosition.x
       value: 1.43
@@ -236,9 +244,9 @@ MonoBehaviour:
   skeletonAnimation: {fileID: 2998747509113378462}
   idle: Idle
   dead: Dead
-  walk: Walk
   attack: Attack
   CurrentAnimation: 
+  walk: Walk
   missileAnimator: {fileID: 6997451703810949427}
   shotCount: 3
   totalDuration: 2

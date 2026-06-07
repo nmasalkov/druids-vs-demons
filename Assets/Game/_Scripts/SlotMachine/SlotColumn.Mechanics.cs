@@ -27,11 +27,19 @@ public partial class SlotColumn
     private float _actualStopDuration;
 
     private float _startY;
+    private float _initialY;
+    private bool _initialCaptured;
     private float _bounceTimer;
     private float _snapY;
 
     private void PlaceCards()
     {
+        if (!_initialCaptured)
+        {
+            _initialY = columnContainer.anchoredPosition.y;
+            _initialCaptured = true;
+        }
+
         var options = _slotMachine.GetActionOptions();
         Sprite[] sprites = new Sprite[CardCount];
         int perOption = CardCount / options.Length;
@@ -56,7 +64,7 @@ public partial class SlotColumn
 
         float offset = (CardCount / 2) * CellHeight;
         Vector2 pos = columnContainer.anchoredPosition;
-        pos.y += offset;
+        pos.y = _initialY + offset;
         columnContainer.anchoredPosition = pos;
 
         _startY = pos.y;

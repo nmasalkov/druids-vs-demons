@@ -78,4 +78,81 @@ public class BalanceTool : MonoBehaviour
         };
         battle.BeginBattle();
     }
+
+    // === Nuke Action testing ===
+
+    /// <summary>
+    /// 3 nuke slots × 3 levels = 9 toggles. NukeToggles[slotIndex, level-1].
+    /// Editor renders this as a 3×3 grid. Player can pick 1..3 of them per cast.
+    /// </summary>
+    public readonly bool[,] NukeToggles = new bool[3, 3];
+
+    public bool IsNukeActionInProgress { get; private set; }
+
+    public int CountSelectedNukes()
+    {
+        int count = 0;
+        for (int s = 0; s < 3; s++)
+            for (int l = 0; l < 3; l++)
+                if (NukeToggles[s, l]) count++;
+        return count;
+    }
+
+    public bool IsNukeSelectionValid()
+    {
+        int n = CountSelectedNukes();
+        return n >= 1 && n <= 3;
+    }
+
+    public void ClearNukeToggles()
+    {
+        for (int s = 0; s < 3; s++)
+            for (int l = 0; l < 3; l++)
+                NukeToggles[s, l] = false;
+    }
+
+    public void PlayNukeAction()
+    {
+        if (IsNukeActionInProgress) return;
+        if (!IsNukeSelectionValid()) return;
+
+        IsNukeActionInProgress = true;
+
+        var entries = BuildEntriesFromToggles();
+        RollStateManager.Instance.NukeEntries.Clear();
+        RollStateManager.Instance.NukeEntries.AddRange(entries);
+
+        // NOTE: toggles are intentionally NOT cleared on completion. Clearing them would
+        // make the "Play Nuke Action" button immediately disabled (selection becomes 0)
+        // and look like the state is stuck. Keeping them lets the user fire the same
+        // setup again or tweak it manually.
+        // NukeState now self-contains its post-cleanup (dead bodies removed inside it),
+        // so no separate PostNukeState wiring is needed here.
+        var nuke = new NukeState();
+        nuke.OnStateCompleted += () => IsNukeActionInProgress = false;
+        nuke.OnStateStart();
+    }
+
+    private List<RollStateManager.NukeEntry> BuildEntriesFromToggles()
+    {
+        var entries = new List<RollStateManager.NukeEntry>();
+        var nukes = new NukeSO[] { G.DefaultNukes.nukeA, G.DefaultNukes.nukeB, G.DefaultNukes.nukeC };
+
+        for (int s = 0; s < 3; s++)
+        {
+            // Skip toggled rows whose DefaultNukes slot is empty (e.g. removed asset).
+            if (nukes[s] == null) continue;
+
+            for (int l = 0; l < 3; l++)
+            {
+                if (!NukeToggles[s, l]) continue;
+                entries.Add(new RollStateManager.NukeEntry
+                {
+                    Nuke = nukes[s],
+                    Count = l + 1
+                });
+            }
+        }
+        return entries;
+    }
 }

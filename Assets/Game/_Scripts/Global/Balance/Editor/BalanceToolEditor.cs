@@ -38,8 +38,59 @@ public class BalanceToolEditor : Editor
         if (GUILayout.Button(battleInProgress ? "Battle in progress..." : "Play Battle")) tool.PlayBattle();
         EditorGUI.EndDisabledGroup();
 
-        if (battleInProgress)
+        DrawNukeSection(tool);
+
+        if (battleInProgress || (Application.isPlaying && tool.IsNukeActionInProgress))
             Repaint();
     }
-}
 
+    private static readonly string[] NukeSlotLabels = { "A", "B", "C" };
+
+    private void DrawNukeSection(BalanceTool tool)
+    {
+        EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("Nuke Action", EditorStyles.boldLabel);
+
+        // Column header: " | L1 | L2 | L3 "
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("", GUILayout.Width(40));
+        GUILayout.Label("L1", EditorStyles.miniBoldLabel, GUILayout.Width(30));
+        GUILayout.Label("L2", EditorStyles.miniBoldLabel, GUILayout.Width(30));
+        GUILayout.Label("L3", EditorStyles.miniBoldLabel, GUILayout.Width(30));
+        EditorGUILayout.EndHorizontal();
+
+        for (int s = 0; s < 3; s++)
+        {
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label(NukeSlotLabels[s], GUILayout.Width(40));
+            for (int l = 0; l < 3; l++)
+            {
+                bool current = tool.NukeToggles[s, l];
+                bool next = GUILayout.Toggle(current, GUIContent.none, GUILayout.Width(30));
+                if (next != current)
+                {
+                    tool.NukeToggles[s, l] = next;
+                    EditorUtility.SetDirty(tool);
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        int selected = tool.CountSelectedNukes();
+        EditorGUILayout.LabelField($"Selected: {selected} (need 1..3)");
+
+        bool nukeInProgress = Application.isPlaying && tool.IsNukeActionInProgress;
+        bool canPlay = Application.isPlaying && !nukeInProgress && tool.IsNukeSelectionValid();
+
+        EditorGUILayout.BeginHorizontal();
+        EditorGUI.BeginDisabledGroup(!canPlay);
+        string label = nukeInProgress ? "Nuke action in progress..." : "Play Nuke Action";
+        if (GUILayout.Button(label)) tool.PlayNukeAction();
+        EditorGUI.EndDisabledGroup();
+
+        EditorGUI.BeginDisabledGroup(nukeInProgress || selected == 0);
+        if (GUILayout.Button("Clear", GUILayout.Width(60))) tool.ClearNukeToggles();
+        EditorGUI.EndDisabledGroup();
+        EditorGUILayout.EndHorizontal();
+    }
+}

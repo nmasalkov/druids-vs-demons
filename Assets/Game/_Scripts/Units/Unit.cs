@@ -13,12 +13,18 @@ namespace Game._Scripts.Creatures
 
         public UnitAnimator Animator { get; private set; }
         public Health Health { get; private set; }
+        /// <summary>
+        /// Cached reference to the <see cref="HitFeedback"/> MonoBehaviour that lives on the
+        /// mandatory child GameObject named "HitFeedback" (every Unit prefab must contain it).
+        /// </summary>
+        public HitFeedback HitFeedback { get; private set; }
         public UnitSlot Slot { get; set; }
 
         protected virtual void Awake()
         {
             Animator = GetComponent<UnitAnimator>();
             Health = GetComponent<Health>();
+            HitFeedback = GetComponentInChildren<HitFeedback>();
         }
 
         protected virtual void Start()

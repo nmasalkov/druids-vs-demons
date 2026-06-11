@@ -181,6 +181,10 @@ PrefabInstance:
       propertyPath: skeletonAnimation
       value: 
       objectReference: {fileID: 2998747509113378462}
+    - target: {fileID: 6900457322584748668, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: TargetTransform
+      value: 
+      objectReference: {fileID: 2883875826884883692}
     - target: {fileID: 7029924513901446375, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.6529851

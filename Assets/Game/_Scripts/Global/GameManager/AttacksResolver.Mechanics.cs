@@ -66,6 +66,9 @@ public partial class AttacksResolver
 
         foreach (var attacker in sorted)
         {
+            // Shocked creatures skip their turn entirely.
+            if (attacker.StatusesManager.IsShocked) continue;
+
             var stats = attacker.Data.Stats(attacker.Experience.Level);
             float dmgPerHit = stats.damage;
             int hitCount = stats.numberOfAttacks;

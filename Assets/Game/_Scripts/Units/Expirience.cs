@@ -1,4 +1,5 @@
-﻿using TMPro;
+﻿using System;
+using TMPro;
 using UnityEngine;
 
 namespace Game._Scripts.Creatures
@@ -8,6 +9,12 @@ namespace Game._Scripts.Creatures
         [field: SerializeField] public int Level { get; private set; } = 1;
         [field: SerializeField] public int TotalExperience { get; private set; }
         [SerializeField] private TMP_Text levelText;
+
+        /// <summary>
+        /// Raised whenever <see cref="Level"/> increases (via XP gain, force-promote, or
+        /// PromoteToLevel). Used by <c>StatusesManager</c> to clear statuses on level-up.
+        /// </summary>
+        public event Action OnPromoted;
 
         private Creature creature;
 
@@ -61,6 +68,7 @@ namespace Game._Scripts.Creatures
             var stats = creature.Data.Stats(Level);
             creature.Health.Init(stats.health);
             UpdateLevelText();
+            OnPromoted?.Invoke();
         }
 
         /// <summary>

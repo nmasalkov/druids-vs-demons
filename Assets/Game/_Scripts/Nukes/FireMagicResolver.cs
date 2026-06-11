@@ -28,7 +28,7 @@ namespace Game._Scripts.Nukes
                 if (currentHp <= 0f) continue;
 
                 float dealt = Mathf.Min(remaining, currentHp);
-                Shots.Add(new NukeShot { Target = target, Damage = dealt });
+                Shots.Add(new FireMagicShot { Target = target, Damage = dealt });
                 remaining -= dealt;
             }
         }

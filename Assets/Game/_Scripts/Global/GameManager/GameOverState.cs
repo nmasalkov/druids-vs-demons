@@ -2,7 +2,7 @@
 
 public class GameOverState : GameState
 {
-    public override void OnStateStart()
+    protected override void OnEnter()
     {
         bool playerAlive = IsSideAlive(G.PlayerCreaturesManager, G.PlayerHero);
         bool enemyAlive = IsSideAlive(G.EnemyCreaturesManager, G.EnemyHero);

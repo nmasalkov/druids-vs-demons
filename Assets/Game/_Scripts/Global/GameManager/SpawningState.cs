@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class SpawningState : ActionState
 {
-    public override void OnStateStart()
+    protected override void OnEnter()
     {
         var creaturesManager = SpawnStateManager.Instance.GetActiveCreaturesManager();
         var entries = RollStateManager.Instance.SpawnEntries;

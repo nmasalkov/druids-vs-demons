@@ -1,10 +1,56 @@
 using System.Collections.Generic;
 using Game._Scripts.Creatures;
 using Game._Scripts.PlayerView;
+using TMPro;
 using UnityEngine;
 
 public class BalanceTool : MonoBehaviour
 {
+    [Header("Debug HUD")]
+    [Tooltip("When checked, the current game phase name is shown in the child TMP_Text label.")]
+    public bool ShowPhaseName;
+
+    private TMP_Text _phaseLabel;
+
+    private void Awake()
+    {
+        // Rule #14: child helper cached via GetComponentInChildren. Convention: BalanceTool
+        // has a child Canvas containing exactly one TMP_Text used as the debug phase label.
+        _phaseLabel = GetComponentInChildren<TMP_Text>(true);
+    }
+
+    private void Start()
+    {
+        _phaseLabel.gameObject.SetActive(ShowPhaseName);
+        GameState.OnAnyStateStarted += HandleStateStarted;
+        GameState.OnAnyStateEnded += HandleStateEnded;
+    }
+
+    private void OnDestroy()
+    {
+        GameState.OnAnyStateStarted -= HandleStateStarted;
+        GameState.OnAnyStateEnded -= HandleStateEnded;
+    }
+
+    private void OnValidate()
+    {
+        if (!Application.isPlaying) return;
+        if (_phaseLabel == null) return;
+        _phaseLabel.gameObject.SetActive(ShowPhaseName);
+    }
+
+    private void HandleStateStarted(GameState state)
+    {
+        if (!ShowPhaseName) return;
+        _phaseLabel.text = $"{state.GetType().Name} Start:";
+    }
+
+    private void HandleStateEnded(GameState state)
+    {
+        if (!ShowPhaseName) return;
+        _phaseLabel.text = $"{state.GetType().Name} End.";
+    }
+
     public void SpawnPlayer(CreatureSO creature)
     {
         var manager = G.PlayerCreaturesManager;

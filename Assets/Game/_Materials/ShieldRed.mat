@@ -7,16 +7,16 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Shield
+  m_Name: ShieldRed
   m_Shader: {fileID: 4800000, guid: a36b7719ff0465b42ab1407d67672c5f, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - BLURISHD_ON
   - FADE_ON
   - FLICKER_ON
   - GLOWTEX_ON
   - GLOW_ON
-  - PIXELATE_ON
-  - TEXTURESCROLL_ON
   - WAVEUV_ON
   m_InvalidKeywords:
   - ETC1_EXTERNAL_ALPHA
@@ -28,6 +28,7 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -56,11 +57,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _GlowTex:
-        m_Texture: {fileID: 2800000, guid: 81687001a52d8024fb3706ba7619ad4b, type: 3}
+        m_Texture: {fileID: 2800000, guid: 181d8112279a33e43986add9200b985d, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 2f5c9cbfde2d0384bb53189b0d0f06d8, type: 3}
+        m_Texture: {fileID: 2800000, guid: c6ad7b22efb776c448982ca631b16f73, type: 3}
         m_Scale: {x: 1.5, y: 1.5}
         m_Offset: {x: 0, y: 0}
     - _OutlineDistortTex:
@@ -81,7 +82,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Alpha: 0.332
+    - _Alpha: 0.473
     - _AlphaCutoffValue: 0.25
     - _AlphaOutlineBlend: 1
     - _AlphaOutlineGlow: 5
@@ -129,7 +130,7 @@ Material:
     - _GlitchAmount: 3.4
     - _GlitchSize: 1
     - _GlitchSpeed: 20
-    - _Glow: 10
+    - _Glow: 1.7
     - _GlowGlobal: 1
     - _GlowTexUsed: 1
     - _GradBlend: 1
@@ -238,7 +239,7 @@ Material:
     - _ZoomUvAmount: 0.5
     m_Colors:
     - _AlphaOutlineColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 0, g: 0.9805136, b: 1, a: 1}
+    - _Color: {r: 0.7254902, g: 0.19055654, b: 0, a: 1}
     - _ColorChangeNewCol: {r: 1, g: 1, b: 0, a: 1}
     - _ColorChangeNewCol2: {r: 1, g: 1, b: 0, a: 1}
     - _ColorChangeNewCol3: {r: 1, g: 1, b: 0, a: 1}
@@ -249,7 +250,7 @@ Material:
     - _ColorSwapGreen: {r: 1, g: 1, b: 1, a: 1}
     - _ColorSwapRed: {r: 1, g: 1, b: 1, a: 1}
     - _FadeBurnColor: {r: 1, g: 1, b: 1, a: 1}
-    - _GlowColor: {r: 0, g: 0.98090506, b: 1, a: 1}
+    - _GlowColor: {r: 0, g: 0.98039246, b: 1, a: 1}
     - _GradBotLeftCol: {r: 0, g: 0, b: 1, a: 1}
     - _GradBotRightCol: {r: 0, g: 0, b: 1, a: 1}
     - _GradTopLeftCol: {r: 1, g: 0, b: 0, a: 1}
@@ -263,3 +264,4 @@ Material:
     - _ShadowColor: {r: 0, g: 0, b: 0, a: 1}
     - _ShineColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1

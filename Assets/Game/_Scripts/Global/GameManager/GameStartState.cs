@@ -1,6 +1,6 @@
 ﻿public class GameStartState : GameState
 {
-    public override void OnStateStart()
+    protected override void OnEnter()
     {
         Utils.DoAfterDelay.Execute(CompleteState, 2f);
     }

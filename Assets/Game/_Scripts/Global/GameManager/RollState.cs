@@ -4,13 +4,13 @@ using UnityEngine;
 
 public class RollState : GameState
 {
-    public override void OnStateStart()
+    protected override void OnEnter()
     {
         RollStateManager.Instance.OnRollFinished += HandleRollFinished;
         RollStateManager.Instance.ActivateSlotMachine();
     }
 
-    public override void OnStateEnd()
+    protected override void OnExit()
     {
         RollStateManager.Instance.OnRollFinished -= HandleRollFinished;
     }

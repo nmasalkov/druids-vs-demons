@@ -9,7 +9,7 @@ public class SwitchSideState : GameState
         _targetSide = targetSide;
     }
 
-    public override void OnStateStart()
+    protected override void OnEnter()
     {
         GameManager.Instance.SetActiveSide(_targetSide);
         CompleteState();

@@ -1,6 +1,6 @@
 public class PostBattleState : GameState
 {
-    public override void OnStateStart()
+    protected override void OnEnter()
     {
         float cleanUpDelay = PostBattleStateManager.Instance.CleanUpDelay;
 

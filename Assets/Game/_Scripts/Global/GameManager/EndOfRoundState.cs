@@ -4,7 +4,7 @@
 /// </summary>
 public class EndOfRoundState : GameState
 {
-    public override void OnStateStart()
+    protected override void OnEnter()
     {
         CompleteState();
     }

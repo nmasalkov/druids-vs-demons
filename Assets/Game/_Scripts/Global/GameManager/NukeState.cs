@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class NukeState : ActionState
 {
-    public override void OnStateStart()
+    protected override void OnEnter()
     {
         var entries = RollStateManager.Instance.NukeEntries;
         if (entries.Count == 0)

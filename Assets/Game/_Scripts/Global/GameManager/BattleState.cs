@@ -3,7 +3,7 @@ using Game._Scripts.Creatures;
 
 public class BattleState : GameState
 {
-    public override void OnStateStart()
+    protected override void OnEnter()
     {
         Utils.DoAfterDelay.Execute(BeginBattle, 0f);
     }

@@ -9,12 +9,14 @@ public class G : MonoBehaviour
 
     [SerializeField] private DefaultCreaturesSO defaultCreatures;
     [SerializeField] private DefaultNukesSO defaultNukes;
+    [SerializeField] private DefaultSpellsSO defaultSpells;
     [SerializeField] private HeroView playerView;
     [SerializeField] private HeroView enemyView;
     [SerializeField] private bool testMode = true;
 
     public static DefaultCreaturesSO DefaultCreatures => Instance.defaultCreatures;
     public static DefaultNukesSO DefaultNukes => Instance.defaultNukes;
+    public static DefaultSpellsSO DefaultSpells => Instance.defaultSpells;
     public static HeroView PlayerView => Instance.playerView;
     public static HeroView EnemyView => Instance.enemyView;
     public static CreaturesManager PlayerCreaturesManager => Instance.playerView.CreaturesManager;

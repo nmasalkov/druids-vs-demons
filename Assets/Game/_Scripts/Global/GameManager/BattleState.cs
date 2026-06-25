@@ -14,6 +14,8 @@ public class BattleState : GameState
         var enemyCreatures = G.EnemyCreaturesManager.GetAllCreatures();
         var playerHero = G.PlayerHero;
         var enemyHero = G.EnemyHero;
+        var playerShield = G.PlayerView.Shield;
+        var enemyShield = G.EnemyView.Shield;
 
         if (playerCreatures.Count == 0 && enemyCreatures.Count == 0
             && (playerHero == null || playerHero.Health.IsDead())
@@ -24,7 +26,7 @@ public class BattleState : GameState
         }
 
         var resolver = new AttacksResolver();
-        resolver.Resolve(playerCreatures, enemyCreatures, playerHero, enemyHero);
+        resolver.Resolve(playerCreatures, enemyCreatures, playerHero, enemyHero, playerShield, enemyShield);
 
         float maxDuration = resolver.ExecuteAttacks(null);
 

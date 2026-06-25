@@ -10,8 +10,11 @@ namespace Game._Scripts.Nukes
     /// damage calculation here. The instant-resolve path skips animations entirely and goes
     /// through <see cref="NukeResolver.ApplyInstant"/>.
     /// </summary>
-    public abstract class NukeActionAnimation : MonoBehaviour
+    public abstract class NukeActionAnimation : ActionAnimation
     {
+        public sealed override void Execute(ActionSO source, Hero caster, ActionResolver resolver, Action onComplete)
+            => Execute((NukeSO)source, caster, (NukeResolver)resolver, onComplete);
+
         /// <summary>
         /// Play the nuke visuals using the planned shots in <paramref name="resolver"/>.
         /// The animation decides WHEN each shot's <see cref="NukeShot.Apply"/> is invoked

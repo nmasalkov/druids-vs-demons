@@ -13,11 +13,11 @@ namespace Game._Scripts.Nukes
     public class FireMagicResolver : NukeResolver
     {
         public override void Resolve(NukeSO source, Hero caster, List<Creature> enemyCreatures,
-            Hero enemyHero, int level)
+            Hero enemyHero, Shield enemyShield, int level)
         {
             Shots.Clear();
 
-            var targets = BuildPriorityTargets(enemyCreatures, enemyHero);
+            var targets = BuildPriorityTargets(enemyCreatures, enemyHero, enemyShield, source.IgnoresShield);
             float remaining = source.GetDamageForLevel(level);
 
             foreach (var target in targets)

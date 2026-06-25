@@ -47,6 +47,7 @@ public class SpawningState : ActionState
         var creature = go.GetComponent<Creature>();
         slot.Creature = creature;
         creature.Slot = slot;
+        creature.OnSummon();
 
         if (entry.Level <= 1) return;
 

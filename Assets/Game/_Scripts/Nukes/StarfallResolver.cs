@@ -11,7 +11,7 @@ namespace Game._Scripts.Nukes
     public class StarfallResolver : NukeResolver
     {
         public override void Resolve(NukeSO source, Hero caster, List<Creature> enemyCreatures,
-            Hero enemyHero, int level)
+            Hero enemyHero, Shield enemyShield, int level)
         {
             Shots.Clear();
 
@@ -26,6 +26,9 @@ namespace Game._Scripts.Nukes
 
             if (enemyHero != null && !enemyHero.Health.IsDead())
                 Shots.Add(new StarfallShot { Target = enemyHero, Damage = damage });
+
+            if (!source.IgnoresShield && enemyShield != null && !enemyShield.Health.IsDead())
+                Shots.Add(new StarfallShot { Target = enemyShield, Damage = damage });
         }
     }
 }

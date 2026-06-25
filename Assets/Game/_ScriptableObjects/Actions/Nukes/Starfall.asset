@@ -19,3 +19,4 @@ MonoBehaviour:
   - 11
   - 17
   animationPrefab: {fileID: -6128024664002128976, guid: 25e984aa352f6cd4ca5c36a1d6ecbea7, type: 3}
+  ignoresShield: 1

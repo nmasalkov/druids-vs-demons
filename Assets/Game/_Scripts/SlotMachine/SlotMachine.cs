@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -12,10 +12,11 @@ public class SlotMachine : MonoBehaviour
     [SerializeField] private Button finishRollButton;
     [SerializeField] private Button creatureRollButton;
     [SerializeField] private Button nukeRollButton;
+    [SerializeField] private Button spellRollButton;
     [SerializeField] private float typeSwitchSettleDelay = 0.5f;
 
     public enum MachineState { FirstRoll, Rolling, PostRolls }
-    public enum RollType { Creature, Nuke }
+    public enum RollType { Creature, Nuke, Spell }
     private MachineState _machineState = MachineState.FirstRoll;
 
     public RollType CurrentRollType { get; private set; } = RollType.Creature;
@@ -50,6 +51,7 @@ public class SlotMachine : MonoBehaviour
         finishRollButton.onClick.AddListener(OnFinishRollClicked);
         creatureRollButton.onClick.AddListener(() => SwitchRollType(RollType.Creature));
         nukeRollButton.onClick.AddListener(() => SwitchRollType(RollType.Nuke));
+        spellRollButton.onClick.AddListener(() => SwitchRollType(RollType.Spell));
         finishRollButton.gameObject.SetActive(false);
         UpdateTypeButtonsVisibility();
     }
@@ -70,6 +72,7 @@ public class SlotMachine : MonoBehaviour
         finishRollButton.onClick.RemoveListener(OnFinishRollClicked);
         creatureRollButton.onClick.RemoveAllListeners();
         nukeRollButton.onClick.RemoveAllListeners();
+        spellRollButton.onClick.RemoveAllListeners();
     }
 
     public ActionSO[] GetActionOptions()
@@ -80,6 +83,11 @@ public class SlotMachine : MonoBehaviour
             {
                 var dn = G.DefaultNukes;
                 return new ActionSO[] { dn.nukeA, dn.nukeB, dn.nukeC };
+            }
+            case RollType.Spell:
+            {
+                var ds = G.DefaultSpells;
+                return new ActionSO[] { ds.spellA, ds.spellB, ds.spellC };
             }
             default:
             {

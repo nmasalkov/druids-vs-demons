@@ -21,7 +21,7 @@ namespace _Scripts.Creatures
         private List<HitInfo> pendingHits;
         private int currentHitIndex;
 
-        public override void AttackCreature(Unit target)
+        public override void AttackCreature(Targetable target)
         {
             AttackWithHits(new List<HitInfo>
             {

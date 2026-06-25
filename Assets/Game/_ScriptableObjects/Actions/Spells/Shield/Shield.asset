@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39b7174e3907466db2ff0e599ecbea4e, type: 3}
+  m_Name: Shield
+  m_EditorClassIdentifier: 
+  actionName: Shield
+  cardSprite: {fileID: 21300000, guid: e178e6e1f0d784049a540ca01f172325, type: 3}
+  animationPrefab: {fileID: -2642668504331925229, guid: 68d7736ab134eb5498b695436819bb0a, type: 3}
+  hpPerLevel:
+  - 15
+  - 27
+  - 56
+  healPerLevel:
+  - 7
+  - 13
+  - 27
+  playerShieldPrefab: {fileID: 2973527808174528490, guid: 2a863bc139488f3428cc214bd971b833, type: 3}
+  enemyShieldPrefab: {fileID: 2629848101248825390, guid: f0dd8afb01b567c4caada0d264af5cea, type: 3}

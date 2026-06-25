@@ -17,7 +17,7 @@ namespace _Scripts.Creatures
             SetAnimation(walk, true);
         }
 
-        public virtual void AttackCreature(Unit target)
+        public virtual void AttackCreature(Targetable target)
         {
             PlayAttack();
         }

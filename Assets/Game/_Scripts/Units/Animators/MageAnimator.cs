@@ -22,7 +22,7 @@ namespace _Scripts.Creatures
             StartFreezeSequence(fireBeam: false, Vector3.zero);
         }
 
-        public override void AttackCreature(Unit target)
+        public override void AttackCreature(Targetable target)
         {
             // Call base PlayAttack directly to avoid triggering PlayAttack override
             base.PlayAttack();

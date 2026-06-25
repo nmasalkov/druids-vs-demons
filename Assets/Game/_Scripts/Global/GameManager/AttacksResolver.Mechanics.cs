@@ -14,13 +14,15 @@ public partial class AttacksResolver
         { typeof(TankSO), 2 }
     };
 
-    private Dictionary<Unit, float> BuildSimulatedHP(List<Creature> creatures, Hero hero)
+    private Dictionary<Targetable, float> BuildSimulatedHP(List<Creature> creatures, Hero hero, Shield shield)
     {
-        var hp = new Dictionary<Unit, float>();
+        var hp = new Dictionary<Targetable, float>();
         foreach (var c in creatures)
             hp[c] = c.Health.CurrentHealth;
         if (hero != null && !hero.Health.IsDead())
             hp[hero] = hero.Health.CurrentHealth;
+        if (shield != null && !shield.Health.IsDead())
+            hp[shield] = shield.Health.CurrentHealth;
         return hp;
     }
 
@@ -36,11 +38,15 @@ public partial class AttacksResolver
     }
 
     /// <summary>
-    /// Returns highest priority alive creature, or hero if all creatures are dead.
+    /// Returns the next attackable target. Priority: enemy shield (if alive) → highest priority
+    /// alive creature → enemy hero.
     /// </summary>
-    private Unit GetHighestPriorityAliveTarget(List<Creature> enemies, Hero hero,
-        Dictionary<Unit, float> simHP)
+    private Targetable GetHighestPriorityAliveTarget(List<Creature> enemies, Hero hero, Shield shield,
+        Dictionary<Targetable, float> simHP)
     {
+        if (shield != null && simHP.TryGetValue(shield, out float shieldHp) && shieldHp > 0)
+            return shield;
+
         var creature = enemies
             .Where(e => simHP.TryGetValue(e, out float hp) && hp > 0)
             .OrderBy(GetPriority)
@@ -59,7 +65,8 @@ public partial class AttacksResolver
         List<Creature> attackers,
         List<Creature> enemies,
         Hero enemyHero,
-        Dictionary<Unit, float> enemySimHP)
+        Shield enemyShield,
+        Dictionary<Targetable, float> enemySimHP)
     {
         var assignments = new List<AttackAssignment>();
         var sorted = SortByPriority(attackers);
@@ -75,7 +82,7 @@ public partial class AttacksResolver
 
             for (int i = 0; i < hitCount; i++)
             {
-                var target = GetHighestPriorityAliveTarget(enemies, enemyHero, enemySimHP);
+                var target = GetHighestPriorityAliveTarget(enemies, enemyHero, enemyShield, enemySimHP);
                 if (target == null) break;
 
                 float hpBefore = enemySimHP[target];
@@ -126,7 +133,7 @@ public partial class AttacksResolver
             foreach (var b in uniqueAttacks)
             {
                 if (b.Attacker.Animator is not TankAnimator) continue;
-                if (a.Attacker == b.Target && b.Attacker == a.Target && a.Attacker != b.Attacker)
+                if ((Targetable)a.Attacker == b.Target && (Targetable)b.Attacker == a.Target && a.Attacker != b.Attacker)
                 {
                     mutualTankA = (TankAnimator)a.Attacker.Animator;
                     mutualTankB = (TankAnimator)b.Attacker.Animator;
@@ -169,7 +176,8 @@ public partial class AttacksResolver
         {
             if (a.Attacker.Animator is not TankAnimator thisTank) continue;
             if (handledTanks.Contains(a.Attacker)) continue;
-            if (a.Target.Animator is not TankAnimator opponentTank) continue;
+            if (a.Target is not Unit unitTarget) continue;
+            if (unitTarget.Animator is not TankAnimator opponentTank) continue;
 
             var attacker = a.Attacker;
             var hitsThis = BuildHitInfos(byAttacker[attacker]);
@@ -208,7 +216,7 @@ public partial class AttacksResolver
     private List<HitInfo> BuildHitInfos(List<AttackAssignment> assignments)
     {
         var hits = new List<HitInfo>();
-        var gemSpawned = new HashSet<(Creature attacker, Unit target)>();
+        var gemSpawned = new HashSet<(Creature attacker, Targetable target)>();
 
         foreach (var a in assignments)
         {
@@ -217,7 +225,9 @@ public partial class AttacksResolver
             float damage = a.Damage;
             bool targetIsDoomed = DoomedTargets.Contains(target);
             bool isHeroTarget = target is Hero;
-            bool shouldSpawnGem = isHeroTarget || (targetIsDoomed && gemSpawned.Add((attacker, target)));
+            bool isShieldTarget = target is Shield;
+            // Shields never grant XP gems even if they're the "doomed" target this round.
+            bool shouldSpawnGem = !isShieldTarget && (isHeroTarget || (targetIsDoomed && gemSpawned.Add((attacker, target))));
 
             hits.Add(new HitInfo
             {

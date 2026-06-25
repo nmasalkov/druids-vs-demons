@@ -6,7 +6,7 @@ using Game._Scripts.Creatures;
 public struct AttackAssignment
 {
     public Creature Attacker;
-    public Unit Target;
+    public Targetable Target;
     public float Damage;
     public float ResultHP;
     public bool FatalBlow;
@@ -21,16 +21,16 @@ public partial class AttacksResolver
     /// <summary>
     /// Set of targets that will die this battle (have at least one FatalBlow assignment).
     /// </summary>
-    public HashSet<Unit> DoomedTargets { get; private set; }
+    public HashSet<Targetable> DoomedTargets { get; private set; }
 
     public void Resolve(List<Creature> playerCreatures, List<Creature> enemyCreatures,
-        Hero playerHero, Hero enemyHero)
+        Hero playerHero, Hero enemyHero, Shield playerShield, Shield enemyShield)
     {
-        var enemySimHP = BuildSimulatedHP(enemyCreatures, enemyHero);
-        var playerSimHP = BuildSimulatedHP(playerCreatures, playerHero);
+        var enemySimHP = BuildSimulatedHP(enemyCreatures, enemyHero, enemyShield);
+        var playerSimHP = BuildSimulatedHP(playerCreatures, playerHero, playerShield);
 
-        PlayerAttacks = ResolveTeam(playerCreatures, enemyCreatures, enemyHero, enemySimHP);
-        EnemyAttacks = ResolveTeam(enemyCreatures, playerCreatures, playerHero, playerSimHP);
+        PlayerAttacks = ResolveTeam(playerCreatures, enemyCreatures, enemyHero, enemyShield, enemySimHP);
+        EnemyAttacks = ResolveTeam(enemyCreatures, playerCreatures, playerHero, playerShield, playerSimHP);
 
         AllAttacks = new List<AttackAssignment>();
         AllAttacks.AddRange(PlayerAttacks);
@@ -42,17 +42,19 @@ public partial class AttacksResolver
 
     private void BuildDoomedTargets()
     {
-        DoomedTargets = new HashSet<Unit>(
+        DoomedTargets = new HashSet<Targetable>(
             AllAttacks.Where(a => a.FatalBlow).Select(a => a.Target)
         );
     }
 
     private void RegisterExperienceRewards()
     {
-        var rewarded = new HashSet<(Creature attacker, Unit target)>();
+        var rewarded = new HashSet<(Creature attacker, Targetable target)>();
 
         foreach (var a in AllAttacks)
         {
+            if (a.Target is Shield) continue;
+
             if (a.Target is Hero)
             {
                 // Hero hit: damage × 10 XP per shot, regardless of death

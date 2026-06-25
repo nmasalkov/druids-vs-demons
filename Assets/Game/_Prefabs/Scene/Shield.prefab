@@ -9,6 +9,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1103888197364254293}
+  - component: {fileID: 2846861541416513451}
+  - component: {fileID: 2973527808174528490}
+  - component: {fileID: 5669221960484441966}
+  - component: {fileID: 897169295398773292}
   m_Layer: 0
   m_Name: Shield
   m_TagString: Untagged
@@ -32,6 +36,74 @@ Transform:
   - {fileID: 8910973282134234610}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2846861541416513451
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2280965034623264804}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edf1535fe7534c6987f163ce3d725bf7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  animator: {fileID: 0}
+  maxHealth: 0
+  currentHealth: 0
+  healthBar: {fileID: 0}
+  healFeedback: {fileID: 0}
+--- !u!114 &2973527808174528490
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2280965034623264804}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28e4171e9df140bab54bc59a0028bc5a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  onSummonFeedback: {fileID: 0}
+  onDeathFeedback: {fileID: 0}
+  onBodyCleanUpFeedback: {fileID: 0}
+  <Data>k__BackingField: {fileID: 11400000, guid: e5c16b4cdb8f87148a98bdb8f707e0c3, type: 2}
+--- !u!114 &5669221960484441966
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2280965034623264804}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac309c808bf74a59a03858cd60220802, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  visualRoot: {fileID: 8910973282134234610}
+  summonDuration: 0.4
+  summonStartScale: 0.1
+  summonEase: 27
+  promoteDuration: 0.25
+  promotePunchScale: 1.25
+  promoteEase: 27
+  deathDuration: 0.35
+  deathEndScale: 0.01
+  deathEase: 26
+--- !u!114 &897169295398773292
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2280965034623264804}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d7db75cd1944a16b05c7a2d20f2a432, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  <HitPlacePosition>k__BackingField: {fileID: 8910973282134234610}
 --- !u!1 &2327420690742471596
 GameObject:
   m_ObjectHideFlags: 0

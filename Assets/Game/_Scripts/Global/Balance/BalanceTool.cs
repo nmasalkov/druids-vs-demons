@@ -201,4 +201,73 @@ public class BalanceTool : MonoBehaviour
         }
         return entries;
     }
+
+    // === Spell Action testing ===
+
+    /// <summary>
+    /// 3 spell slots × 3 levels = 9 toggles. SpellToggles[slotIndex, level-1].
+    /// Mirrors NukeToggles.
+    /// </summary>
+    public readonly bool[,] SpellToggles = new bool[3, 3];
+
+    public bool IsSpellActionInProgress { get; private set; }
+
+    public int CountSelectedSpells()
+    {
+        int count = 0;
+        for (int s = 0; s < 3; s++)
+            for (int l = 0; l < 3; l++)
+                if (SpellToggles[s, l]) count++;
+        return count;
+    }
+
+    public bool IsSpellSelectionValid()
+    {
+        int n = CountSelectedSpells();
+        return n >= 1 && n <= 3;
+    }
+
+    public void ClearSpellToggles()
+    {
+        for (int s = 0; s < 3; s++)
+            for (int l = 0; l < 3; l++)
+                SpellToggles[s, l] = false;
+    }
+
+    public void PlaySpellAction()
+    {
+        if (IsSpellActionInProgress) return;
+        if (!IsSpellSelectionValid()) return;
+
+        IsSpellActionInProgress = true;
+
+        var entries = BuildSpellEntriesFromToggles();
+        RollStateManager.Instance.SpellEntries.Clear();
+        RollStateManager.Instance.SpellEntries.AddRange(entries);
+
+        var spell = new SpellState();
+        spell.OnStateCompleted += () => IsSpellActionInProgress = false;
+        spell.OnStateStart();
+    }
+
+    private List<RollStateManager.SpellEntry> BuildSpellEntriesFromToggles()
+    {
+        var entries = new List<RollStateManager.SpellEntry>();
+        var spells = new SpellSO[] { G.DefaultSpells.spellA, G.DefaultSpells.spellB, G.DefaultSpells.spellC };
+
+        for (int s = 0; s < 3; s++)
+        {
+            if (spells[s] == null) continue;
+            for (int l = 0; l < 3; l++)
+            {
+                if (!SpellToggles[s, l]) continue;
+                entries.Add(new RollStateManager.SpellEntry
+                {
+                    Spell = spells[s],
+                    Count = l + 1
+                });
+            }
+        }
+        return entries;
+    }
 }

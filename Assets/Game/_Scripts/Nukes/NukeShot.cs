@@ -13,7 +13,7 @@ namespace Game._Scripts.Nukes
     /// </summary>
     public abstract class NukeShot
     {
-        public Unit Target;
+        public Targetable Target;
 
         public abstract void Apply();
 
@@ -26,7 +26,9 @@ namespace Game._Scripts.Nukes
         protected void ApplyShock()
         {
             if (Target == null) return;
-            Target.StatusesManager.ApplyShock();
+            // Shock only applies to Units (creatures/heroes); shields and other Targetables ignore it.
+            if (Target is Unit unit)
+                unit.StatusesManager.ApplyShock();
         }
     }
 }

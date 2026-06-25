@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Game._Scripts.Global;
@@ -20,6 +20,10 @@ public class RollStateManager : MonoBehaviour
     /// After a nuke roll is finished, contains distinct nukes with their match counts (1, 2, or 3).
     /// </summary>
     public List<NukeEntry> NukeEntries { get; private set; } = new();
+    /// <summary>
+    /// After a spell roll is finished, contains distinct spells with their match counts (1, 2, or 3).
+    /// </summary>
+    public List<SpellEntry> SpellEntries { get; private set; } = new();
 
     /// <summary>
     /// True if the last roll was a triple (3 same cards). Used to trigger re-roll.
@@ -39,10 +43,20 @@ public class RollStateManager : MonoBehaviour
         public int Level; // target level (1 = single, 2 = pair, 3 = triple)
     }
 
-    public struct NukeEntry
+    public struct NukeEntry : IActionEntry
     {
         public NukeSO Nuke;
         public int Count; // 1, 2, or 3
+        public ActionSO Source => Nuke;
+        public int Level => Count;
+    }
+
+    public struct SpellEntry : IActionEntry
+    {
+        public SpellSO Spell;
+        public int Count; // 1, 2, or 3
+        public ActionSO Source => Spell;
+        public int Level => Count;
     }
 
     void Awake()
@@ -95,6 +109,7 @@ public class RollStateManager : MonoBehaviour
     {
         SpawnEntries.Clear();
         NukeEntries.Clear();
+        SpellEntries.Clear();
 
         var groups = actions.GroupBy(a => a).ToList();
         TripleRolled = groups.Any(g => g.Count() >= 3);
@@ -106,6 +121,19 @@ public class RollStateManager : MonoBehaviour
                 NukeEntries.Add(new NukeEntry
                 {
                     Nuke = (NukeSO)group.Key,
+                    Count = group.Count()
+                });
+            }
+            return;
+        }
+
+        if (rollType == SlotMachine.RollType.Spell)
+        {
+            foreach (var group in groups)
+            {
+                SpellEntries.Add(new SpellEntry
+                {
+                    Spell = (SpellSO)group.Key,
                     Count = group.Count()
                 });
             }

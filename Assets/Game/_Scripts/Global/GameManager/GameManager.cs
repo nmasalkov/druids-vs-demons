@@ -97,6 +97,8 @@ namespace Game._Scripts.Global
         {
             if (RollStateManager.Instance.LastRollType == SlotMachine.RollType.Nuke)
                 return new NukeState();
+            if (RollStateManager.Instance.LastRollType == SlotMachine.RollType.Spell)
+                return new SpellState();
             return new SpawningState();
         }
 

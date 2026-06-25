@@ -7,19 +7,22 @@ namespace Game._Scripts.Nukes
     /// Computes WHAT happens (which targets, how much damage); animation plays HOW it happens.
     /// Mirrors the AttacksResolver + BattleState split used for normal creature battles.
     /// </summary>
-    public abstract class NukeResolver
+    public abstract class NukeResolver : ActionResolver
     {
         public List<NukeShot> Shots { get; } = new();
         public abstract void Resolve(NukeSO source, Hero caster, List<Creature> enemyCreatures,
-            Hero enemyHero, int level);
-        public void ApplyInstant()
+            Hero enemyHero, Shield enemyShield, int level);
+        public override void ApplyInstant()
         {
             foreach (var s in Shots)
                 s.Apply();
         }
-        protected static List<Unit> BuildPriorityTargets(List<Creature> enemyCreatures, Hero enemyHero)
+        protected static List<Targetable> BuildPriorityTargets(List<Creature> enemyCreatures, Hero enemyHero,
+            Shield enemyShield, bool ignoresShield)
         {
-            var targets = new List<Unit>();
+            var targets = new List<Targetable>();
+            if (!ignoresShield)
+                AddIfAlive(targets, enemyShield);
             AddIfAlive(targets, FindByData<MageSO>(enemyCreatures));
             AddIfAlive(targets, FindByData<TankSO>(enemyCreatures));
             AddIfAlive(targets, FindByData<ArcherSO>(enemyCreatures));
@@ -35,7 +38,7 @@ namespace Game._Scripts.Nukes
             }
             return null;
         }
-        private static void AddIfAlive(List<Unit> list, Unit unit)
+        private static void AddIfAlive(List<Targetable> list, Targetable unit)
         {
             if (unit == null) return;
             if (unit.Health.IsDead()) return;

@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 [CreateAssetMenu(fileName = "DefaultSpells", menuName = "Game/Defaults/Spells")]
 public class DefaultSpellsSO : ScriptableObject
 {
-    public List<SpellSO> spells;
+    public SpellSO spellA;
+    public SpellSO spellB;
+    public SpellSO spellC;
 }
 

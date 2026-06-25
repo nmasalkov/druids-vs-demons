@@ -11,11 +11,11 @@ namespace Game._Scripts.Nukes
     public class ShockResolver : NukeResolver
     {
         public override void Resolve(NukeSO source, Hero caster, List<Creature> enemyCreatures,
-            Hero enemyHero, int level)
+            Hero enemyHero, Shield enemyShield, int level)
         {
             Shots.Clear();
 
-            var targets = BuildPriorityTargets(enemyCreatures, enemyHero);
+            var targets = BuildPriorityTargets(enemyCreatures, enemyHero, enemyShield, source.IgnoresShield);
             int count = level < targets.Count ? level : targets.Count;
 
             for (int i = 0; i < count; i++)

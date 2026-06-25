@@ -284,6 +284,7 @@ MonoBehaviour:
   finishRollButton: {fileID: 2462331673371989565}
   creatureRollButton: {fileID: 4897306224048706859}
   nukeRollButton: {fileID: 3999550042276138130}
+  spellRollButton: {fileID: 7674211183756684935}
   typeSwitchSettleDelay: 0.5
 --- !u!1 &4209741083251326115
 GameObject:
@@ -1274,7 +1275,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6442393371096195470, guid: ccc740f2958deb441b73c8dfeebb566d, type: 3}
       propertyPath: m_Name
-      value: RollTypeButtonHea
+      value: RollTypeButtonSpell
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1286,6 +1287,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 4637496046807972017, guid: ccc740f2958deb441b73c8dfeebb566d, type: 3}
   m_PrefabInstance: {fileID: 8560710899535999377}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7674211183756684935 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2039435042665389846, guid: ccc740f2958deb441b73c8dfeebb566d, type: 3}
+  m_PrefabInstance: {fileID: 8560710899535999377}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &8669988902740267525
 PrefabInstance:
   m_ObjectHideFlags: 0

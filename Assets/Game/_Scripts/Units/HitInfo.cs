@@ -5,7 +5,7 @@ namespace _Scripts.Creatures
 {
     public struct HitInfo
     {
-        public Unit Target;
+        public Targetable Target;
         public Action OnHit;
     }
 }

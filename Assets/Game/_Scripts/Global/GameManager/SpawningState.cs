@@ -12,13 +12,13 @@ public class SpawningState : ActionState
         foreach (var entry in entries)
         {
             var slot = GetSlotForCreature(creaturesManager, entry.Creature);
-            ProcessEntry(entry, slot);
+            ProcessEntry(entry, slot, creaturesManager);
         }
 
         CompleteState();
     }
 
-    private void ProcessEntry(RollStateManager.SpawnEntry entry, UnitSlot slot)
+    private void ProcessEntry(RollStateManager.SpawnEntry entry, UnitSlot slot, CreaturesManager creaturesManager)
     {
         if (slot.Creature != null)
         {
@@ -26,7 +26,7 @@ public class SpawningState : ActionState
             return;
         }
 
-        SpawnNewCreature(entry, slot);
+        SpawnNewCreature(entry, slot, creaturesManager);
     }
 
     private void HandleExistingCreature(RollStateManager.SpawnEntry entry, Creature creature)
@@ -41,13 +41,19 @@ public class SpawningState : ActionState
         creature.Health.Heal(entry.Creature.healAmounts[index]);
     }
 
-    private void SpawnNewCreature(RollStateManager.SpawnEntry entry, UnitSlot slot)
+    private void SpawnNewCreature(RollStateManager.SpawnEntry entry, UnitSlot slot, CreaturesManager creaturesManager)
     {
         var go = Object.Instantiate(entry.Creature.creaturePrefab, slot.transform);
         var creature = go.GetComponent<Creature>();
         slot.Creature = creature;
         creature.Slot = slot;
         creature.OnSummon();
+
+        // Join a BattleCry buff already active from earlier this same turn (e.g. cast, then a
+        // triple's bonus roll summons this creature before the battle it should also buff).
+        float activeBuff = creaturesManager.GetActiveBattleCryBuffMultiplier();
+        if (activeBuff != 1f)
+            creature.StatusesManager.ApplyBattleCryBuff(activeBuff);
 
         if (entry.Level <= 1) return;
 

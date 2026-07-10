@@ -21,8 +21,7 @@ public class SpellSO : ActionSO
     public override ActionResolver CreateAndResolve(ActionContext ctx, int level)
     {
         var resolver = CreateResolver();
-        resolver.Resolve(this, ctx.Caster, ctx.CasterView, level);
+        resolver.Resolve(this, ctx.Caster, ctx.CasterView, ctx.EnemyCreatures, level);
         return resolver;
     }
 }
-

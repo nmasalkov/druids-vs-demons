@@ -27,6 +27,21 @@ namespace Game._Scripts.PlayerView
             return list;
         }
 
+        /// <summary>
+        /// Reads the BattleCry buff multiplier already active on this side's creatures (1f if
+        /// none is active). Lets a creature summoned by a bonus roll, after BattleCry was cast
+        /// earlier the same turn, join the buff already in effect for that battle.
+        /// </summary>
+        public float GetActiveBattleCryBuffMultiplier()
+        {
+            foreach (var creature in GetAllCreatures())
+            {
+                float multiplier = creature.StatusesManager.AttackDamageMultiplier;
+                if (multiplier != 1f) return multiplier;
+            }
+            return 1f;
+        }
+
         public void SpawnCreatures(List<CreatureSO> creatures)
         {
             foreach (var creatureSO in creatures)

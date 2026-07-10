@@ -1,4 +1,5 @@
-﻿using Game._Scripts.Creatures;
+﻿using System.Collections.Generic;
+using Game._Scripts.Creatures;
 using Game._Scripts.PlayerView;
 
 namespace Game._Scripts.Spells
@@ -8,7 +9,8 @@ namespace Game._Scripts.Spells
     /// </summary>
     public class NoOpSpellResolver : SpellResolver
     {
-        public override void Resolve(SpellSO source, Hero caster, HeroView casterView, int level)
+        public override void Resolve(SpellSO source, Hero caster, HeroView casterView,
+            List<Creature> enemyCreatures, int level)
         {
             Shots.Clear();
         }

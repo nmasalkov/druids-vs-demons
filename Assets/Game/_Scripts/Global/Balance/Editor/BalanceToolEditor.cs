@@ -45,17 +45,38 @@ public class BalanceToolEditor : Editor
             Repaint();
     }
 
-    private static readonly string[] NukeSlotLabels = { "A", "B", "C" };
-    private static readonly string[] SpellSlotLabels = { "A", "B", "C" };
+    private static string[] GetNukeSlotLabels()
+    {
+        if (!Application.isPlaying) return new[] { "A", "B", "C" };
+        return new[]
+        {
+            G.DefaultNukes.nukeA != null ? G.DefaultNukes.nukeA.actionName : "A",
+            G.DefaultNukes.nukeB != null ? G.DefaultNukes.nukeB.actionName : "B",
+            G.DefaultNukes.nukeC != null ? G.DefaultNukes.nukeC.actionName : "C",
+        };
+    }
+
+    private static string[] GetSpellSlotLabels()
+    {
+        if (!Application.isPlaying) return new[] { "A", "B", "C" };
+        return new[]
+        {
+            G.DefaultSpells.spellA != null ? G.DefaultSpells.spellA.actionName : "A",
+            G.DefaultSpells.spellB != null ? G.DefaultSpells.spellB.actionName : "B",
+            G.DefaultSpells.spellC != null ? G.DefaultSpells.spellC.actionName : "C",
+        };
+    }
 
     private void DrawNukeSection(BalanceTool tool)
     {
         EditorGUILayout.Space(10);
         EditorGUILayout.LabelField("Nuke Action", EditorStyles.boldLabel);
 
+        var nukeSlotLabels = GetNukeSlotLabels();
+
         // Column header: " | L1 | L2 | L3 "
         EditorGUILayout.BeginHorizontal();
-        GUILayout.Label("", GUILayout.Width(40));
+        GUILayout.Label("", GUILayout.Width(70));
         GUILayout.Label("L1", EditorStyles.miniBoldLabel, GUILayout.Width(30));
         GUILayout.Label("L2", EditorStyles.miniBoldLabel, GUILayout.Width(30));
         GUILayout.Label("L3", EditorStyles.miniBoldLabel, GUILayout.Width(30));
@@ -64,7 +85,7 @@ public class BalanceToolEditor : Editor
         for (int s = 0; s < 3; s++)
         {
             EditorGUILayout.BeginHorizontal();
-            GUILayout.Label(NukeSlotLabels[s], GUILayout.Width(40));
+            GUILayout.Label(nukeSlotLabels[s], GUILayout.Width(70));
             for (int l = 0; l < 3; l++)
             {
                 bool current = tool.NukeToggles[s, l];
@@ -81,12 +102,20 @@ public class BalanceToolEditor : Editor
         int selected = tool.CountSelectedNukes();
         EditorGUILayout.LabelField($"Selected: {selected} (need 1..3)");
 
+        bool nextCastAsEnemy = EditorGUILayout.ToggleLeft("Cast as Enemy (onto Player)", tool.CastNukeAsEnemy);
+        if (nextCastAsEnemy != tool.CastNukeAsEnemy)
+        {
+            tool.CastNukeAsEnemy = nextCastAsEnemy;
+            EditorUtility.SetDirty(tool);
+        }
+
         bool nukeInProgress = Application.isPlaying && tool.IsNukeActionInProgress;
         bool canPlay = Application.isPlaying && !nukeInProgress && tool.IsNukeSelectionValid();
 
         EditorGUILayout.BeginHorizontal();
         EditorGUI.BeginDisabledGroup(!canPlay);
-        string label = nukeInProgress ? "Nuke action in progress..." : "Play Nuke Action";
+        string label = nukeInProgress ? "Nuke action in progress..."
+            : tool.CastNukeAsEnemy ? "Play Nuke Action (as Enemy)" : "Play Nuke Action";
         if (GUILayout.Button(label)) tool.PlayNukeAction();
         EditorGUI.EndDisabledGroup();
 
@@ -101,8 +130,10 @@ public class BalanceToolEditor : Editor
         EditorGUILayout.Space(10);
         EditorGUILayout.LabelField("Spell Action", EditorStyles.boldLabel);
 
+        var spellSlotLabels = GetSpellSlotLabels();
+
         EditorGUILayout.BeginHorizontal();
-        GUILayout.Label("", GUILayout.Width(40));
+        GUILayout.Label("", GUILayout.Width(70));
         GUILayout.Label("L1", EditorStyles.miniBoldLabel, GUILayout.Width(30));
         GUILayout.Label("L2", EditorStyles.miniBoldLabel, GUILayout.Width(30));
         GUILayout.Label("L3", EditorStyles.miniBoldLabel, GUILayout.Width(30));
@@ -111,7 +142,7 @@ public class BalanceToolEditor : Editor
         for (int s = 0; s < 3; s++)
         {
             EditorGUILayout.BeginHorizontal();
-            GUILayout.Label(SpellSlotLabels[s], GUILayout.Width(40));
+            GUILayout.Label(spellSlotLabels[s], GUILayout.Width(70));
             for (int l = 0; l < 3; l++)
             {
                 bool current = tool.SpellToggles[s, l];
@@ -128,12 +159,20 @@ public class BalanceToolEditor : Editor
         int selected = tool.CountSelectedSpells();
         EditorGUILayout.LabelField($"Selected: {selected} (need 1..3)");
 
+        bool nextCastAsEnemy = EditorGUILayout.ToggleLeft("Cast as Enemy (onto Player)", tool.CastSpellAsEnemy);
+        if (nextCastAsEnemy != tool.CastSpellAsEnemy)
+        {
+            tool.CastSpellAsEnemy = nextCastAsEnemy;
+            EditorUtility.SetDirty(tool);
+        }
+
         bool spellInProgress = Application.isPlaying && tool.IsSpellActionInProgress;
         bool canPlay = Application.isPlaying && !spellInProgress && tool.IsSpellSelectionValid();
 
         EditorGUILayout.BeginHorizontal();
         EditorGUI.BeginDisabledGroup(!canPlay);
-        string label = spellInProgress ? "Spell action in progress..." : "Play Spell Action";
+        string label = spellInProgress ? "Spell action in progress..."
+            : tool.CastSpellAsEnemy ? "Play Spell Action (as Enemy)" : "Play Spell Action";
         if (GUILayout.Button(label)) tool.PlaySpellAction();
         EditorGUI.EndDisabledGroup();
 

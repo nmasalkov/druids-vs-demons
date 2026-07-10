@@ -114,12 +114,14 @@ public class SlotMachine : MonoBehaviour
         bool show = _machineState == MachineState.FirstRoll;
         creatureRollButton.gameObject.SetActive(show);
         nukeRollButton.gameObject.SetActive(show);
+        spellRollButton.gameObject.SetActive(show);
     }
 
     private void HideTypeButtons()
     {
         creatureRollButton.gameObject.SetActive(false);
         nukeRollButton.gameObject.SetActive(false);
+        spellRollButton.gameObject.SetActive(false);
     }
 
     void Update()

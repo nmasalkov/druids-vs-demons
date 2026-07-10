@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Game._Scripts.Creatures;
+using Game._Scripts.Global;
 using Game._Scripts.PlayerView;
 using TMPro;
 using UnityEngine;
@@ -133,6 +134,9 @@ public class BalanceTool : MonoBehaviour
     /// </summary>
     public readonly bool[,] NukeToggles = new bool[3, 3];
 
+    /// <summary>When checked, "Play Nuke Action" casts from the enemy's side onto the player.</summary>
+    public bool CastNukeAsEnemy;
+
     public bool IsNukeActionInProgress { get; private set; }
 
     public int CountSelectedNukes()
@@ -163,6 +167,8 @@ public class BalanceTool : MonoBehaviour
         if (!IsNukeSelectionValid()) return;
 
         IsNukeActionInProgress = true;
+
+        GameManager.Instance.SetActiveSide(CastNukeAsEnemy ? ActiveSide.Enemy : ActiveSide.Player);
 
         var entries = BuildEntriesFromToggles();
         RollStateManager.Instance.NukeEntries.Clear();
@@ -210,6 +216,9 @@ public class BalanceTool : MonoBehaviour
     /// </summary>
     public readonly bool[,] SpellToggles = new bool[3, 3];
 
+    /// <summary>When checked, "Play Spell Action" casts from the enemy's side onto the player.</summary>
+    public bool CastSpellAsEnemy;
+
     public bool IsSpellActionInProgress { get; private set; }
 
     public int CountSelectedSpells()
@@ -240,6 +249,8 @@ public class BalanceTool : MonoBehaviour
         if (!IsSpellSelectionValid()) return;
 
         IsSpellActionInProgress = true;
+
+        GameManager.Instance.SetActiveSide(CastSpellAsEnemy ? ActiveSide.Enemy : ActiveSide.Player);
 
         var entries = BuildSpellEntriesFromToggles();
         RollStateManager.Instance.SpellEntries.Clear();

@@ -15,9 +15,11 @@ namespace Game._Scripts.Spells
         /// <summary>
         /// Plan the spell. <paramref name="casterView"/> is the caster's <see cref="HeroView"/>
         /// — spells that affect the caster's own board (e.g. summoning Shield) read their
-        /// own slots from it.
+        /// own slots from it. <paramref name="enemyCreatures"/> mirrors <c>NukeResolver.Resolve</c>
+        /// for spells that also need to reach the enemy's board (e.g. BattleCry's debuff).
         /// </summary>
-        public abstract void Resolve(SpellSO source, Hero caster, HeroView casterView, int level);
+        public abstract void Resolve(SpellSO source, Hero caster, HeroView casterView,
+            List<Creature> enemyCreatures, int level);
 
         public override void ApplyInstant()
         {

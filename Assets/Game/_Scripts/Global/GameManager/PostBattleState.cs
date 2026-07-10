@@ -8,10 +8,19 @@ public class PostBattleState : GameState
         {
             G.PlayerCreaturesManager.CleanUpDead();
             G.EnemyCreaturesManager.CleanUpDead();
+            ClearBattleCryStatuses();
 
             float gemDelay = PostBattleStateManager.Instance.GemCollectionDelay;
             Utils.DoAfterDelay.Execute(CollectExperience, gemDelay);
         }, cleanUpDelay);
+    }
+
+    private void ClearBattleCryStatuses()
+    {
+        foreach (var c in G.PlayerCreaturesManager.GetAllCreatures())
+            c.StatusesManager.ClearBattleCry();
+        foreach (var c in G.EnemyCreaturesManager.GetAllCreatures())
+            c.StatusesManager.ClearBattleCry();
     }
 
     private void CollectExperience()

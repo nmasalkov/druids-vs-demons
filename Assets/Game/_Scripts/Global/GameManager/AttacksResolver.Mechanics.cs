@@ -77,7 +77,8 @@ public partial class AttacksResolver
             if (attacker.StatusesManager.IsShocked) continue;
 
             var stats = attacker.Data.Stats(attacker.Experience.Level);
-            float dmgPerHit = stats.damage;
+            float dmgPerHit = stats.damage * attacker.StatusesManager.AttackDamageMultiplier;
+            if (dmgPerHit <= 0f) continue; // BattleCry Energy Drain reduced damage to 0 — skip turn
             int hitCount = stats.numberOfAttacks;
 
             for (int i = 0; i < hitCount; i++)

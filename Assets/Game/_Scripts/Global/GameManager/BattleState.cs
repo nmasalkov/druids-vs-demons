@@ -8,6 +8,26 @@ public class BattleState : GameState
         Utils.DoAfterDelay.Execute(BeginBattle, 0f);
     }
 
+    /// <summary>
+    /// Instant resolution path covering battle + post-battle (rule 7): plans the same attack
+    /// assignments as the animated battle, lands every hit immediately, removes dead bodies,
+    /// clears BattleCry and grants the earned XP without gem flights. No animation, no waits.
+    /// </summary>
+    public static void ResolveBattleInstant()
+    {
+        var resolver = new AttacksResolver();
+        resolver.Resolve(
+            G.PlayerCreaturesManager.GetAllCreatures(), G.EnemyCreaturesManager.GetAllCreatures(),
+            G.PlayerHero, G.EnemyHero, G.PlayerView.Shield, G.EnemyView.Shield);
+
+        resolver.ApplyAttacksInstant();
+
+        G.PlayerCreaturesManager.CleanUpDead();
+        G.EnemyCreaturesManager.CleanUpDead();
+        PostBattleState.ClearBattleCryStatuses();
+        ExperienceManager.Instance.ResolveGemsInstant();
+    }
+
     public void BeginBattle()
     {
         var playerCreatures = G.PlayerCreaturesManager.GetAllCreatures();

@@ -76,4 +76,15 @@ public partial class AttacksResolver
     {
         return ExecuteAnimations(AllAttacks);
     }
+
+    /// <summary>
+    /// Instant path (rule 7): lands every planned hit immediately in resolve order — no
+    /// animations, no delays. Gems don't spawn; the XP registered during
+    /// <see cref="Resolve"/> is granted via <c>ExperienceManager.ResolveGemsInstant()</c>.
+    /// </summary>
+    public void ApplyAttacksInstant()
+    {
+        foreach (var a in AllAttacks)
+            a.Target.Health.TakeDamage(a.Damage);
+    }
 }

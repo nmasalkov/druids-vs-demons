@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Game._Scripts.Creatures;
 using UnityEngine;
 
@@ -10,6 +10,11 @@ namespace Game._Scripts.PlayerView
         [SerializeField] private UnitSlot archerSlot;
         [SerializeField] private UnitSlot tankSlot;
 
+        [Header("Charm slots (2 per class, filled by the Charm spell)")]
+        [SerializeField] private UnitSlot[] mageCharmSlots = new UnitSlot[2];
+        [SerializeField] private UnitSlot[] archerCharmSlots = new UnitSlot[2];
+        [SerializeField] private UnitSlot[] tankCharmSlots = new UnitSlot[2];
+
         public UnitSlot MageSlot => mageSlot;
         public UnitSlot ArcherSlot => archerSlot;
         public UnitSlot TankSlot => tankSlot;
@@ -18,12 +23,62 @@ namespace Game._Scripts.PlayerView
         public Creature Archer => archerSlot.Creature;
         public Creature Tank => tankSlot.Creature;
 
+        /// <summary>Every slot on this manager: natives first, then each class's charm slots.</summary>
+        private IEnumerable<UnitSlot> AllSlots()
+        {
+            yield return tankSlot;
+            yield return mageSlot;
+            yield return archerSlot;
+            foreach (var slot in tankCharmSlots) yield return slot;
+            foreach (var slot in mageCharmSlots) yield return slot;
+            foreach (var slot in archerCharmSlots) yield return slot;
+        }
+
         public List<Creature> GetAllCreatures()
         {
             var list = new List<Creature>();
-            if (tankSlot.Creature != null) list.Add(tankSlot.Creature);
-            if (mageSlot.Creature != null) list.Add(mageSlot.Creature);
-            if (archerSlot.Creature != null) list.Add(archerSlot.Creature);
+            foreach (var slot in AllSlots())
+                if (slot.Creature != null) list.Add(slot.Creature);
+            return list;
+        }
+
+        /// <summary>The native (non-charm) slot for a creature class.</summary>
+        public UnitSlot GetNativeSlot(CreatureSO creature)
+        {
+            return creature switch
+            {
+                MageSO => mageSlot,
+                ArcherSO => archerSlot,
+                TankSO => tankSlot,
+                _ => mageSlot
+            };
+        }
+
+        private UnitSlot[] CharmSlotsFor(CreatureSO creature)
+        {
+            return creature switch
+            {
+                MageSO => mageCharmSlots,
+                ArcherSO => archerCharmSlots,
+                TankSO => tankCharmSlots,
+                _ => mageCharmSlots
+            };
+        }
+
+        /// <summary>First free charm slot for a creature class, or null if both are occupied.</summary>
+        public UnitSlot GetFreeCharmSlot(CreatureSO creature)
+        {
+            foreach (var slot in CharmSlotsFor(creature))
+                if (slot.Creature == null) return slot;
+            return null;
+        }
+
+        /// <summary>Creatures currently occupying the charm slots of a given class.</summary>
+        public List<Creature> GetCharmSlotCreatures(CreatureSO creature)
+        {
+            var list = new List<Creature>();
+            foreach (var slot in CharmSlotsFor(creature))
+                if (slot.Creature != null) list.Add(slot.Creature);
             return list;
         }
 
@@ -46,28 +101,19 @@ namespace Game._Scripts.PlayerView
         {
             foreach (var creatureSO in creatures)
             {
-                switch (creatureSO)
-                {
-                    case MageSO when mageSlot.Creature == null:
-                        mageSlot.Creature = Instantiate(creatureSO.creaturePrefab, mageSlot.transform).GetComponent<Creature>();
-                        mageSlot.Creature.Slot = mageSlot;
-                        break;
-                    case ArcherSO when archerSlot.Creature == null:
-                        archerSlot.Creature = Instantiate(creatureSO.creaturePrefab, archerSlot.transform).GetComponent<Creature>();
-                        archerSlot.Creature.Slot = archerSlot;
-                        break;
-                    case TankSO when tankSlot.Creature == null:
-                        tankSlot.Creature = Instantiate(creatureSO.creaturePrefab, tankSlot.transform).GetComponent<Creature>();
-                        tankSlot.Creature.Slot = tankSlot;
-                        break;
-                }
+                var slot = GetNativeSlot(creatureSO);
+                if (slot.Creature != null) continue;
+
+                var creature = Instantiate(creatureSO.creaturePrefab, slot.transform).GetComponent<Creature>();
+                slot.Creature = creature;
+                creature.Slot = slot;
             }
         }
+
         public void CleanUpDead()
         {
-            CleanSlot(mageSlot);
-            CleanSlot(archerSlot);
-            CleanSlot(tankSlot);
+            foreach (var slot in AllSlots())
+                CleanSlot(slot);
         }
 
         private void CleanSlot(UnitSlot slot)

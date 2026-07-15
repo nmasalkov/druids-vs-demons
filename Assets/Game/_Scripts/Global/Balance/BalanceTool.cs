@@ -76,16 +76,7 @@ public class BalanceTool : MonoBehaviour
         manager.SpawnCreatures(new List<CreatureSO> { creature });
     }
 
-    private UnitSlot GetSlotForCreature(CreaturesManager manager, CreatureSO creature)
-    {
-        return creature switch
-        {
-            MageSO => manager.MageSlot,
-            ArcherSO => manager.ArcherSlot,
-            TankSO => manager.TankSlot,
-            _ => manager.MageSlot
-        };
-    }
+    private UnitSlot GetSlotForCreature(CreaturesManager manager, CreatureSO creature) => manager.GetNativeSlot(creature);
 
     private void HandleExistingCreature(UnitSlot slot)
     {

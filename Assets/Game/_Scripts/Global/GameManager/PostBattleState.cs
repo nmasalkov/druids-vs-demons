@@ -15,7 +15,7 @@ public class PostBattleState : GameState
         }, cleanUpDelay);
     }
 
-    private void ClearBattleCryStatuses()
+    public static void ClearBattleCryStatuses()
     {
         foreach (var c in G.PlayerCreaturesManager.GetAllCreatures())
             c.StatusesManager.ClearBattleCry();

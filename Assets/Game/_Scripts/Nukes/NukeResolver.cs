@@ -23,20 +23,23 @@ namespace Game._Scripts.Nukes
             var targets = new List<Targetable>();
             if (!ignoresShield)
                 AddIfAlive(targets, enemyShield);
-            AddIfAlive(targets, FindByData<MageSO>(enemyCreatures));
-            AddIfAlive(targets, FindByData<TankSO>(enemyCreatures));
-            AddIfAlive(targets, FindByData<ArcherSO>(enemyCreatures));
+            AddAllByData<MageSO>(targets, enemyCreatures);
+            AddAllByData<TankSO>(targets, enemyCreatures);
+            AddAllByData<ArcherSO>(targets, enemyCreatures);
             AddIfAlive(targets, enemyHero);
             return targets;
         }
-        private static Creature FindByData<TData>(List<Creature> creatures) where TData : CreatureSO
+        /// <summary>
+        /// Appends every alive creature of a class, not just the first (charm slots can hold up
+        /// to 3 creatures of the same class on a board).
+        /// </summary>
+        private static void AddAllByData<TData>(List<Targetable> targets, List<Creature> creatures) where TData : CreatureSO
         {
             foreach (var c in creatures)
             {
                 if (c == null) continue;
-                if (c.Data is TData) return c;
+                if (c.Data is TData) AddIfAlive(targets, c);
             }
-            return null;
         }
         private static void AddIfAlive(List<Targetable> list, Targetable unit)
         {

@@ -16,6 +16,19 @@ specifically requires changing how it's wired into `Assets/Game`.
 There is no custom `.asmdef` for `Assets/Game` — it compiles into the default `Assembly-CSharp`
 assembly.
 
+### Robotek terminology mapping
+
+The user often describes mechanics in terms of the game Robotek. Translate as follows:
+
+| Robotek term | This project |
+| ------------ | ------------ |
+| hack         | Charm (the `CharmSO` spell) |
+| robots       | creatures |
+| mainframe    | hero |
+| droid        | mage |
+| drone        | archer |
+| tank         | tank |
+
 ## Working with this repo
 
 This is a Unity project, not a CLI-buildable one — there are no npm/make/CLI build, lint, or test
@@ -126,7 +139,12 @@ them for any new/modified game code under `Assets/Game`:
    Editor setup (components to add, fields to assign, SO assets to update).
 7. **Every animated/delayed game mechanic needs an instant-resolve counterpart** that skips animation,
    so tests/automation can run without waiting (see `NukeState.ResolveNukesInstant()`,
-   `ActionState.ResolveInstant`, `ExperienceManager.ResolveGemsInstant()`).
+   `ActionState.ResolveInstant`, `BattleState.ResolveBattleInstant()`,
+   `ExperienceManager.ResolveGemsInstant()`). The end goal: the **whole game cycle** must be able to
+   switch into instant mode and run hundreds of automated test fights headlessly (no visual playback)
+   to gather balance data — so an outcome must never depend on its animation. Keep all data mutation
+   in resolvers/shots (`Apply()`), never inside animation callbacks, so both paths reach the exact
+   same end state.
 8. **Use the new Input System** (`UnityEngine.InputSystem`, e.g. `Keyboard.current.jKey...`), never the
    legacy `Input` class.
 9. **Cache `[RequireComponent]` sibling references in `Awake()`** and reuse the cached field — never
@@ -145,6 +163,15 @@ them for any new/modified game code under `Assets/Game`:
     - Dedicated child GameObject by convention → no `[RequireComponent]`; `GetComponentInChildren<T>()`
       and let it throw if missing (rule 5). Example: `HitFeedback` lives on a child GO named
       `HitFeedback`, cached via `Unit.Awake()`.
+15. **Play particles through Feel feedbacks.** Gameplay code never calls `ParticleSystem.Play()`
+    directly — every particle effect is wired to an `MMF_Player` (with an `MMF_Particles` feedback
+    bound to the system) and triggered via `PlayFeedbacks()` / `StopFeedbacks()` (plus the
+    `Stop(true, StopEmittingAndClear)` residue fix when force-stopping looping effects). See
+    `StatusesManager` for the pattern — it owns the serialized `MMF_Player` refs for every unit
+    status/attempt effect. Also: particle systems on units must
+    use main-module **Scaling Mode = Local**, not Hierarchy — the enemy side is mirrored via
+    `localScale.x = -1`, and Hierarchy-scaled Billboard/Mesh particles inherit the negative scale
+    and render invisible (verified live: identical simulation, nothing drawn).
 
 ## Editor / IDE MCP integrations
 

@@ -20,8 +20,23 @@ namespace Game._Scripts.Units
         [SerializeField] private MMF_Player battleCryBuffFeedback;
         [Tooltip("MMF_Player on the BattleCryEffect/BattleCryDebuffFeedback child. Played while a BattleCry debuff is active.")]
         [SerializeField] private MMF_Player battleCryDebuffFeedback;
+        [Tooltip("MMF_Player on the StatusFeedbacks/CharmedFeedback/CharmedStatusFeedback child (Dizziness). Played while IsCharmed is true. Heroes don't wire this — Charm is creature-only.")]
+        [SerializeField] private MMF_Player charmedFeedback;
+        [Tooltip("MMF_Player on the CharmedAttemptFeedback/heart child. One-shot burst played on a successful charm attempt. Creature-only, like charmedFeedback.")]
+        [SerializeField] private MMF_Player charmSuccessFeedback;
+        [Tooltip("MMF_Player on the CharmedAttemptFeedback/heart_broken child. One-shot burst played on a failed charm attempt. Creature-only, like charmedFeedback.")]
+        [SerializeField] private MMF_Player charmFailFeedback;
 
         public bool IsShocked { get; private set; }
+
+        /// <summary>
+        /// True while this creature is stolen from its home side. A creature only ever changes
+        /// sides via Charm, so the flag is a simple toggle: charming a normal creature sets it,
+        /// charming an already-charmed creature (stealing it back) clears it (see
+        /// <c>CharmShot.Apply</c>). NOT touched by <see cref="ClearAllStatuses"/> (persists
+        /// through heals/promotions); also cleared on death.
+        /// </summary>
+        public bool IsCharmed { get; private set; }
 
         /// <summary>
         /// 1 = no BattleCry effect. Set by <see cref="ApplyBattleCryBuff"/>/<see cref="ApplyBattleCryDebuff"/>,
@@ -37,6 +52,7 @@ namespace Game._Scripts.Units
         private Unit unit;
         private ParticleSystem battleCryBuffParticles;
         private ParticleSystem battleCryDebuffParticles;
+        private ParticleSystem charmedParticles;
 
         void Awake()
         {
@@ -49,12 +65,15 @@ namespace Game._Scripts.Units
                 battleCryBuffParticles = battleCryBuffFeedback.GetComponentInChildren<ParticleSystem>();
             if (battleCryDebuffFeedback != null)
                 battleCryDebuffParticles = battleCryDebuffFeedback.GetComponentInChildren<ParticleSystem>();
+            if (charmedFeedback != null)
+                charmedParticles = charmedFeedback.GetComponentInChildren<ParticleSystem>();
         }
 
         void Start()
         {
             unit.Health.onHealed += ClearAllStatuses;
             unit.Health.onDeath += ClearAllStatuses;
+            unit.Health.onDeath += ClearCharmed;
 
             // Creatures additionally lose statuses when they level up.
             var experience = GetComponent<Experience>();
@@ -113,6 +132,27 @@ namespace Game._Scripts.Units
         {
             battleCryDebuffFeedback.StopFeedbacks();
             battleCryDebuffParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+
+        /// <summary>One-shot heart burst for a successful charm attempt (view only, no state change).</summary>
+        public void PlayCharmSuccess() => charmSuccessFeedback.PlayFeedbacks();
+
+        /// <summary>One-shot broken-heart burst for a failed charm attempt.</summary>
+        public void PlayCharmFail() => charmFailFeedback.PlayFeedbacks();
+
+        public void ApplyCharmed()
+        {
+            if (IsCharmed) return;
+            IsCharmed = true;
+            charmedFeedback.PlayFeedbacks();
+        }
+
+        public void ClearCharmed()
+        {
+            if (!IsCharmed) return;
+            IsCharmed = false;
+            charmedFeedback.StopFeedbacks();
+            charmedParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         }
 
         private void ClearAllStatuses()

@@ -11,8 +11,9 @@ public class SpawningState : ActionState
 
         foreach (var entry in entries)
         {
-            var slot = GetSlotForCreature(creaturesManager, entry.Creature);
+            var slot = creaturesManager.GetNativeSlot(entry.Creature);
             ProcessEntry(entry, slot, creaturesManager);
+            HealCharmSlotOccupants(entry, creaturesManager);
         }
 
         CompleteState();
@@ -61,14 +62,16 @@ public class SpawningState : ActionState
         Utils.DoAfterDelay.Execute(() => creature.Experience.PromoteToLevel(lvl), 0f);
     }
 
-    private UnitSlot GetSlotForCreature(CreaturesManager manager, CreatureSO creature)
+    /// <summary>
+    /// Rolling a class heals every charm-slot occupant of that class, but never promotes them —
+    /// only the native slot promotes-or-heals (see <see cref="HandleExistingCreature"/>).
+    /// </summary>
+    private void HealCharmSlotOccupants(RollStateManager.SpawnEntry entry, CreaturesManager manager)
     {
-        return creature switch
-        {
-            MageSO => manager.MageSlot,
-            ArcherSO => manager.ArcherSlot,
-            TankSO => manager.TankSlot,
-            _ => manager.MageSlot
-        };
+        int index = Mathf.Clamp(entry.Level - 1, 0, entry.Creature.healAmounts.Length - 1);
+        float heal = entry.Creature.healAmounts[index];
+
+        foreach (var charmed in manager.GetCharmSlotCreatures(entry.Creature))
+            charmed.Health.Heal(heal);
     }
 }

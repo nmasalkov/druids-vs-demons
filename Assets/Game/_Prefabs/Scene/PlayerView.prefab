@@ -919,6 +919,15 @@ MonoBehaviour:
   mageSlot: {fileID: 6979986077732927449}
   archerSlot: {fileID: 1235650258738309492}
   tankSlot: {fileID: 8356073702731102687}
+  mageCharmSlots:
+  - {fileID: 9042203738255411346}
+  - {fileID: 5053394167761961035}
+  archerCharmSlots:
+  - {fileID: 4054791435352215015}
+  - {fileID: 8029949845078931436}
+  tankCharmSlots:
+  - {fileID: 8485754687337734431}
+  - {fileID: 8359405795766688343}
 --- !u!1 &4039160074585695080
 GameObject:
   m_ObjectHideFlags: 0

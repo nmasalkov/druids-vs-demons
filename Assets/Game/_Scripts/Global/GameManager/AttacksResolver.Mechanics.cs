@@ -172,34 +172,21 @@ public partial class AttacksResolver
             handledTanks.Add(creatureB);
         }
 
-        // Handle one-way tank→tank
-        foreach (var a in uniqueAttacks)
+        // Remaining tanks, grouped by target and chained: tanks sharing one target take turns
+        // (each launches as the previous one leaps back) so they never pile up on the same
+        // melee position at once.
+        var tankChains = uniqueAttacks
+            .Where(a => a.Attacker.Animator is TankAnimator && !handledTanks.Contains(a.Attacker))
+            .GroupBy(a => a.Target);
+
+        foreach (var chain in tankChains)
         {
-            if (a.Attacker.Animator is not TankAnimator thisTank) continue;
-            if (handledTanks.Contains(a.Attacker)) continue;
-            if (a.Target is not Unit unitTarget) continue;
-            if (unitTarget.Animator is not TankAnimator opponentTank) continue;
-
-            var attacker = a.Attacker;
-            var hitsThis = BuildHitInfos(byAttacker[attacker]);
-
-            thisTank.WaitThenAttack(a.Target, hitsThis.Count > 0 ? hitsThis[0].OnHit : null);
-
-            opponentTank.OnLeapBackStarted += () =>
-            {
-                thisTank.StartPendingAttack();
-            };
-
-            float opponentDur = opponentTank.GetAttackDuration();
-            float waitingDur = thisTank.GetRunDuration() + thisTank.GetAttackDuration()
-                               - thisTank.GetRangedDelay() + thisTank.GetRunDuration();
-            float dur = opponentDur + waitingDur;
+            float dur = ExecuteTankChain(chain.ToList(), byAttacker);
             if (dur > maxDuration) maxDuration = dur;
-
-            handledTanks.Add(attacker);
+            foreach (var a in chain) handledTanks.Add(a.Attacker);
         }
 
-        // Handle all other attacks
+        // Handle all other attacks (ranged attackers stay in their slots — simultaneous is fine)
         foreach (var a in uniqueAttacks)
         {
             if (handledTanks.Contains(a.Attacker)) continue;
@@ -212,6 +199,53 @@ public partial class AttacksResolver
         }
 
         return maxDuration;
+    }
+
+    /// <summary>
+    /// Plays a group of tank attacks that all share one target as a queue. The head tank follows
+    /// the normal rules (waits for a tank opponent's leap-back, otherwise attacks right away);
+    /// each subsequent tank waits for the previous chain member's leap-back before starting its
+    /// own run. Returns the total choreography duration.
+    /// </summary>
+    private float ExecuteTankChain(List<AttackAssignment> chain,
+        Dictionary<Creature, List<AttackAssignment>> byAttacker)
+    {
+        float duration = StartChainHead(chain[0], byAttacker, out var previousTank);
+
+        for (int i = 1; i < chain.Count; i++)
+        {
+            var assignment = chain[i];
+            var tank = (TankAnimator)assignment.Attacker.Animator;
+            var hits = BuildHitInfos(byAttacker[assignment.Attacker]);
+
+            tank.WaitThenAttack(assignment.Target, hits.Count > 0 ? hits[0].OnHit : null);
+            previousTank.OnLeapBackStarted += tank.StartPendingAttack;
+
+            // Chained tanks start with no ranged delay: run + attack + return each.
+            duration += tank.GetAttackDuration() - tank.GetRangedDelay();
+            previousTank = tank;
+        }
+
+        return duration;
+    }
+
+    private float StartChainHead(AttackAssignment head,
+        Dictionary<Creature, List<AttackAssignment>> byAttacker, out TankAnimator tank)
+    {
+        tank = (TankAnimator)head.Attacker.Animator;
+        var hits = BuildHitInfos(byAttacker[head.Attacker]);
+        Action onHit = hits.Count > 0 ? hits[0].OnHit : null;
+
+        // One-way tank→tank: wait for the opponent tank to finish its own attack first.
+        if (head.Target is Unit { Animator: TankAnimator opponentTank })
+        {
+            tank.WaitThenAttack(head.Target, onHit);
+            opponentTank.OnLeapBackStarted += tank.StartPendingAttack;
+            return opponentTank.GetAttackDuration() + tank.GetAttackDuration() - tank.GetRangedDelay();
+        }
+
+        tank.AttackWithHits(hits);
+        return tank.GetAttackDuration();
     }
 
     private List<HitInfo> BuildHitInfos(List<AttackAssignment> assignments)

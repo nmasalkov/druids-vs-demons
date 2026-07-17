@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Game._Scripts.Creatures;
+using Game._Scripts.Global;
 using Game._Scripts.Pickups;
 using UnityEngine;
 
@@ -32,6 +33,16 @@ public class ExperienceManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+    }
+
+    void Start()
+    {
+        GameManager.OnBattleRestart += ClearForRestart;
+    }
+
+    void OnDestroy()
+    {
+        GameManager.OnBattleRestart -= ClearForRestart;
     }
 
     /// <summary>
@@ -129,6 +140,7 @@ public class ExperienceManager : MonoBehaviour
     {
         const float stagger = 0.15f;
         gemsInFlight = activeGems.Count;
+        int generation = GameManager.Instance.Generation;
 
         for (int i = 0; i < activeGems.Count; i++)
         {
@@ -137,8 +149,10 @@ public class ExperienceManager : MonoBehaviour
 
             Utils.DoAfterDelay.Execute(() =>
             {
+                if (GameManager.IsStale(generation)) return;
                 d.Gem.FlyTo(d.Owner.transform, () =>
                 {
+                    if (GameManager.IsStale(generation)) return;
                     d.Owner.Experience.AddExperience(d.Amount);
                     OnGemArrived();
                 });
@@ -176,6 +190,18 @@ public class ExperienceManager : MonoBehaviour
                 data.Owner.Experience.AddExperience(data.Amount);
         }
         activeGems.Clear();
+    }
+
+    /// <summary>
+    /// Discards all pending XP and in-flight gems without granting anything. Used by battle restart.
+    /// </summary>
+    public void ClearForRestart()
+    {
+        foreach (var g in activeGems)
+            if (g.Gem != null) Destroy(g.Gem.gameObject);
+        activeGems.Clear();
+        pendingXp.Clear();
+        gemsInFlight = 0;
     }
 }
 

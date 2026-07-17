@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Game._Scripts.Creatures;
+using Game._Scripts.Global;
 using UnityEngine;
 
 namespace Game._Scripts.PlayerView
@@ -22,6 +23,16 @@ namespace Game._Scripts.PlayerView
         public Creature Mage => mageSlot.Creature;
         public Creature Archer => archerSlot.Creature;
         public Creature Tank => tankSlot.Creature;
+
+        void Start()
+        {
+            GameManager.OnBattleRestart += ResetAll;
+        }
+
+        void OnDestroy()
+        {
+            GameManager.OnBattleRestart -= ResetAll;
+        }
 
         /// <summary>Every slot on this manager: natives first, then each class's charm slots.</summary>
         private IEnumerable<UnitSlot> AllSlots()
@@ -114,6 +125,18 @@ namespace Game._Scripts.PlayerView
         {
             foreach (var slot in AllSlots())
                 CleanSlot(slot);
+        }
+
+        /// <summary>Destroys every creature in every slot (native + charm), instantly, no death
+        /// animation. Used for a full battle restart.</summary>
+        public void ResetAll()
+        {
+            foreach (var slot in AllSlots())
+            {
+                if (slot.Creature == null) continue;
+                Destroy(slot.Creature.gameObject);
+                slot.Creature = null;
+            }
         }
 
         private void CleanSlot(UnitSlot slot)

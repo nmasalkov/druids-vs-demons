@@ -1,4 +1,5 @@
 ﻿using System;
+using Game._Scripts.Global;
 
 public abstract class GameState
 {
@@ -8,6 +9,12 @@ public abstract class GameState
     public static event Action<GameState> OnAnyStateEnded;
 
     public event Action OnStateCompleted;
+
+    /// <summary>Restart generation captured when this state was created. Lets a state started
+    /// before a battle restart recognize that it's stale and no-op instead of corrupting the
+    /// fresh run.</summary>
+    protected readonly int Generation = GameManager.Instance.Generation;
+    protected bool IsStale => GameManager.IsStale(Generation);
 
     public void OnStateStart()
     {
@@ -26,6 +33,7 @@ public abstract class GameState
 
     protected void CompleteState()
     {
+        if (IsStale) return;
         OnStateCompleted?.Invoke();
     }
 }

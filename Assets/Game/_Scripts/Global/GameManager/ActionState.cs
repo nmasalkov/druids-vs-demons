@@ -53,6 +53,7 @@ public abstract class ActionState : GameState
         float cleanUpDelay = PostBattleStateManager.Instance.CleanUpDelay;
         Utils.DoAfterDelay.Execute(() =>
         {
+            if (IsStale) return;
             CleanUpDeadCreatures();
             CompleteState();
         }, cleanUpDelay);
@@ -88,6 +89,8 @@ public abstract class ActionState : GameState
     private void PlayEntry<TEntry>(IReadOnlyList<TEntry> entries, int index, float pauseBetween, string stateName)
         where TEntry : IActionEntry
     {
+        if (IsStale) return;
+
         if (index >= entries.Count)
         {
             CompleteWithCleanup();

@@ -71,12 +71,14 @@ public class RollStateManager : MonoBehaviour
 
         playerSlotMachine.OnFinishRollCompleted += HandleFinishRoll;
         enemySlotMachine.OnFinishRollCompleted += HandleFinishRoll;
+        GameManager.OnBattleRestart += ResetForRestart;
     }
 
     void OnDestroy()
     {
         playerSlotMachine.OnFinishRollCompleted -= HandleFinishRoll;
         enemySlotMachine.OnFinishRollCompleted -= HandleFinishRoll;
+        GameManager.OnBattleRestart -= ResetForRestart;
     }
 
     public void ActivateSlotMachine()
@@ -148,5 +150,21 @@ public class RollStateManager : MonoBehaviour
                 Level = group.Count()
             });
         }
+    }
+
+    /// <summary>Clears roll results and returns both slot machines to their default (inactive)
+    /// state. Used by battle restart.</summary>
+    public void ResetForRestart()
+    {
+        SpawnEntries.Clear();
+        NukeEntries.Clear();
+        SpellEntries.Clear();
+        TripleRolled = false;
+        LastRollType = SlotMachine.RollType.Creature;
+
+        playerSlotMachine.ResetUI();
+        enemySlotMachine.ResetUI();
+        playerSlotMachine.gameObject.SetActive(false);
+        enemySlotMachine.gameObject.SetActive(false);
     }
 }

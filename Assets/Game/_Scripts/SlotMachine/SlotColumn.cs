@@ -56,13 +56,15 @@ public partial class SlotColumn : MonoBehaviour
 
     /// <summary>
     /// Resets runtime state (spinning, reroll flags, PostRolls UI) without reshuffling cards.
+    /// Also snaps the reel back to its resting position, in case this is called while the column
+    /// was mid-spin/mid-stop/mid-bounce (e.g. a battle restart while paused).
     /// </summary>
     public void ResetState()
     {
         _state = State.Idle;
         _isReroll = false;
         _postRollsEnabled = false;
-        _distanceSinceLastRecycle = 0f;
+        SnapToAligned();
         rerollButton.gameObject.SetActive(false);
     }
 

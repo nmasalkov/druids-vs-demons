@@ -41,29 +41,39 @@ commands. Development happens in the Unity Editor (6000.1.6f1):
 - After changing any MonoBehaviour/ScriptableObject serialized fields, the change must be verified/
   wired up in the Editor (see rule 6 below) since there's no way to check this outside Unity.
 
+## Documentation map
+
+CLAUDE.md is a glossary and rule book — deep per-system detail lives in `docs/*.md` so this file stays
+short and scannable. Read the matching doc before altering that system, and (per rule 17 below) check
+for a matching `docs/*.md` file whenever you're collecting context about a system, even one not listed
+here — this list is added to over time and can lag behind the actual `docs/` folder contents.
+
+| System | Doc | Read it when touching... |
+| ------ | --- | ------------------------- |
+| Round/turn state machine, restart, pause | [`docs/GameLoop.md`](docs/GameLoop.md) | `GameManager`, `GameState`/`ActionState`, the restart/pause feature, the `Generation`/`IsStale` staleness guard |
+| Combat resolution, units, health/shield | [`docs/Battle.md`](docs/Battle.md) | `BattleState`, `Health`, `Shield`, `Targetable`/`Unit`/`Creature`/`Hero`, `StatusesManager` |
+| Nuke/Spell action pattern | [`docs/ActionsAndSpells.md`](docs/ActionsAndSpells.md) | adding/changing a nuke or spell, `ActionSO`/`ActionResolver`/`ActionAnimation`/`ActionState` |
+| Slot machine + AI roller | [`docs/SlotMachine.md`](docs/SlotMachine.md) | `SlotMachine`/`SlotColumn`, `RollStateManager`, `AIController` |
+| XP/leveling, gem pickups | [`docs/Experience.md`](docs/Experience.md) | `ExperienceManager`, `Experience`, `ExpirienceGem` |
+
+**Keep these docs up to date** (rule 18 below): when a change alters how a documented system works
+(new states, new events, changed resolution order, new restart participants, etc.), update the
+relevant `docs/*.md` file in the same change instead of letting it go stale.
+
 ## Core architecture
 
 ### Game loop: `GameManager` + `GameState`
 
 `GameManager` (`Global/GameManager/GameManager.cs`) is a singleton that drives the entire match as a
-single coroutine, `RunGameLoop()`. That method is the **single source of truth for round order** —
-read it top-to-bottom rather than searching for where states get chained; no state ever dynamically
-inserts another state into the sequence.
+single coroutine, `RunGameLoop()` — the **single source of truth for round order** (read it
+top-to-bottom; no state ever dynamically inserts another state into the sequence). Hero death
+interrupts the loop out-of-band via `Hero.OnHeroDied` → `GameOverState`.
 
-Flow per round: `SwitchSideState` → `RollState` → (`SpawningState` | `NukeState` | `SpellState`,
-chosen polymorphically by `GameManager.CreateActionState()` based on the roll's `SlotMachine.RollType`)
-→ optionally re-roll on a triple → `BattleState` → `PostBattleState`, then repeat for the other side,
-then `EndOfRoundState`. Round 1 skips the post-player-turn battle (player just summoned, shouldn't
-immediately be attacked).
-
-All states derive from the abstract `GameState` (`Global/GameManager/GameState.cs`): `OnEnter()` /
-`OnExit()` lifecycle, and `CompleteState()` signals `GameManager.Run()` to advance. `ActionState`
-(`Global/GameManager/ActionState.cs`) is the shared base for Nuke/Spell states — it resolves
-caster/target sides from `GameManager.ActiveSide`, and owns the generic entry-playback loop
-(`PlayEntries`) and the animation-skipping instant-resolve path (`ResolveInstant`).
-
-Hero death is handled out-of-band via the `Hero.OnHeroDied` event, which can interrupt the main
-coroutine at any point (`HandleHeroDied` → `GameOverState`).
+`GameManager.RestartBattle()` restarts the battle in place (no scene reload) by firing a static
+`OnBattleRestart` event — every script that owns entities or battle-scoped state subscribes to it
+independently and resets itself (the canonical example of the event-based architecture in rule 3). A
+`Generation`/`IsStale` counter guards against delayed callbacks (`Utils.DoAfterDelay`) that were
+scheduled before a restart. Full detail: [`docs/GameLoop.md`](docs/GameLoop.md).
 
 ### `G` — global service locator
 
@@ -73,52 +83,28 @@ gameplay code reaches other systems through `G.*` rather than holding direct ref
 
 ### Action pattern: SO (data) → Resolver (logic) → Animation (view)
 
-Nukes and spells share one pattern, split strictly along the data/logic/view boundary (this mirrors
-coding rule 13 below):
-
-1. **`ActionSO`** (abstract) — the "card": name, sprite, and `AnimationPrefabBase`. `NukeSO`/`SpellSO`
-   subclasses (e.g. `FireMagicSO`, `ShieldSO`, `StarfallSO`) hold balance numbers (damage per level,
-   targeting rules) and implement `CreateAndResolve(ActionContext, level)`.
-2. **`ActionResolver`** (abstract, `ApplyInstant()`) — pure data layer. A concrete resolver (e.g.
-   `FireMagicResolver`, `ShieldResolver`) computes targets/damage/shots up front against an
-   `ActionContext` (caster, enemy creatures/hero/shield) with no animation or timing involved.
-3. **`ActionAnimation`** (abstract MonoBehaviour, `Execute(source, caster, resolver, onComplete)`) —
-   view layer only. Instantiated per entry, downcasts the resolver to its typed shots and plays
-   visuals, then calls `onComplete`.
-
-`ActionState.PlayEntries` drives this per rolled entry: build `ActionContext` → `CreateAndResolve` →
-instantiate the animation prefab → wait for `onComplete` → pause → next entry → `CompleteWithCleanup()`
-(removes dead creatures on both sides). `ActionState.ResolveInstant` is the non-animated equivalent
-used for instant resolution (rule 7) — same resolve step, straight to `ApplyInstant()`, no view layer.
-
-Placeholder SOs without an assigned `AnimationPrefabBase` are skipped with a warning rather than
-throwing, since balance-only WIP SO assets are expected to exist mid-development.
+Nukes and spells share one pattern, split strictly along the data/logic/view boundary (mirrors rule
+13): **`ActionSO`** (data/balance + `AnimationPrefabBase`) → **`ActionResolver`** (pure logic,
+`ApplyInstant()`) → **`ActionAnimation`** (view only, `Execute(...)`). `ActionState.PlayEntries` drives
+this per rolled entry; `ActionState.ResolveInstant` is the non-animated equivalent (rule 7). Full
+detail, worked example, and how to add a new nuke/spell:
+[`docs/ActionsAndSpells.md`](docs/ActionsAndSpells.md).
 
 ### Slot machine
 
-`SlotMachine.cs` drives a multi-column reel (`SlotColumn`) with three roll type tabs
-(`RollType.Creature/Nuke/Spell`, selectable only in `MachineState.FirstRoll`). Each `SlotColumn`
-independently spins/stops and reports its landed `ActionSO` as `WinningAction`. After all columns
-stop, the machine enters `PostRolls` (allowing per-column reroll) unless all three columns already
-match (`IsTriple()`), in which case it auto-finishes. `FinishRoll()` fires
-`OnFinishRollCompleted(List<ActionSO>, RollType)`, which `RollStateManager` consumes to build the
-entries (`IActionEntry`) that `ActionState` plays.
+`SlotMachine.cs` drives a multi-column reel (`SlotColumn`) across three roll types
+(`RollType.Creature/Nuke/Spell`). `RollStateManager` consumes the finished roll
+(`OnFinishRollCompleted`) into typed entries (`IActionEntry`) that `ActionState` plays, and also drives
+`AIController`'s control of the enemy's machine. Full detail:
+[`docs/SlotMachine.md`](docs/SlotMachine.md).
 
 ### Units
 
-`Targetable` → `Unit` (abstract, `[RequireComponent(StatusesManager)]`, exposes `Animator`/
-`StatusesManager`, requires subclasses to implement `GetMaxHealth()`) → `Creature` (has `CreatureSO`
-data + `Experience`) / `Hero`. `Shield` is a `Targetable` directly (not a `Unit`) — a summoned
-defensive construct in `HeroView.ShieldSlot`, highest-priority target for most nukes/melee, no XP on
-kill.
-
-`Health` is a standalone component (`TakeDamage`/`Heal`/`IsDead`) with a `PostponeDeath` flag so
-attackers (e.g. Tank) can finish their attack animation before the death animation plays
-(`ExecutePostponedDeath()`).
-
-Stats/balance for creatures live on `CreatureSO` (indexed by `Experience.Level`, e.g.
-`Data.Stats(Experience.Level).health`), not on the `Creature` MonoBehaviour itself, per the
-data/view separation rule.
+`Targetable` → `Unit` → `Creature`/`Hero`; `Shield` is a `Targetable` directly (not a `Unit`), highest-
+priority target for most nukes/melee, no XP on kill. `Health` (`TakeDamage`/`Heal`/`IsDead`,
+`PostponeDeath`) is a standalone component. Creature stats/balance live on `CreatureSO` indexed by
+`Experience.Level`, per the data/view separation rule. Combat resolution detail:
+[`docs/Battle.md`](docs/Battle.md). XP/leveling detail: [`docs/Experience.md`](docs/Experience.md).
 
 ## Project coding rules
 
@@ -129,7 +115,14 @@ them for any new/modified game code under `Assets/Game`:
    is immediately visible.
 2. **Use `Utils.DoAfterDelay.Execute(action, delay)`** for one-off delayed calls instead of writing a
    custom coroutine.
-3. **Prefer events over direct references** between components for loose coupling.
+3. **Prefer events over direct references** between components for loose coupling. The canonical
+   example is the battle-restart architecture: `GameManager` fires one static
+   `GameManager.OnBattleRestart` event, and every script that needs to reset itself (heroes, creature
+   managers, roll state, XP, AI control, ...) subscribes independently in its own `Start()`
+   (unsubscribing in `OnDestroy()`) instead of a coordinator holding direct references to every
+   dependent system and calling each of them by hand. Reach for this "one broadcaster, many
+   independent subscribers" shape whenever a single fan-out action (restart, game-over, round-start,
+   etc.) needs several unrelated systems to each do their own thing.
 4. **No cross-script logic in `Awake()`.** `Awake()` is self-initialization only (caching own
    components, singleton `Instance` assignment). Anything depending on other MonoBehaviours or
    singletons goes in `Start()` or later.
@@ -172,6 +165,21 @@ them for any new/modified game code under `Assets/Game`:
     use main-module **Scaling Mode = Local**, not Hierarchy — the enemy side is mirrored via
     `localScale.x = -1`, and Hierarchy-scaled Billboard/Mesh particles inherit the negative scale
     and render invisible (verified live: identical simulation, nothing drawn).
+16. **Entities/state-holding scripts must support battle restart.** Any script that spawns entities
+    (creatures, shields, gems, projectiles, ...) or holds battle-scoped state (pending rolls, pending
+    XP, AI control, ...) must subscribe to the static `GameManager.OnBattleRestart` event in its own
+    `Start()` (unsubscribe in `OnDestroy()`) and provide its own reset method for the handler to call.
+    See `docs/GameLoop.md` for the current subscriber list and `GameManager.RestartBattle()` for how
+    the event fires. Don't add restart-handling logic to `GameManager` itself beyond its own fields
+    (`_gameOver`, `ActiveSide`, coroutine state) — every other system resets itself.
+17. **Check for a matching `docs/*.md` file whenever collecting context about a system**, before
+    reading source top-to-bottom from scratch — see the Documentation map above. If a doc exists for
+    the system you're touching, read it first; it's cheaper and more complete than re-deriving the
+    same understanding from code every session.
+18. **Keep `docs/*.md` up to date.** When a change alters how a documented system works (new states,
+    new events, changed resolution order, new restart participants, new SO subclasses, etc.), update
+    the relevant `docs/*.md` file as part of that same change instead of letting it drift from the
+    code.
 
 ## Editor / IDE MCP integrations
 

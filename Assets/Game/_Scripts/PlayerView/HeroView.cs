@@ -1,4 +1,5 @@
 using Game._Scripts.Creatures;
+using Game._Scripts.Global;
 using UnityEngine;
 
 namespace Game._Scripts.PlayerView
@@ -19,6 +20,19 @@ namespace Game._Scripts.PlayerView
         void Start()
         {
             hero.Slot = heroSlot;
+            GameManager.OnBattleRestart += ClearShield;
+        }
+
+        void OnDestroy()
+        {
+            GameManager.OnBattleRestart -= ClearShield;
+        }
+
+        public void ClearShield()
+        {
+            if (Shield == null) return;
+            Destroy(Shield.gameObject);
+            ShieldSlot.Unit = null;
         }
     }
 }

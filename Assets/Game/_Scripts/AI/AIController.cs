@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Game._Scripts.Global;
+using UnityEngine;
 
 public class AIController : MonoBehaviour
 {
@@ -12,17 +13,28 @@ public class AIController : MonoBehaviour
         Instance = this;
     }
 
+    void Start()
+    {
+        GameManager.OnBattleRestart += ReleaseControl;
+    }
+
+    void OnDestroy()
+    {
+        GameManager.OnBattleRestart -= ReleaseControl;
+    }
+
     public void TakeControl(SlotMachine slotMachine)
     {
         _targetMachine = slotMachine;
         _targetMachine.OnPostRollsEnter += HandlePostRolls;
 
         _targetMachine.StartAll();
-        Utils.DoAfterDelay.Execute(() => _targetMachine.StopAll(), 2f);
+        Utils.DoAfterDelay.Execute(() => { if (_targetMachine != null) _targetMachine.StopAll(); }, 2f);
     }
 
     public void ReleaseControl()
     {
+        if (_targetMachine == null) return;
         _targetMachine.OnPostRollsEnter -= HandlePostRolls;
         _targetMachine = null;
     }

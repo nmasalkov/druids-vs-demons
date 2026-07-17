@@ -1,5 +1,6 @@
 using System;
 using _Scripts.Creatures;
+using Game._Scripts.Global;
 using UnityEngine;
 
 namespace Game._Scripts.Creatures
@@ -17,6 +18,12 @@ namespace Game._Scripts.Creatures
             InitHealth();
             base.Start();
             Health.onDeath += () => OnHeroDied?.Invoke(this);
+            GameManager.OnBattleRestart += InitHealth;
+        }
+
+        private void OnDestroy()
+        {
+            GameManager.OnBattleRestart -= InitHealth;
         }
 
         protected override float GetMaxHealth()

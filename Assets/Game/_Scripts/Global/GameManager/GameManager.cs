@@ -13,6 +13,15 @@ namespace Game._Scripts.Global
         public ActiveSide ActiveSide { get; private set; } = ActiveSide.Player;
         public void SetActiveSide(ActiveSide side) => ActiveSide = side;
 
+        public int Generation { get; private set; }
+        public static bool IsStale(int capturedGeneration) => capturedGeneration != Instance.Generation;
+
+        /// <summary>Fired synchronously from <see cref="RestartBattle"/>, before the round loop
+        /// restarts. Any script that spawns entities or holds battle-scoped state subscribes
+        /// here (in Start(), unsubscribing in OnDestroy()) with its own reset method — see
+        /// docs/GameLoop.md.</summary>
+        public static event Action OnBattleRestart;
+
         private GameState _currentState;
         private Coroutine _mainCoroutine;
         private bool _gameOver;
@@ -155,6 +164,29 @@ namespace Game._Scripts.Global
         {
             if (hero != null && !hero.Health.IsDead()) return true;
             return creatures.GetAllCreatures().Count > 0;
+        }
+
+        // ============================================================
+        //  Restart — resets both sides and starts a fresh round loop.
+        // ============================================================
+
+        public void RestartBattle()
+        {
+            Generation++; // invalidate every in-flight closure scheduled before this point
+
+            if (_mainCoroutine != null)
+            {
+                StopCoroutine(_mainCoroutine);
+                _mainCoroutine = null;
+            }
+            _currentState?.OnStateEnd();
+            _currentState = null;
+            _gameOver = false;
+            SetActiveSide(ActiveSide.Player);
+
+            OnBattleRestart?.Invoke();
+
+            _mainCoroutine = StartCoroutine(RunGameLoop());
         }
     }
 }

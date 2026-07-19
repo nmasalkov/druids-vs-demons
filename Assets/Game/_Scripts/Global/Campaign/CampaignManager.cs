@@ -12,15 +12,14 @@ public class CampaignManager : MonoBehaviour
     [SerializeField] private GameCatalog catalog;
 
     public RunState CurrentRun { get; private set; }
+    public BattleSO CurrentBattle { get; private set; }
 
     public const string SaveKey = "DvD_RunState";
 
     void Awake()
     {
         Instance = this;
-        CurrentRun = PlayerPrefs.HasKey(SaveKey)
-            ? JsonUtility.FromJson<RunState>(PlayerPrefs.GetString(SaveKey))
-            : new RunState();
+        CurrentRun = LoadOrCreateRunState();
     }
 
     void Start()
@@ -32,9 +31,38 @@ public class CampaignManager : MonoBehaviour
         // nothing here that could get clobbered by ordering either way.
         ApplyLoadoutToG();
         EnergyController.Instance.ApplyCampaignEnergyCapacity(CurrentRun.energyCapacity);
+        ApplyEncounterToScene();
     }
 
     public void Save() => PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(CurrentRun));
+
+    public void ResetRun()
+    {
+        CurrentRun = new RunState();
+        Save();
+    }
+
+    /// <summary>
+    /// Self-contained PlayerPrefs read shared with CampaignProgressManager's own bootstrap
+    /// (which can't rely on CampaignManager.Instance existing yet — see docs/Encounters.md).
+    /// </summary>
+    public static RunState LoadOrCreateRunState() =>
+        PlayerPrefs.HasKey(SaveKey)
+            ? JsonUtility.FromJson<RunState>(PlayerPrefs.GetString(SaveKey))
+            : new RunState();
+
+    /// <summary>
+    /// Swaps in the current encounter's enemy avatar/HP. Called once from Start() for the scene's
+    /// initial load, and reused by CampaignProgressManager for an in-place "soft reload" when
+    /// navigating to a new encounter without leaving BattleScene (see docs/Encounters.md) — public
+    /// so it's callable from outside the Awake/Start pipeline.
+    /// </summary>
+    public void ApplyEncounterToScene()
+    {
+        if (CampaignProgressManager.Instance.CurrentEncounter is not BattleSO battle) return;
+        CurrentBattle = battle;
+        G.EnemyView.ReplaceHeroAvatar(battle.enemyData.enemyAvatarPrefab);
+    }
 
     private void ApplyLoadoutToG()
     {

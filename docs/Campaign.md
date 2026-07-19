@@ -7,15 +7,17 @@ with a pre-battle loadout phase and a post-battle reward phase around each one, 
 player-improvable stats (max HP, reroll energy capacity) that persist across the run. This system is
 the **data layer** only — a `RunState` that saves/loads via `PlayerPrefs`/JSON, and the wiring that
 makes `BattleScene` pull its starting values from it instead of pure hardcoded defaults. It does not
-implement the pre-battle/post-battle UI, reward selection, or per-encounter enemy variation — those
-are follow-ups once this foundation exists.
+implement the pre-battle/post-battle UI or reward selection — those are still follow-ups. Per-
+encounter enemy avatar/HP variation *is* now solved, one layer up — see `docs/Encounters.md`.
 
-**Both sides still roll from one shared pool.** `SlotMachine.GetActionOptions()` has no player/enemy
-distinction — overriding `G`'s creature/nuke/spell defaults from campaign data keeps that behavior
-for both sides identically. Only the player's hero max HP is campaign-driven (`Hero == G.PlayerHero`
-check in `Hero.GetMaxHealth()`); the enemy always uses its own `HeroSO.health`. True per-encounter
-enemy composition (different enemies per battle) needs `SlotMachine` to gain a per-side loadout
-source — not solved here.
+**Both sides still roll from one shared creature/nuke/spell pool.** `SlotMachine.GetActionOptions()`
+has no player/enemy distinction — overriding `G`'s creature/nuke/spell defaults from campaign data
+keeps that behavior for both sides identically. Only the player's hero max HP is driven by
+`RunState` directly (`Hero == G.PlayerHero` check in `Hero.GetMaxHealth()`); the enemy's max HP is
+driven by the current `BattleSO` when one is active (`docs/Encounters.md`), falling back to its own
+`HeroSO.health` otherwise. True per-encounter *creature* composition (different summonable creatures
+per battle, not just a different enemy avatar/HP) still needs `SlotMachine` to gain a per-side
+loadout source — not solved here.
 
 ## Key files
 
@@ -54,7 +56,7 @@ public string archerId = "archer", tankId = "tank", mageId = "mage";
 public string nukeAId = "firemagic", nukeBId = "starfall", nukeCId = "shock";
 public string spellAId = "battlecry", spellBId = "charm", spellCId = "shield";
 
-public int currentEncounterIndex = 0; // abstract progression marker; not consumed by anything yet
+public int currentEncounterIndex = 0; // now consumed — see docs/Encounters.md
 ```
 
 The 9 loadout fields are ids, not direct SO references — `ScriptableObject` references don't survive
@@ -162,12 +164,14 @@ authoring surface uses direct references, for convenience.
   `ScriptableObject.CreateInstance` runtime instances `CampaignManager` builds from them are
   disposable, never saved as assets) — don't confuse "SO used at runtime" with "data that needs to
   survive a session," which is what `RunState`/`PlayerPrefs` is for.
-- **Not `DontDestroyOnLoad`.** `CampaignManager` lives on the same `Global/GameManager` GameObject as
-  `G`/`GameManager`/`EnergyController`/`RollStateManager` (see `docs/GameLoop.md`). With only one scene
-  in the project there's nothing to survive a transition into yet, and `DontDestroyOnLoad` on that
-  GameObject would drag every battle-scoped sibling singleton into persistent scope too. Revisit this
-  — likely by giving `CampaignManager` its own root GameObject, or a dedicated bootstrap scene — once
-  a second (menu/map) scene actually exists.
+- **`CampaignManager` itself is still not `DontDestroyOnLoad`.** It lives on the same
+  `Global/GameManager` GameObject as `G`/`GameManager`/`EnergyController`/`RollStateManager` (see
+  `docs/GameLoop.md`) and is recreated on every `BattleScene` load — `DontDestroyOnLoad` on that
+  GameObject would drag every battle-scoped sibling singleton into persistent scope too.
+  `CampaignProgressManager` (see `docs/Encounters.md`) is now the one exception in the codebase: a
+  dedicated, separately-placed root GameObject that *is* `DontDestroyOnLoad`, specifically because it
+  owns campaign navigation state that needs to survive scene reloads — read that doc for why it works
+  as a separate object instead of needing this same revisit for `CampaignManager`.
 - **A missing/unresolved catalog id doesn't throw** — `GameCatalog.Find*` returns `null`, and
   `CampaignManager` falls back to `G`'s existing default for that slot with a logged warning, rather
   than crashing on stale/bad save data. This is deliberately different from the project's usual
@@ -192,3 +196,7 @@ authoring surface uses direct references, for convenience.
   value into.
 - `docs/SlotMachine.md` — `SlotMachine.GetActionOptions()`, the sole consumer of `G.DefaultCreatures`/
   `DefaultNukes`/`DefaultSpells` that this system's loadout override ultimately affects.
+- `docs/Encounters.md` — the actual battle sequence built on top of this data layer:
+  `EncounterListSO`/`BattleSO`, `CampaignProgressManager`'s navigation API, and per-encounter enemy
+  avatar/HP substitution. Consumes `currentEncounterIndex` and is what makes it not "abstract"
+  anymore.

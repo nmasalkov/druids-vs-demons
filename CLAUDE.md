@@ -17,7 +17,9 @@ specifically requires changing how it's wired into `Assets/Game`.
 **campaign** — a series of battles against different enemies, bracketed by a pre-battle loadout phase
 and a post-battle reward phase, with player-improvable run stats (max HP, reroll energy capacity) that
 persist across the run. See [`docs/Campaign.md`](docs/Campaign.md) for the run-state data layer this
-is built on so far.
+is built on so far, and [`docs/Encounters.md`](docs/Encounters.md) for the battle sequence built on
+top of it. A future `MapScene` will sit between battles — home for the pre-battle/post-battle phases
+and encounter navigation — once it exists; `CampaignProgressManager` is already built to work from it.
 
 There is no custom `.asmdef` for `Assets/Game` — it compiles into the default `Assembly-CSharp`
 assembly.
@@ -47,6 +49,24 @@ commands. Development happens in the Unity Editor (6000.1.6f1):
 - After changing any MonoBehaviour/ScriptableObject serialized fields, the change must be verified/
   wired up in the Editor (see rule 6 below) since there's no way to check this outside Unity.
 
+## Plan mode
+
+The user is not an experienced game developer, so in plan mode be a proactive collaborator on the
+**new** parts of a plan, not just a transcriber of what they asked for. This applies to genuinely new
+architecture/design decisions only — don't relitigate existing code or patterns already established as
+the desired approach in this file or `docs/*.md`; those are settled, not up for review.
+
+For the new pieces a plan introduces:
+
+- Think through basic performance implications (allocations/GC per frame or per roll, `Update()` work,
+  instantiate/destroy churn) for anything that runs every frame or every battle.
+- Think through ease of future expansion — is this a one-off special case, or does it set a pattern
+  that will need to repeat (new creature type, new nuke, new campaign stage, etc.)? Prefer the shape
+  that generalizes.
+- If you see a materially better alternative (simpler, cheaper at runtime, easier to extend later),
+  say so and offer it as a variant alongside the user's original ask, with a one-line tradeoff — don't
+  silently substitute your own approach.
+
 ## Documentation map
 
 CLAUDE.md is a glossary and rule book — deep per-system detail lives in `docs/*.md` so this file stays
@@ -63,6 +83,7 @@ here — this list is added to over time and can lag behind the actual `docs/` f
 | XP/leveling, gem pickups | [`docs/Experience.md`](docs/Experience.md) | `ExperienceManager`, `Experience`, `ExpirienceGem` |
 | Reroll energy/cost | [`docs/Energy.md`](docs/Energy.md) | `EnergyController`, `EnergyDisplay`, `SlotColumn`'s reroll cost gate |
 | Campaign/meta progression, run-state save data | [`docs/Campaign.md`](docs/Campaign.md) | `RunState`, `GameCatalog`, `CampaignManager`, `CampaignDebugTool`, `ActionSO.id` |
+| Encounters, campaign progress/navigation | [`docs/Encounters.md`](docs/Encounters.md) | `EncounterSO`/`BattleSO`/`EncounterListSO`, `CampaignProgressManager`, `CampaignProgressTool`, `HeroView.ReplaceHeroAvatar` |
 | Global service locator | [`docs/G.md`](docs/G.md) | `G`, `G.ApplyCampaignLoadout`, adding a new static accessor |
 
 **Keep these docs up to date** (rule 18 below): when a change alters how a documented system works
@@ -136,7 +157,17 @@ them for any new/modified game code under `Assets/Game`:
    components, singleton `Instance` assignment). Anything depending on other MonoBehaviours or
    singletons goes in `Start()` or later.
 5. **No null-checks on mandatory references** (e.g. `Creature.Slot`) — let them throw. Only guard
-   values that are genuinely optional.
+   values that are genuinely optional. This extends to singleton/manager `Instance` accessors that
+   are guaranteed to co-exist wherever the calling code runs — e.g. `CampaignManager.Instance`,
+   `CampaignProgressManager.Instance`, and `GameManager.Instance` are all wired into `BattleScene`
+   together, so code that only ever runs inside that scene (or inside another singleton also only
+   wired into it) shouldn't defensively null-check one from the other. If one is ever genuinely
+   missing, that's a scene-setup bug you want surfaced immediately as a `NullReferenceException` in
+   the console, not silently swallowed by an `if (x.Instance == null) return;`. This doesn't cover
+   guards against genuinely fragile *ordering* (e.g. an `Awake()`-vs-`Awake()` dependency between
+   two specific scripts pending on Script Execution Order, like `CampaignDebugTool`'s existing
+   `CampaignManager.Instance == null` check) — those are a different, documented risk and can keep
+   their guard.
 6. **After complex changes / new serialized fields**, always give a checklist of what needs manual
    Editor setup (components to add, fields to assign, SO assets to update).
 7. **Every animated/delayed game mechanic needs an instant-resolve counterpart** that skips animation,
@@ -189,6 +220,23 @@ them for any new/modified game code under `Assets/Game`:
     new events, changed resolution order, new restart participants, new SO subclasses, etc.), update
     the relevant `docs/*.md` file as part of that same change instead of letting it drift from the
     code.
+19. **Surface important runtime state in the Inspector.** A script that owns load-bearing runtime
+    state — what phase/state is active, what level something is at, what occupies a slot, which
+    encounter/asset is currently resolved, etc. — should show it directly in a custom Editor, not
+    leave it buried in private fields only visible via a debugger. The bar is "can someone glance at
+    the Inspector while the game is running and know what's actually going on." If there's enough
+    state that showing it all flatly gets noisy, group related values and collapse them behind a
+    foldout — but any single piece of state that's load-bearing for understanding current behavior
+    stays visible by default, not hidden a click away. See `CampaignProgressManagerEditor` (shows
+    the resolved current encounter index/id/asset live) for the pattern.
+20. **Keep debug-only surface out of the main class file.** When a script that's core game logic
+    (not itself a debug tool) exposes a method/field that only a debug tool ever calls — e.g.
+    `CampaignProgressManager.SetSessionEncounterOverride`, called solely by `CampaignProgressTool`
+    — split that surface into a `<ClassName>.Debug.cs` partial class file instead of mixing it into
+    the main one. Same partial-class split already used for non-debug reasons elsewhere (e.g.
+    `AttacksResolver.cs`/`AttacksResolver.Mechanics.cs`) — apply it here so the main file stays
+    scannable as pure gameplay logic, and anything living in `.Debug.cs` is self-evidently
+    debug-only without having to read doc comments to tell.
 
 ## Editor / IDE MCP integrations
 

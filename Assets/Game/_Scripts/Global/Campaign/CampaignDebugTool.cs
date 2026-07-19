@@ -40,10 +40,6 @@ public class CampaignDebugTool : MonoBehaviour
     public bool overrideSpellC;
     public SpellSO spellC;
 
-    [Header("Encounter")]
-    public bool overrideEncounterIndex;
-    public int currentEncounterIndex;
-
     void Awake()
     {
         // Must run after CampaignManager.Awake() (which creates CurrentRun) and before anything
@@ -63,6 +59,5 @@ public class CampaignDebugTool : MonoBehaviour
         if (overrideSpellA) run.spellAId = spellA.id;
         if (overrideSpellB) run.spellBId = spellB.id;
         if (overrideSpellC) run.spellCId = spellC.id;
-        if (overrideEncounterIndex) run.currentEncounterIndex = currentEncounterIndex;
     }
 }

@@ -635,8 +635,6 @@ MonoBehaviour:
   spellB: {fileID: 0}
   overrideSpellC: 0
   spellC: {fileID: 0}
-  overrideEncounterIndex: 0
-  currentEncounterIndex: 0
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -1190,6 +1188,7 @@ Transform:
   - {fileID: 208500269}
   - {fileID: 1048882878}
   - {fileID: 352721656}
+  - {fileID: 776952873}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &716968458
@@ -1222,6 +1221,52 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a90c9a5c4f544d7af180b7a24df1587, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &776952872
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 776952873}
+  - component: {fileID: 776952874}
+  m_Layer: 0
+  m_Name: CampaignProgressTool
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &776952873
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 776952872}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.43639, y: -3.60922, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 716968457}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &776952874
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 776952872}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ddbb151e55877c4ab5506b98730fbc6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  overrideEncounter: 0
+  encounter: {fileID: 11400000, guid: 95fb0993e7117f040aa56ead071a00af, type: 2}
 --- !u!1 &841080620
 GameObject:
   m_ObjectHideFlags: 0
@@ -1695,6 +1740,51 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1073269070}
   m_CullTransparentMesh: 1
+--- !u!1 &1217926524
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1217926526}
+  - component: {fileID: 1217926525}
+  m_Layer: 0
+  m_Name: CampaignProgress
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1217926525
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1217926524}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d0ac65fb0445374fbdabf747c0e8ffa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  encounterList: {fileID: 11400000, guid: 0f7c48921d7dc4041bd97f30fc070d1f, type: 2}
+--- !u!4 &1217926526
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1217926524}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1235868931
 GameObject:
   m_ObjectHideFlags: 0
@@ -3398,3 +3488,4 @@ SceneRoots:
   - {fileID: 1962064505}
   - {fileID: 716968457}
   - {fileID: 561666450}
+  - {fileID: 1217926526}

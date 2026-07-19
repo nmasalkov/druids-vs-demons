@@ -34,9 +34,6 @@ public class CampaignDebugToolEditor : Editor
         DrawToggleAndObject(tool, "Spell B", ref tool.overrideSpellB, ref tool.spellB);
         DrawToggleAndObject(tool, "Spell C", ref tool.overrideSpellC, ref tool.spellC);
 
-        EditorGUILayout.Space(6);
-        DrawToggleAndInt(tool, "Encounter Index", ref tool.overrideEncounterIndex, ref tool.currentEncounterIndex);
-
         DrawSavedRunSection();
     }
 

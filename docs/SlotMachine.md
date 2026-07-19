@@ -73,10 +73,14 @@ Stopping, Bouncing }`, private, in `SlotColumn.Mechanics.cs`):
 
 ## Reroll / finish flow
 
-- `OnRerollClicked()` (per column, gated on `_postRollsEnabled && _state == State.Idle`) sets
-  `_isReroll = true`, fires `OnRerollStarted` (disables the finish button while any reroll is in
-  flight), and self-schedules its own `StopSpin()` after a fixed `0.44f` via `Utils.DoAfterDelay` —
-  i.e. a reroll always spins for a fixed short window, not until an external stop signal.
+- `OnRerollClicked()` (per column, gated on `_postRollsEnabled && _state == State.Idle`) is also
+  gated on `EnergyController.Instance.TrySpendReroll()` — rerolling costs energy at a per-round
+  cost that doubles with every reroll and resets when the roll phase ends; see `docs/Energy.md`.
+  If the player can't afford it, the click is a no-op (the button is also disabled in that case).
+  Otherwise it sets `_isReroll = true`, fires `OnRerollStarted` (disables the finish button while
+  any reroll is in flight), and self-schedules its own `StopSpin()` after a fixed `0.44f` via
+  `Utils.DoAfterDelay` — i.e. a reroll always spins for a fixed short window, not until an external
+  stop signal.
 - `FinishRoll()` reads every column's `WinningAction` into a `List<ActionSO>` and fires
   `OnFinishRollCompleted(rolledActions, CurrentRollType)` — this is the single hand-off point to
   `RollStateManager.HandleFinishRoll`.
@@ -188,3 +192,4 @@ system's delays go through `Utils.DoAfterDelay`, which was changed this session 
   full `OnBattleRestart` subscriber list.
 - `docs/ActionsAndSpells.md` — how `NukeEntry`/`SpellEntry` (`IActionEntry`) feed into
   `ActionState.PlayEntries`.
+- `docs/Energy.md` — the reroll energy/cost system that gates `SlotColumn.OnRerollClicked`.

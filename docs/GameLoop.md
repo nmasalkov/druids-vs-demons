@@ -22,8 +22,8 @@ single source of truth for round order and is meant to be read top-to-bottom.
   `SwitchSideState`, `RollState`, `SpawningState`, `NukeState`, `SpellState`, `BattleState`,
   `PostBattleState`, `EndOfRoundState`, `GameOverState`.
 - `Units/ExperienceManager.cs`, `PlayerView/CreaturesManager.cs`, `PlayerView/HeroView.cs`,
-  `Units/Hero.cs`, `Global/RollStateManager/RollStateManager.cs`, `AI/AIController.cs` — all
-  subscribe to the battle-restart event (see below).
+  `Units/Hero.cs`, `Global/RollStateManager/RollStateManager.cs`, `AI/AIController.cs`,
+  `Global/GameManager/EnergyController.cs` — all subscribe to the battle-restart event (see below).
 - `UI/PauseMenuController.cs` — pause overlay + `Time.timeScale` freeze.
 - `Utils/DoAfterDelay.cs` — the delayed-callback utility every state/animation chain runs on.
 
@@ -159,6 +159,7 @@ more):
 | `Global/RollStateManager/RollStateManager.cs` | `ResetForRestart` | Clears `SpawnEntries`/`NukeEntries`/`SpellEntries`, resets `TripleRolled`/`LastRollType`, resets both slot machines' UI and deactivates them. |
 | `Units/ExperienceManager.cs` | `ClearForRestart` | Destroys any in-flight XP gem GameObjects, clears `pendingXp`/`activeGems`, resets `gemsInFlight` — discards XP rather than granting it (contrast with `ResolveGemsInstant`, which grants). |
 | `AI/AIController.cs` | `ReleaseControl` | Releases AI control of a slot machine if it currently holds one (now null-guarded — restart can fire this when the AI isn't in control at all). |
+| `Global/GameManager/EnergyController.cs` | `ResetForRestart` | Refills reroll energy to `startingEnergy` and resets the reroll cost back to `baseRerollCost`. See `docs/Energy.md`. |
 
 Because subscribers are independent (none of them read another subscriber's post-reset state),
 firing order among them doesn't matter — `OnBattleRestart?.Invoke()` runs all of them

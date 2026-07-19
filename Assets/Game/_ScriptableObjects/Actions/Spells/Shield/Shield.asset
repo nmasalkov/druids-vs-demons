@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 39b7174e3907466db2ff0e599ecbea4e, type: 3}
   m_Name: Shield
   m_EditorClassIdentifier: 
+  id: shield
   actionName: Shield
   cardSprite: {fileID: 21300000, guid: e178e6e1f0d784049a540ca01f172325, type: 3}
   animationPrefab: {fileID: -2642668504331925229, guid: 68d7736ab134eb5498b695436819bb0a, type: 3}

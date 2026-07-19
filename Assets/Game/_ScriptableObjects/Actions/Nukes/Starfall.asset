@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1032ff51032941f5be7b69ef5d22f23a, type: 3}
   m_Name: Starfall
   m_EditorClassIdentifier: 
+  id: starfall
   actionName: Starfall
   cardSprite: {fileID: 21300000, guid: 8cb4df65c6f4a2e499814646147fbc0a, type: 3}
   damagePerLevel:

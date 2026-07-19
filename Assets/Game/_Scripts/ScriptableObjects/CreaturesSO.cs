@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
 [CreateAssetMenu(fileName = "DefaultCreatures", menuName = "Game/Defaults/Creatures")]
-public class DefaultCreaturesSO : ScriptableObject
+public class CreaturesSO : ScriptableObject
 {
     public ArcherSO archer;
     public TankSO tank;

@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1864af9225930fb4ab6f22716a8de14e, type: 3}
   m_Name: Charm
   m_EditorClassIdentifier: 
+  id: charm
   actionName: Charm
   cardSprite: {fileID: 21300000, guid: 69138f6b03c8c9c44bda0ff26e983dda, type: 3}
   animationPrefab: {fileID: 2913066308180658946, guid: 0a7cb8bf68db31c439b63a4ad5c6955a, type: 3}

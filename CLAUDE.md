@@ -13,6 +13,12 @@ assets). Everything else under `Assets/` (Epic Toon FX, PixPlays, Feel/MoreMount
 Sprite Shader, etc.) is vendored third-party/asset-store content — treat it as read-only unless a task
 specifically requires changing how it's wired into `Assets/Game`.
 
+**Development direction:** the game is moving from a single self-contained battle toward a
+**campaign** — a series of battles against different enemies, bracketed by a pre-battle loadout phase
+and a post-battle reward phase, with player-improvable run stats (max HP, reroll energy capacity) that
+persist across the run. See [`docs/Campaign.md`](docs/Campaign.md) for the run-state data layer this
+is built on so far.
+
 There is no custom `.asmdef` for `Assets/Game` — it compiles into the default `Assembly-CSharp`
 assembly.
 
@@ -55,6 +61,9 @@ here — this list is added to over time and can lag behind the actual `docs/` f
 | Nuke/Spell action pattern | [`docs/ActionsAndSpells.md`](docs/ActionsAndSpells.md) | adding/changing a nuke or spell, `ActionSO`/`ActionResolver`/`ActionAnimation`/`ActionState` |
 | Slot machine + AI roller | [`docs/SlotMachine.md`](docs/SlotMachine.md) | `SlotMachine`/`SlotColumn`, `RollStateManager`, `AIController` |
 | XP/leveling, gem pickups | [`docs/Experience.md`](docs/Experience.md) | `ExperienceManager`, `Experience`, `ExpirienceGem` |
+| Reroll energy/cost | [`docs/Energy.md`](docs/Energy.md) | `EnergyController`, `EnergyDisplay`, `SlotColumn`'s reroll cost gate |
+| Campaign/meta progression, run-state save data | [`docs/Campaign.md`](docs/Campaign.md) | `RunState`, `GameCatalog`, `CampaignManager`, `CampaignDebugTool`, `ActionSO.id` |
+| Global service locator | [`docs/G.md`](docs/G.md) | `G`, `G.ApplyCampaignLoadout`, adding a new static accessor |
 
 **Keep these docs up to date** (rule 18 below): when a change alters how a documented system works
 (new states, new events, changed resolution order, new restart participants, etc.), update the
@@ -77,9 +86,9 @@ scheduled before a restart. Full detail: [`docs/GameLoop.md`](docs/GameLoop.md).
 
 ### `G` — global service locator
 
-`G.cs` (`Global/G.cs`) is a singleton exposing default data SOs (`DefaultCreatures`, `DefaultNukes`,
-`DefaultSpells`) and both sides' `HeroView`/`CreaturesManager`/`Hero` as static properties. Most
-gameplay code reaches other systems through `G.*` rather than holding direct references.
+`G.cs` (`Global/G.cs`) is a singleton most gameplay code reaches other systems through (both sides'
+`HeroView`/`CreaturesManager`/`Hero`, the shared creature/nuke/spell pool) rather than holding direct
+references. Full detail: [`docs/G.md`](docs/G.md).
 
 ### Action pattern: SO (data) → Resolver (logic) → Animation (view)
 

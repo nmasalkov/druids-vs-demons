@@ -1,14 +1,19 @@
 using System;
+using MoreMountains.Feedbacks;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public partial class SlotColumn : MonoBehaviour
 {
     [SerializeField] private Button rerollButton;
+    [SerializeField] private TMP_Text rerollCostText;
+    [SerializeField] private MMF_Player rerollCostChangeFeedback;
 
     private bool _postRollsEnabled;
     private bool _isReroll;
     private SlotMachine _slotMachine;
+    private Color _affordableRerollCostColor;
 
     public event Action OnColumnStopped;
     public event Action OnRerollStarted;
@@ -21,11 +26,46 @@ public partial class SlotColumn : MonoBehaviour
         PlaceCards();
         rerollButton.onClick.AddListener(OnRerollClicked);
         rerollButton.gameObject.SetActive(false);
+
+        _affordableRerollCostColor = rerollCostText.color;
+        UpdateRerollCostText(EnergyController.Instance.CurrentRerollCost);
+        RefreshRerollInteractable();
+        EnergyController.Instance.OnRerollCostChanged += HandleRerollCostChanged;
+        EnergyController.Instance.OnEnergyChanged += HandleEnergyChanged;
     }
 
     void OnDestroy()
     {
         rerollButton.onClick.RemoveListener(OnRerollClicked);
+        if (EnergyController.Instance != null)
+        {
+            EnergyController.Instance.OnRerollCostChanged -= HandleRerollCostChanged;
+            EnergyController.Instance.OnEnergyChanged -= HandleEnergyChanged;
+        }
+    }
+
+    private void HandleRerollCostChanged(int newCost)
+    {
+        UpdateRerollCostText(newCost);
+        rerollCostChangeFeedback.PlayFeedbacks();
+        RefreshRerollInteractable();
+    }
+
+    private void HandleEnergyChanged(int newEnergy)
+    {
+        RefreshRerollInteractable();
+    }
+
+    private void UpdateRerollCostText(int cost)
+    {
+        rerollCostText.text = cost.ToString();
+    }
+
+    private void RefreshRerollInteractable()
+    {
+        bool canAfford = EnergyController.Instance.CanAffordReroll;
+        rerollButton.interactable = canAfford;
+        rerollCostText.color = canAfford ? _affordableRerollCostColor : Color.red;
     }
 
     public void AddStopDelay(float delay)
@@ -48,6 +88,7 @@ public partial class SlotColumn : MonoBehaviour
     private void OnRerollClicked()
     {
         if (!_postRollsEnabled || _state != State.Idle) return;
+        if (!EnergyController.Instance.TrySpendReroll()) return;
         _isReroll = true;
         OnRerollStarted?.Invoke();
         StartSpin();

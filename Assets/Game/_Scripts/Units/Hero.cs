@@ -28,6 +28,9 @@ namespace Game._Scripts.Creatures
 
         protected override float GetMaxHealth()
         {
+            // Only the player's max HP is campaign-driven; the enemy always uses its own HeroSO.
+            if (this == G.PlayerHero && CampaignManager.Instance != null)
+                return CampaignManager.Instance.CurrentRun.maxHp;
             return Data.health;
         }
     }

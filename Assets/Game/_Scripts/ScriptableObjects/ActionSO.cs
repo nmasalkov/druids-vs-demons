@@ -2,6 +2,9 @@
 
 public abstract class ActionSO : ScriptableObject
 {
+    [Tooltip("Stable identifier used to resolve this asset from campaign save data (RunState) via GameCatalog. Not shown to players — actionName is the display string.")]
+    public string id;
+
     public string actionName;
     public Sprite cardSprite;
 

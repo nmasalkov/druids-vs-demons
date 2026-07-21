@@ -3,7 +3,10 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// Shows the player's current reroll energy total and plays a feedback whenever it changes.
+/// Shows the player's current reroll energy total and plays a feedback whenever the player
+/// actually spends energy on a reroll. Text updates on every energy change (including
+/// campaign-driven ones — initial load, encounter transition, restart), but the feedback only
+/// plays for real spending (EnergyController.OnEnergySpent) — see docs/Energy.md.
 /// </summary>
 public class EnergyDisplay : MonoBehaviour
 {
@@ -14,17 +17,25 @@ public class EnergyDisplay : MonoBehaviour
     {
         UpdateText(EnergyController.Instance.CurrentEnergy);
         EnergyController.Instance.OnEnergyChanged += HandleEnergyChanged;
+        EnergyController.Instance.OnEnergySpent += PlayChangeFeedback;
     }
 
     void OnDestroy()
     {
         if (EnergyController.Instance != null)
+        {
             EnergyController.Instance.OnEnergyChanged -= HandleEnergyChanged;
+            EnergyController.Instance.OnEnergySpent -= PlayChangeFeedback;
+        }
     }
 
     private void HandleEnergyChanged(int newEnergy)
     {
         UpdateText(newEnergy);
+    }
+
+    private void PlayChangeFeedback()
+    {
         energyChangeFeedback.PlayFeedbacks();
     }
 

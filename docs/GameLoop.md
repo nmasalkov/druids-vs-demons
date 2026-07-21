@@ -66,9 +66,12 @@ while (!gameOver):
   (`ExperienceManager.ResolveGems()`) before completing.
 - `EndOfRoundState` is a pure marker — completes immediately, exists so the round boundary is
   visible in the state sequence and events.
-- `GameOverState` **never calls `CompleteState()`** — it's an intentional dead end that just logs
-  the winner/draw. The loop is stopped before this state is entered (see Hero death below); the
-  only way out is `GameManager.RestartBattle()`.
+- `GameOverState` **never calls `CompleteState()`** — the round loop stops here, by design. It logs
+  the winner/draw, then hands off to `CampaignProgressManager.Instance.ResolveVictory()`/
+  `ResolveDefeat()`, which schedule the actual campaign transition (advance/reload/complete) after a
+  delay — see `docs/Encounters.md`'s "Battle results" section. `GameManager.RestartBattle()`
+  (triggered manually, or by that scheduled transition) is still the only way the round loop itself
+  resumes.
 
 ## GameState / ActionState contract
 
@@ -111,12 +114,15 @@ static check.
   entry-by-entry animation chain specifically.
 - `ActionState.CompleteWithCleanup()` checks `IsStale` before calling `CleanUpDeadCreatures()`
   (and again implicitly via the guarded `CompleteState()` call after it).
-- Outside `GameState`, two more sites capture a local `int generation` at schedule time and check
-  `GameManager.IsStale(generation)` inside the delayed closure: `AIController`'s 2-second
+- Outside `GameState`, several more sites capture a local `int generation` at schedule time and
+  check `GameManager.IsStale(generation)` inside the delayed closure: `AIController`'s 2-second
   `_targetMachine.StopAll()` timer (guarded with a plain null-check on `_targetMachine` instead,
-  since the actual bug there is the field going null, not staleness — see below) and
+  since the actual bug there is the field going null, not staleness — see below);
   `ExperienceManager.LaunchGemsToOwners()`'s per-gem flight closures (guarded twice: before
-  `FlyTo`, and again before the arrival callback grants XP).
+  `FlyTo`, and again before the arrival callback grants XP); and
+  `CampaignProgressManager.ResolveVictory()`/`ResolveDefeat()`'s 4-second post-battle delays (see
+  `docs/Encounters.md`) — without the guard, a manual restart during that window would leave the
+  stale delayed callback to fire anyway and double up on the transition.
 
 Not guarded, deliberately: `GameStartState`'s intro delay, `BattleState`'s completion delay,
 `PostBattleState`'s cleanup/gem-collection delays, `RollStateManager`'s internal button-unlock
@@ -159,7 +165,7 @@ more):
 | `Global/RollStateManager/RollStateManager.cs` | `ResetForRestart` | Clears `SpawnEntries`/`NukeEntries`/`SpellEntries`, resets `TripleRolled`/`LastRollType`, resets both slot machines' UI and deactivates them. |
 | `Units/ExperienceManager.cs` | `ClearForRestart` | Destroys any in-flight XP gem GameObjects, clears `pendingXp`/`activeGems`, resets `gemsInFlight` — discards XP rather than granting it (contrast with `ResolveGemsInstant`, which grants). |
 | `AI/AIController.cs` | `ReleaseControl` | Releases AI control of a slot machine if it currently holds one (now null-guarded — restart can fire this when the AI isn't in control at all). |
-| `Global/GameManager/EnergyController.cs` | `ResetForRestart` | Refills reroll energy to `startingEnergy` and resets the reroll cost back to `baseRerollCost`. See `docs/Energy.md`. |
+| `Global/GameManager/EnergyController.cs` | `ResetForRestart` | Refills reroll energy to `CampaignManager.Instance.CurrentRun.currentEnergy` (read fresh, campaign-persistent — not a local baseline) and resets the reroll cost back to `baseRerollCost`. See `docs/Energy.md`. |
 
 Because subscribers are independent (none of them read another subscriber's post-reset state),
 firing order among them doesn't matter — `OnBattleRestart?.Invoke()` runs all of them
@@ -202,11 +208,17 @@ freeze correctly under `timeScale = 0`. `PauseMenuController.OnDestroy()` also r
 
 - **Hero death interrupts the loop out-of-band.** `Hero.OnHeroDied` is a static event; `Hero.Start()`
   wires `Health.onDeath` to fire it. `GameManager.Start()` subscribes `HandleHeroDied`, which — if
-  `IsGameOver()` (either side has no living hero AND no creatures) — sets `_gameOver = true`, stops
-  the coroutine, force-ends `_currentState`, and enters `GameOverState`. This can happen mid-state,
-  not just between states, since it's event-driven rather than part of the yield sequence.
-- **`GameOverState` is a genuine dead end** — no `CompleteState()` call, by design. The only way out
-  is `RestartBattle()` (via the pause menu), which doesn't care what state the game was frozen in.
+  `IsGameOver()` (**either hero is dead** — `G.PlayerHero.Health.IsDead() || G.EnemyHero.Health.IsDead()`,
+  remaining creatures on either side don't matter) — sets `_gameOver = true`, stops the coroutine,
+  force-ends `_currentState`, and enters `GameOverState`. This can happen mid-state, not just
+  between states, since it's event-driven rather than part of the yield sequence. Each encounter's
+  enemy hero is effectively the boss — killing it ends the fight immediately, it doesn't require
+  clearing every creature it summoned too (a deliberate campaign-era simplification; the original
+  symmetric "eliminate the whole side" rule is gone).
+- **`GameOverState` never calls `CompleteState()`, but is no longer a silent dead end** — it hands
+  off to `CampaignProgressManager` (see above), which schedules a real transition. `RestartBattle()`
+  itself doesn't care what state the game was frozen in and remains the only way the round loop
+  resumes, whether triggered manually (pause menu) or by that scheduled transition.
 - **Rule 7 (instant-resolve) relationship:** `RestartBattle()` itself doesn't need an instant-resolve
   counterpart — it's a UI-triggered meta action, already synchronous by construction, not an
   animated game mechanic whose *outcome* needs to be reproducible headlessly. The instant-resolve

@@ -153,17 +153,14 @@ namespace Game._Scripts.Global
             new GameOverState().OnStateStart();
         }
 
+        /// <summary>
+        /// The moment either hero dies, the battle is over — remaining creatures on either side
+        /// don't matter. Each encounter's enemy hero is effectively the boss; killing it ends the
+        /// fight immediately rather than requiring every summoned creature to be cleared too.
+        /// </summary>
         private bool IsGameOver()
         {
-            bool playerAlive = IsSideAlive(G.PlayerCreaturesManager, G.PlayerHero);
-            bool enemyAlive = IsSideAlive(G.EnemyCreaturesManager, G.EnemyHero);
-            return !playerAlive || !enemyAlive;
-        }
-
-        private bool IsSideAlive(PlayerView.CreaturesManager creatures, Creatures.Hero hero)
-        {
-            if (hero != null && !hero.Health.IsDead()) return true;
-            return creatures.GetAllCreatures().Count > 0;
+            return G.PlayerHero.Health.IsDead() || G.EnemyHero.Health.IsDead();
         }
 
         // ============================================================

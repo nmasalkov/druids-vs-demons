@@ -1,25 +1,29 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class GameOverState : GameState
 {
     protected override void OnEnter()
     {
-        bool playerAlive = IsSideAlive(G.PlayerCreaturesManager, G.PlayerHero);
-        bool enemyAlive = IsSideAlive(G.EnemyCreaturesManager, G.EnemyHero);
+        bool playerDead = G.PlayerHero.Health.IsDead();
+        bool enemyDead = G.EnemyHero.Health.IsDead();
 
-        if (!playerAlive && !enemyAlive)
-            Debug.Log("[GameOver] Draw! Both sides are eliminated.");
-        else if (!playerAlive)
-            Debug.Log("[GameOver] Enemy wins! Player side is eliminated.");
-        else if (!enemyAlive)
-            Debug.Log("[GameOver] Player wins! Enemy side is eliminated.");
+        if (playerDead && enemyDead)
+        {
+            Debug.Log("[GameOver] Draw! Both heroes have fallen.");
+            CampaignProgressManager.Instance.ResolveDefeat();
+        }
+        else if (playerDead)
+        {
+            Debug.Log("[GameOver] Enemy wins! Your hero has fallen.");
+            CampaignProgressManager.Instance.ResolveDefeat();
+        }
+        else if (enemyDead)
+        {
+            Debug.Log("[GameOver] Player wins! Enemy hero has fallen.");
+            CampaignProgressManager.Instance.ResolveVictory();
+        }
 
-        // Do not call CompleteState — the game stops here.
-    }
-
-    private bool IsSideAlive(Game._Scripts.PlayerView.CreaturesManager creatures, Game._Scripts.Creatures.Hero hero)
-    {
-        if (hero != null && !hero.Health.IsDead()) return true;
-        return creatures.GetAllCreatures().Count > 0;
+        // Do not call CompleteState — the round loop stops here. ResolveVictory/ResolveDefeat
+        // above schedule the actual campaign transition (advance/reload/complete) after a delay.
     }
 }

@@ -38,19 +38,24 @@ loadout source — not solved here.
   shape `CampaignManager` builds a runtime instance into.
 - `Global/G.cs` — gained the static `ApplyCampaignLoadout(CreaturesSO, NukesSO, SpellsSO)`, called
   once by `CampaignManager.Start()`. Full detail: [`docs/G.md`](G.md).
-- `Global/GameManager/EnergyController.cs` — gained `ApplyCampaignEnergyCapacity(int)`, called once
-  by `CampaignManager.Start()`. Its own baseline init stays in `Awake()`, unchanged from before this
-  system existed — see Gotchas for why that matters.
+- `Global/GameManager/EnergyController.cs` — gained `ApplyCampaignEnergy(int)`, called from
+  `CampaignManager.ApplyEncounterToScene()` (initial load and every encounter transition). No more
+  local baseline — `CurrentEnergy` comes from `RunState.currentEnergy` exclusively; see
+  `docs/Energy.md` and Gotchas.
 - `Units/Hero.cs` — `GetMaxHealth()` reads `CampaignManager.Instance.CurrentRun.maxHp` for the
   player's `Hero` only.
+- `Global/Campaign/CampaignProfileSO.cs` — Editor-authorable snapshot of a whole `RunState` (SO
+  references instead of ids), pluggable into `CampaignDebugTool`'s "Use Debug Profile" slot. See
+  below and CLAUDE.md rule 21.
 
 ## `RunState` shape
 
 ```csharp
 public int saveVersion = 1;          // for future save migration
 
-public int maxHp = 100;              // matches HeroSO.health's existing default
-public int energyCapacity = 50;      // matches EnergyController.startingEnergy's existing default
+public int maxHp = 100;               // matches HeroSO.health's existing default
+public int energyCapacity = 50;       // upper bound a victory reward clamps currentEnergy to
+public int currentEnergy = 50;        // the only field a battle itself changes — see docs/Encounters.md
 
 public string archerId = "archer", tankId = "tank", mageId = "mage";
 public string nukeAId = "firemagic", nukeBId = "starfall", nukeCId = "shock";
@@ -79,10 +84,12 @@ Starfall/Shock, not Fireball, despite the filename suggesting otherwise.
      (`FindArcher`/`FindTank`/`FindMage`/`FindNuke`/`FindSpell`). Any id that doesn't resolve
      (empty/unknown) falls back to whatever `G`'s own Inspector-wired default asset already has for
      that slot, logging a warning. Result is handed to the static `G.ApplyCampaignLoadout(...)`.
-   - `EnergyController.Instance.ApplyCampaignEnergyCapacity(CurrentRun.energyCapacity)`, which fires
-     `OnEnergyChanged` so `EnergyDisplay` picks up the value (belt-and-suspenders — `CampaignManager`'s
-     execution order already guarantees this runs before `EnergyDisplay.Start()` reads it once, but
-     the event fire also makes this correct if that ordering ever changes).
+   - `ApplyEncounterToScene()` calls `EnergyController.Instance.ApplyCampaignEnergy(CurrentRun.currentEnergy)`,
+     which fires `OnEnergyChanged` so `EnergyDisplay` picks up the value (belt-and-suspenders —
+     `CampaignManager`'s execution order already guarantees this runs before `EnergyDisplay.Start()`
+     reads it once, but the event fire also makes this correct if that ordering ever changes). The
+     same method is reused for encounter transitions that don't reload the scene — see
+     `docs/Encounters.md`.
 3. `Hero.GetMaxHealth()` doesn't get pushed a value — it reads `CampaignManager.Instance.CurrentRun.maxHp`
    directly (lazily) whenever called, which happens to be from the player `Hero`'s own `Start()` (via
    `InitHealth()`). Safe purely from the Awake-before-Start guarantee: `CampaignManager.Awake()` has
@@ -120,6 +127,36 @@ authoring surface uses direct references, for convenience.
   Play mode. A "Clear Saved Run" button calls `PlayerPrefs.DeleteKey` + `Save()` directly — separate
   from, and not gated by, the override toggles.
 
+### "Use Debug Profile" — `CampaignProfileSO`
+
+A coarser alternative to the per-field overrides above: `CampaignDebugTool.useDebugProfile` +
+`debugProfile` (a `CampaignProfileSO` asset, `Game/Campaign/Campaign Profile` in the Create menu).
+When checked, `Awake()` applies **every** `RunState` field from the profile wholesale
+(`ApplyDebugProfile`) and skips the granular override checks entirely — no mixing the two. Exists
+so a whole test scenario (loadout + stats + which encounter) can be saved as one reusable asset
+instead of re-checking a dozen boxes every session — drag in `CampaignProfileSO` assets for
+different scenarios ("mid-run, low energy," "final boss, maxed loadout," etc.) and swap between
+them.
+
+`CampaignProfileSO`'s shape mirrors `RunState` field-for-field, but with direct SO references
+(`ArcherSO archer`, `NukeSO nukeA`, etc.) instead of id strings — same convenience tradeoff the
+per-field overrides already make, and for the same reason (id strings exist purely so `RunState`
+survives a `JsonUtility`/`PlayerPrefs` round-trip; a debug-only asset has no such constraint).
+`ApplyDebugProfile` converts each reference to its `.id` the same way the granular overrides do.
+Profile fields are treated as mandatory once `useDebugProfile` is checked (rule 5) — an unassigned
+archer/tank/mage/nuke/spell throws immediately rather than silently resolving to `null`.
+
+**`currentEncounterIndex` needs one more step than the other fields**: setting
+`run.currentEncounterIndex` alone has no effect on which encounter loads, since
+`CampaignProgressManager` (`docs/Encounters.md`) bootstraps its own index from PlayerPrefs
+independently of the live `CurrentRun` object. `ApplyDebugProfile` also calls
+`CampaignProgressManager.Instance.SetSessionEncounterIndexOverride(profile.currentEncounterIndex)`
+— see `docs/Encounters.md`'s "Debug-only surface" section for why that method exists.
+
+**Reminder (CLAUDE.md rule 21): every new persisted `RunState` field needs a matching field on
+`CampaignProfileSO` too, plus a granular override pair on `CampaignDebugTool` — nothing enforces
+this at compile time, so it's easy to add a `RunState` field and forget the other two.**
+
 ## Gotchas
 
 - **If you change `CampaignDebugTool`'s field layout (add/remove/retype fields), remove and re-add
@@ -141,23 +178,27 @@ authoring surface uses direct references, for convenience.
   `Start()`, which is safe purely from the Awake-before-Start guarantee. Don't add a third script that
   also needs to mutate `CurrentRun` pre-`Start()` without reconsidering this — it doesn't scale past
   the two-script execution-order pin.
-- **`EnergyController`'s baseline init must stay in `Awake()`, not `Start()` — this was a real bug,
-  caught live in testing, not just reasoned about.** An earlier version of this system moved
-  `CurrentEnergy`/`CurrentRerollCost` initialization from `Awake()` into `Start()`, reasoning
-  (wrongly) that it needed to run after `CampaignManager`. That broke `SlotColumn.Start()`, which
-  reads `EnergyController.Instance.CurrentRerollCost` synchronously to seed the reroll-cost label —
+- **`EnergyController.CurrentRerollCost` (not `CurrentEnergy`) is the one thing that must still be
+  set in `Awake()`, not `Start()` — this was a real bug, caught live in testing, not just reasoned
+  about.** An earlier version of this system moved both `CurrentEnergy`/`CurrentRerollCost`
+  initialization from `Awake()` into `Start()`, reasoning (wrongly) that it needed to run after
+  `CampaignManager`. That broke `SlotColumn.Start()`, which reads
+  `EnergyController.Instance.CurrentRerollCost` synchronously to seed the reroll-cost label —
   Start()-vs-Start() order between unrelated components is unspecified, so the label intermittently
-  showed `0` instead of the real cost depending on which `Start()` ran first. The fix: `EnergyController`
-  keeps setting its baseline in `Awake()` exactly as it did before this system existed (self-contained,
-  no dependency on `CampaignManager`), and `CampaignManager.Start()` applies its override *on top of*
-  that already-correct baseline — safe regardless of Start() ordering, since `EnergyController` never
-  writes `CurrentEnergy` again after its own `Awake()`.
+  showed `0` instead of the real cost depending on which `Start()` ran first. `CurrentRerollCost`
+  stays self-contained in `Awake()` for exactly this reason (`baseRerollCost`, no `CampaignManager`
+  dependency). `CurrentEnergy` is different — it's campaign-persistent data now (`docs/Energy.md`),
+  so it's deliberately left unset until `CampaignManager.ApplyEncounterToScene()` calls
+  `ApplyCampaignEnergy()`, safe because of `CampaignManager`'s early Script Execution Order (next
+  bullet), not because of the Awake/Start split.
 - **`CampaignManager`'s early Script Execution Order (`-100`) is why applying directly from its own
   `Start()` is safe**, not despite it. Because `-100` is earlier than every default-order script,
-  `CampaignManager.Start()` runs before `EnergyController.Start()`/`EnergyDisplay.Start()`/etc. — but
-  by design this no longer matters for correctness (see the `EnergyController` point above), only for
-  `EnergyDisplay` showing the right value on the very first frame instead of one frame later via the
-  `OnEnergyChanged` catch-up.
+  `CampaignManager.Start()` runs before `EnergyController.Start()`/`EnergyDisplay.Start()`/etc. For
+  `CurrentRerollCost` this no longer matters for correctness (it's set standalone in `Awake()`), only
+  for `EnergyDisplay` showing the right value on the very first frame instead of one frame later via
+  the `OnEnergyChanged` catch-up — but for `CurrentEnergy` this ordering is load-bearing: nothing
+  else ever sets it, so if `CampaignManager.Start()` ran *after* some consumer's `Start()`, that
+  consumer would read a stale `0` with no catch-up until the next `OnEnergyChanged` fire.
 - **`RunState` is plain data, not a `ScriptableObject`, on purpose.** SOs are Editor-time assets;
   mutating one's fields at runtime doesn't persist in a build and risks polluting shared asset state.
   `CreaturesSO`/`NukesSO`/`SpellsSO` stay SOs because they're `G`'s existing shape (and the
@@ -192,8 +233,8 @@ authoring surface uses direct references, for convenience.
 - `docs/GameLoop.md` — `Global/GameManager` GameObject convention `CampaignManager` follows; the
   `OnBattleRestart` event this system's fields interact with (`EnergyController.ResetForRestart`,
   `Hero.InitHealth`).
-- `docs/Energy.md` — `EnergyController`'s reroll cost/capacity system this system feeds a starting
-  value into.
+- `docs/Energy.md` — `EnergyController`'s reroll cost system; `CurrentEnergy` itself is now fully
+  owned by this system's `RunState.currentEnergy`, not a local baseline.
 - `docs/SlotMachine.md` — `SlotMachine.GetActionOptions()`, the sole consumer of `G.DefaultCreatures`/
   `DefaultNukes`/`DefaultSpells` that this system's loadout override ultimately affects.
 - `docs/Encounters.md` — the actual battle sequence built on top of this data layer:

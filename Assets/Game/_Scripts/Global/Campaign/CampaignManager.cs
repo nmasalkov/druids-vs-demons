@@ -2,8 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Owns the current campaign RunState: loads/creates it, resolves its loadout ids against
-/// GameCatalog, and applies the result to G (creature/nuke/spell pool) and EnergyController
-/// (reroll energy capacity) at battle start. See docs/Campaign.md.
+/// GameCatalog, and applies the result to G (creature/nuke/spell pool), EnergyController (reroll
+/// energy), and the scene's enemy encounter data. See docs/Campaign.md and docs/Encounters.md.
 /// </summary>
 public class CampaignManager : MonoBehaviour
 {
@@ -30,7 +30,6 @@ public class CampaignManager : MonoBehaviour
         // itself only ever sets its own baseline in Awake(), never in Start(), so there's
         // nothing here that could get clobbered by ordering either way.
         ApplyLoadoutToG();
-        EnergyController.Instance.ApplyCampaignEnergyCapacity(CurrentRun.energyCapacity);
         ApplyEncounterToScene();
     }
 
@@ -52,13 +51,16 @@ public class CampaignManager : MonoBehaviour
             : new RunState();
 
     /// <summary>
-    /// Swaps in the current encounter's enemy avatar/HP. Called once from Start() for the scene's
-    /// initial load, and reused by CampaignProgressManager for an in-place "soft reload" when
-    /// navigating to a new encounter without leaving BattleScene (see docs/Encounters.md) — public
-    /// so it's callable from outside the Awake/Start pipeline.
+    /// Applies the current encounter's per-encounter run state to the scene: reroll energy (which
+    /// may have just changed via a victory reward) and the enemy avatar/HP. Called once from
+    /// Start() for the scene's initial load, and reused by CampaignProgressManager for an
+    /// in-place "soft reload" when navigating to a new encounter without leaving BattleScene (see
+    /// docs/Encounters.md) — public so it's callable from outside the Awake/Start pipeline.
     /// </summary>
     public void ApplyEncounterToScene()
     {
+        EnergyController.Instance.ApplyCampaignEnergy(CurrentRun.currentEnergy);
+
         if (CampaignProgressManager.Instance.CurrentEncounter is not BattleSO battle) return;
         CurrentBattle = battle;
         G.EnemyView.ReplaceHeroAvatar(battle.enemyData.enemyAvatarPrefab);

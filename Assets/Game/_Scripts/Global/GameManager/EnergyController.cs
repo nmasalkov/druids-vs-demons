@@ -7,18 +7,18 @@ using UnityEngine;
 /// <see cref="baseRerollCost"/> and doubles on every successful reroll; it resets back to
 /// <see cref="baseRerollCost"/> whenever a roll phase ends (<see cref="RollStateManager.OnRollFinished"/>),
 /// so the next round's first reroll is cheap again.
+///
+/// The energy pool itself is campaign-persistent, not a fixed per-battle baseline (see
+/// docs/Energy.md) — CurrentEnergy always comes from RunState.currentEnergy via
+/// ApplyCampaignEnergy()/ResetForRestart(), never a locally serialized default. This component
+/// fully trusts CampaignManager to exist (CLAUDE.md rule 5 — both live on the same
+/// Global/GameManager GameObject).
 /// </summary>
 public class EnergyController : MonoBehaviour
 {
     public static EnergyController Instance { get; private set; }
 
-    [SerializeField] private int startingEnergy = 50;
     [SerializeField] private int baseRerollCost = 2;
-
-    // Set once in Start() to startingEnergy, then possibly overridden by CampaignManager's
-    // energy capacity via ApplyCampaignEnergyCapacity(). ResetForRestart() refills to this
-    // (not the raw serialized field) so a mid-campaign restart refills to the run's capacity.
-    private int _effectiveStartingEnergy;
 
     public int CurrentEnergy { get; private set; }
     public int CurrentRerollCost { get; private set; }
@@ -28,16 +28,22 @@ public class EnergyController : MonoBehaviour
     public event Action<int> OnEnergyChanged;
     public event Action<int> OnRerollCostChanged;
 
+    /// <summary>
+    /// Fired only when the player actually spends energy on a reroll — separate from
+    /// OnEnergyChanged so UI feedback (the HUD "shake") plays for real spending only, not for
+    /// campaign-driven value updates (initial load, encounter transition, restart) that also fire
+    /// OnEnergyChanged. See docs/Energy.md.
+    /// </summary>
+    public event Action OnEnergySpent;
+
     void Awake()
     {
         Instance = this;
-        // Must happen here, not Start(): SlotColumn.Start() reads CurrentRerollCost
-        // synchronously in its own Start() to seed the reroll-cost label, and Start()-vs-Start()
-        // order between unrelated components is unspecified — only the Awake-before-any-Start
-        // guarantee is reliable. (A prior version of this method set these in Start() instead,
-        // which intermittently left the label showing 0 depending on component order — caught
-        // live during testing.)
-        CurrentEnergy = _effectiveStartingEnergy = startingEnergy;
+        // Only self-contained init here (rule 4) — CurrentRerollCost doesn't depend on anything
+        // else, but CurrentEnergy does (RunState, via CampaignManager) so it's left at its
+        // default until ApplyCampaignEnergy() is called from CampaignManager.Start() (SEO -100,
+        // guaranteed to run before this component's own Start() or any consumer's, e.g.
+        // EnergyDisplay/SlotColumn — see docs/Campaign.md).
         CurrentRerollCost = baseRerollCost;
     }
 
@@ -48,15 +54,13 @@ public class EnergyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Called by CampaignManager.Start() to override this run's reroll energy capacity.
-    /// CampaignManager's early Script Execution Order means its Start() runs before this
-    /// component's Start() and before any default-order consumer's Start() (e.g.
-    /// EnergyDisplay) — but the OnEnergyChanged fire below also makes this correct even if that
-    /// ordering ever changes, since anything already showing the old value self-corrects.
+    /// Called by CampaignManager whenever the scene needs to reflect the current RunState energy
+    /// — the initial Start() and every encounter transition (soft or full scene reload). Does not
+    /// touch CurrentRerollCost.
     /// </summary>
-    public void ApplyCampaignEnergyCapacity(int amount)
+    public void ApplyCampaignEnergy(int amount)
     {
-        CurrentEnergy = _effectiveStartingEnergy = amount;
+        CurrentEnergy = amount;
         OnEnergyChanged?.Invoke(CurrentEnergy);
     }
 
@@ -77,6 +81,7 @@ public class EnergyController : MonoBehaviour
 
         CurrentEnergy -= CurrentRerollCost;
         OnEnergyChanged?.Invoke(CurrentEnergy);
+        OnEnergySpent?.Invoke();
 
         CurrentRerollCost *= 2;
         OnRerollCostChanged?.Invoke(CurrentRerollCost);
@@ -90,9 +95,16 @@ public class EnergyController : MonoBehaviour
         OnRerollCostChanged?.Invoke(CurrentRerollCost);
     }
 
+    /// <summary>
+    /// Fired on every GameManager.OnBattleRestart — including a restart of the *current*
+    /// encounter (defeat, pause menu, debug tool). Reads RunState.currentEnergy fresh rather than
+    /// a cached field: that value only ever changes via a victory reward (CampaignProgressManager.
+    /// ResolveVictory), never during a restart, so re-reading it here is exactly "restore the
+    /// energy this encounter started with" — see docs/Encounters.md.
+    /// </summary>
     private void ResetForRestart()
     {
-        CurrentEnergy = _effectiveStartingEnergy;
+        CurrentEnergy = CampaignManager.Instance.CurrentRun.currentEnergy;
         OnEnergyChanged?.Invoke(CurrentEnergy);
         ResetRerollCost();
     }

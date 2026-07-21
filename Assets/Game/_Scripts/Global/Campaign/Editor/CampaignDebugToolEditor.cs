@@ -11,6 +11,13 @@ public class CampaignDebugToolEditor : Editor
         var tool = (CampaignDebugTool)target;
 
         EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("Debug Profile", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(
+            "When checked, every RunState field is set from the profile asset wholesale — the " +
+            "granular overrides below are ignored entirely. Never saved.", MessageType.Info);
+        DrawToggleAndObject(tool, "Use Debug Profile", ref tool.useDebugProfile, ref tool.debugProfile);
+
+        EditorGUILayout.Space(10);
         EditorGUILayout.LabelField("Run State Overrides", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
             "Checked fields override CampaignManager's RunState in Awake(), before anything " +
@@ -18,6 +25,7 @@ public class CampaignDebugToolEditor : Editor
 
         DrawToggleAndInt(tool, "Max HP", ref tool.overrideMaxHp, ref tool.maxHp);
         DrawToggleAndInt(tool, "Energy Capacity", ref tool.overrideEnergyCapacity, ref tool.energyCapacity);
+        DrawToggleAndInt(tool, "Current Energy", ref tool.overrideCurrentEnergy, ref tool.currentEnergy);
 
         EditorGUILayout.Space(6);
         DrawToggleAndObject(tool, "Archer", ref tool.overrideArcher, ref tool.archer);

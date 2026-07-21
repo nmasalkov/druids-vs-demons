@@ -1,6 +1,7 @@
 using Game._Scripts.Global;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Utils;
 
 /// <summary>
 /// The real (not debug-only) API for campaign navigation: knows which encounter is current and
@@ -17,6 +18,10 @@ using UnityEngine.SceneManagement;
 public partial class CampaignProgressManager : MonoBehaviour
 {
     public static CampaignProgressManager Instance { get; private set; }
+
+    // How long the "Player wins!"/"Enemy wins!" message sits on screen before the campaign
+    // transition (advance/reload/complete) actually happens.
+    private const float BattleResultDelaySeconds = 4f;
 
     [SerializeField] private EncounterListSO encounterList;
 
@@ -80,6 +85,56 @@ public partial class CampaignProgressManager : MonoBehaviour
         CampaignManager.Instance.Save();
 
         LoadCurrentEncounter();
+    }
+
+    /// <summary>
+    /// Called by GameOverState once the player has won: grants the current battle's energy
+    /// reward (clamped to capacity) immediately, then after a delay either advances to the next
+    /// encounter or, if this was the last one, completes the campaign. See docs/Encounters.md.
+    /// </summary>
+    public void ResolveVictory()
+    {
+        var battle = CampaignManager.Instance.CurrentBattle;
+        if (battle != null)
+        {
+            var run = CampaignManager.Instance.CurrentRun;
+            run.currentEnergy = Mathf.Min(run.currentEnergy + battle.energyReward, run.energyCapacity);
+            CampaignManager.Instance.Save();
+        }
+
+        int generation = GameManager.Instance.Generation;
+        DoAfterDelay.Execute(() =>
+        {
+            if (GameManager.IsStale(generation)) return;
+            if (HasNextEncounter) AdvanceToNextEncounter();
+            else CompleteCampaign();
+        }, BattleResultDelaySeconds);
+    }
+
+    /// <summary>
+    /// Called by GameOverState on defeat (or a draw): reloads the current encounter after a
+    /// delay. No RunState changes — energy/progress stay exactly where they were before this
+    /// battle started. See docs/Encounters.md.
+    /// </summary>
+    public void ResolveDefeat()
+    {
+        int generation = GameManager.Instance.Generation;
+        DoAfterDelay.Execute(() =>
+        {
+            if (GameManager.IsStale(generation)) return;
+            ResetCurrentEncounter();
+        }, BattleResultDelaySeconds);
+    }
+
+    /// <summary>
+    /// Placeholder end-of-campaign state: no dedicated UI yet, so this just logs and freezes
+    /// time — a clear "nothing more happens" signal distinct from GameOverState's silent dead
+    /// end. Revisit once a real campaign-complete screen exists.
+    /// </summary>
+    private void CompleteCampaign()
+    {
+        Debug.Log("[Campaign] Congratulations! You've completed the campaign.");
+        Time.timeScale = 0f;
     }
 
     /// <summary>

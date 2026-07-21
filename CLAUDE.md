@@ -237,6 +237,14 @@ them for any new/modified game code under `Assets/Game`:
     `AttacksResolver.cs`/`AttacksResolver.Mechanics.cs`) — apply it here so the main file stays
     scannable as pure gameplay logic, and anything living in `.Debug.cs` is self-evidently
     debug-only without having to read doc comments to tell.
+21. **Adding a new persisted `RunState` field means updating three more places, not just
+    `RunState`.** `CampaignProfileSO` needs the matching field (SO reference or plain value,
+    mirroring `RunState`'s shape — see `docs/Campaign.md`), `CampaignDebugTool`'s granular
+    override section needs the matching `override<Field>`/`<field>` pair and its
+    `ApplyDebugProfile` case, and `docs/Campaign.md` needs the field documented. Easy to forget
+    one of the three since none of them fail to compile if you do — `CampaignProfileSO` and
+    `CampaignDebugTool` are both plain data/Editor-only, so a missed field just silently doesn't
+    override, no error anywhere.
 
 ## Editor / IDE MCP integrations
 

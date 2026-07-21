@@ -13,6 +13,11 @@ public class RunState
     public int maxHp = 100;
     public int energyCapacity = 50;
 
+    // The only RunState field a battle itself changes (via reroll spend + victory reward) —
+    // persists across encounters; every other field only changes through explicit campaign
+    // navigation/debug actions. See docs/Encounters.md.
+    public int currentEnergy = 50;
+
     // Defaults mirror today's _DefaultCreatures.asset/DefaultNukes.asset/DefaultSpells.asset
     // assignments exactly, so a fresh/no-save run resolves to the same loadout the game already
     // ships with. See the id assignments in docs/Campaign.md's Editor setup checklist.

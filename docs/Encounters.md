@@ -5,9 +5,12 @@
 Builds the actual **battle sequence** on top of `docs/Campaign.md`'s data layer:
 `EncounterListSO` is the ordered campaign (currently three `BattleSO` battles), each battle carries
 its own enemy avatar/HP/reward, and `CampaignProgressManager` is the real API — not debug-only
-logic — for starting a run, restarting the current encounter, and advancing to the next one. Every
-battle's own pre-battle/post-battle phases and reward consumption are still unbuilt follow-ups; this
-only wires up the sequencing skeleton so those can land later without re-architecting.
+logic — for starting a run, restarting the current encounter, and advancing to the next one.
+`GameOverState` now drives that API automatically at the end of a battle: victory grants the
+energy reward and (after a delay) advances to the next encounter or completes the campaign; defeat
+reloads the current encounter — see "Battle results" below. A dedicated pre-battle/post-battle
+*UI* phase is still an unbuilt follow-up; this is campaign emulation without a separate scene for
+it yet.
 
 ## Key files
 
@@ -33,11 +36,17 @@ only wires up the sequencing skeleton so those can land later without re-archite
   `BattleScene`), so scene-name strings aren't inlined at each call site.
 - `PlayerView/HeroView.cs` — gained `ReplaceHeroAvatar(GameObject avatarPrefab)`.
 - `Global/Campaign/CampaignManager.cs` — gained `CurrentBattle`, `ResetRun()`, the static
-  `LoadOrCreateRunState()` helper, and `ApplyEncounterToScene()` (called from `Start()`).
+  `LoadOrCreateRunState()` helper, and `ApplyEncounterToScene()` (called from `Start()`, applies
+  both energy and enemy avatar/HP).
 - `Units/Hero.cs` — `GetMaxHealth()` gained a symmetric enemy-side branch.
 - `UI/PauseMenuController.cs` — `HandleRestartClicked()` now calls
   `CampaignProgressManager.Instance.ResetCurrentEncounter()` instead of calling
   `GameManager.RestartBattle()` directly.
+- `Global/GameManager/GameOverState.cs` — no longer a pure dead end; calls
+  `CampaignProgressManager.Instance.ResolveVictory()`/`ResolveDefeat()` after logging. See
+  "Battle results" below.
+- `Global/Campaign/CampaignProfileSO.cs` — Editor-authorable whole-`RunState` snapshot for
+  `CampaignDebugTool`'s "Use Debug Profile" — see `docs/Campaign.md`.
 
 Assets: `_ScriptableObjects/Campaign/Encounters/EncounterList.asset` +
 `Battle1.asset`/`Battle2.asset`/`Battle3.asset`, referencing
@@ -177,12 +186,13 @@ public BattleSO CurrentBattle { get; private set; }
 void Start()
 {
     ApplyLoadoutToG();
-    EnergyController.Instance.ApplyCampaignEnergyCapacity(CurrentRun.energyCapacity);
     ApplyEncounterToScene();
 }
 
 public void ApplyEncounterToScene()
 {
+    EnergyController.Instance.ApplyCampaignEnergy(CurrentRun.currentEnergy);
+
     if (CampaignProgressManager.Instance.CurrentEncounter is not BattleSO battle) return;
     CurrentBattle = battle;
     G.EnemyView.ReplaceHeroAvatar(battle.enemyData.enemyAvatarPrefab);
@@ -259,16 +269,130 @@ dependency on `CampaignProgressManager`. No `CampaignManager.Instance != null` g
 whenever the current `EncounterSO` isn't a `BattleSO`, a legitimate state once other encounter
 types exist.
 
+## Battle results: victory/defeat resolution
+
+`GameOverState` (`docs/GameLoop.md`) used to be a genuine dead end — it logged the winner and never
+called `CompleteState()`, leaving the game frozen until a manual restart. It now delegates to
+`CampaignProgressManager` right after logging, still without calling `CompleteState()` itself (the
+round loop still stops there — see `docs/GameLoop.md`'s "Gotchas"):
+
+```csharp
+protected override void OnEnter()
+{
+    bool playerDead = G.PlayerHero.Health.IsDead();
+    bool enemyDead = G.EnemyHero.Health.IsDead();
+
+    if (playerDead && enemyDead)
+    {
+        Debug.Log("[GameOver] Draw! Both heroes have fallen.");
+        CampaignProgressManager.Instance.ResolveDefeat();
+    }
+    else if (playerDead)
+    {
+        Debug.Log("[GameOver] Enemy wins! Your hero has fallen.");
+        CampaignProgressManager.Instance.ResolveDefeat();
+    }
+    else if (enemyDead)
+    {
+        Debug.Log("[GameOver] Player wins! Enemy hero has fallen.");
+        CampaignProgressManager.Instance.ResolveVictory();
+    }
+}
+```
+
+**Win condition simplified for the campaign era**: `GameManager.IsGameOver()` used to require
+eliminating a side entirely (hero *and* every summoned creature — `IsSideAlive` checked both). It's
+now purely hero death (`G.PlayerHero.Health.IsDead() || G.EnemyHero.Health.IsDead()`) — each
+encounter's enemy hero is the boss, so killing it ends the fight immediately regardless of any
+creatures it still has on the field. `IsSideAlive` was removed from both `GameManager` and
+`GameOverState` (it was duplicated between them).
+
+A draw is treated the same as a defeat (reload the current encounter) — the user-facing spec only
+distinguishes victory from "not victory," and a simultaneous double-KO is rare enough not to warrant
+its own path.
+
+`ResolveVictory()`/`ResolveDefeat()` (in `CampaignProgressManager.cs`, real game logic — not
+debug-only) both wait `BattleResultDelaySeconds` (4s) via `Utils.DoAfterDelay.Execute` before doing
+anything, so the "Player wins!"/"Enemy wins!" console message (and whatever UI eventually shows it)
+has time to actually be seen:
+
+```csharp
+public void ResolveVictory()
+{
+    var battle = CampaignManager.Instance.CurrentBattle;
+    if (battle != null)
+    {
+        var run = CampaignManager.Instance.CurrentRun;
+        run.currentEnergy = Mathf.Min(run.currentEnergy + battle.energyReward, run.energyCapacity);
+        CampaignManager.Instance.Save();
+    }
+
+    int generation = GameManager.Instance.Generation;
+    DoAfterDelay.Execute(() =>
+    {
+        if (GameManager.IsStale(generation)) return;
+        if (HasNextEncounter) AdvanceToNextEncounter();
+        else CompleteCampaign();
+    }, BattleResultDelaySeconds);
+}
+
+public void ResolveDefeat()
+{
+    int generation = GameManager.Instance.Generation;
+    DoAfterDelay.Execute(() =>
+    {
+        if (GameManager.IsStale(generation)) return;
+        ResetCurrentEncounter();
+    }, BattleResultDelaySeconds);
+}
+```
+
+- **The energy reward is granted synchronously**, before the delay even starts — `battle.energyReward`
+  added to `RunState.currentEnergy`, clamped to `energyCapacity`, then `Save()`d immediately. Not
+  gated behind the delay or the staleness check: it can only ever run once per battle (`GameManager.
+  HandleHeroDied`'s `if (_gameOver) return;` guard makes `GameOverState` itself unreachable twice),
+  so there's no duplication risk to guard against.
+- **The staleness guard (`GameManager.Generation`/`IsStale`, see `docs/GameLoop.md`) protects the
+  *delayed* transition specifically**, following the same pattern `AIController`/`ExperienceManager`
+  already use for their own `DoAfterDelay` closures. Without it: if the player manually restarts
+  (pause menu → `ResetCurrentEncounter()` → `GameManager.RestartBattle()`, which bumps `Generation`)
+  during the 4-second window, the still-pending delayed callback would later fire anyway and call
+  `AdvanceToNextEncounter()`/`ResetCurrentEncounter()` a second time — for victory, incorrectly
+  advancing past an encounter the player just manually restarted.
+- **`CompleteCampaign()`** is a deliberately minimal placeholder — logs
+  `"[Campaign] Congratulations! You've completed the campaign."` and sets `Time.timeScale = 0f`.
+  No dedicated "campaign complete" screen exists yet; this is just a clear, unmistakable stop
+  distinct from `GameOverState`'s old silent freeze. `Time.timeScale = 0f` doesn't disable
+  `PauseMenuController` (`Update()` still runs, so Escape/Restart still work) — revisit once a real
+  end screen exists.
+- **`ResetCurrentEncounter()` (defeat path) never touches `RunState` at all** — no reward, no index
+  change — satisfying "restarting must not duplicate rewards or advance campaign progress" and
+  "restarting must not reset the entire run" directly: it's the exact same method the pause menu
+  and debug tool already use for a plain mid-battle restart.
+
 ## Debug-only surface: `CampaignProgressManager.Debug.cs`
 
-Per CLAUDE.md rule 20, `SetSessionEncounterOverride` — called by nothing except
-`CampaignProgressTool` — lives in a separate `CampaignProgressManager.Debug.cs` partial class file
-instead of the main `CampaignProgressManager.cs`, the same partial-class split pattern
+Per CLAUDE.md rule 20, `SetSessionEncounterOverride`/`SetSessionEncounterIndexOverride` — called by
+nothing except `CampaignProgressTool`/`CampaignDebugTool` — live in a separate
+`CampaignProgressManager.Debug.cs` partial class file instead of the main
+`CampaignProgressManager.cs`, the same partial-class split pattern
 `AttacksResolver.cs`/`AttacksResolver.Mechanics.cs` already uses for a different reason. The
 `_overrideWindowOpen` field lives there too, since it exists solely in service of the override
 mechanism. `CampaignProgressManager.cs`'s own `Awake()`/`Start()` still set it directly (partial
 class members are shared across all the type's files) — the split only separates *what's debug-only*
 from *what's real navigation logic*, not lifecycle ownership.
+
+**Why `SetSessionEncounterIndexOverride(int)` exists alongside `SetSessionEncounterOverride(EncounterSO)`**:
+`CampaignDebugTool`'s "Use Debug Profile" (`docs/Campaign.md`) sets
+`CampaignManager.CurrentRun.currentEncounterIndex` directly from `CampaignProfileSO`, but
+`CampaignProgressManager` bootstraps its own `_currentEncounterIndex` from PlayerPrefs
+independently — it never reads the live `CurrentRun` object (see "Why it bootstraps its own index"
+above). Mutating `CurrentRun.currentEncounterIndex` alone was a real, caught-live bug: it had zero
+effect on which encounter actually loaded that session, since nothing connected the two. `CampaignDebugTool`
+doesn't hold an `EncounterListSO` reference to resolve an index into an `EncounterSO` the way
+`CampaignProgressTool` does, so the index-based overload exists specifically for this caller — same
+`_overrideWindowOpen` gating and `Mathf.Clamp` bounds-safety as the `EncounterSO` overload (which
+now just resolves its argument to an index and forwards to this one).
 
 ## `CampaignProgressTool`
 
@@ -342,12 +466,14 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
 - **`CampaignProgress` must stay a root-level GameObject.** `DontDestroyOnLoad` only works on scene
   roots — parenting it under `Global` (where `CampaignProgressTool` correctly lives, since that one
   doesn't need to persist) would silently fail to persist it across scene reloads.
-- **`AdvanceToNextEncounter()` doesn't wrap or stop cleanly at the end of the list** — it just logs
-  a warning and no-ops if already on the last encounter. There's no "campaign complete" state yet;
-  that's part of the pre/post-battle phase work this pass doesn't build.
-- **`energyReward`/`battleId`/`isTutorial` on `BattleSO` are inert** — no logic reads them yet,
-  same as `RunState.currentEncounterIndex` was before this system existed. They exist for the
-  pre-battle/post-battle phases to consume once built.
+- **`AdvanceToNextEncounter()` itself still just logs a warning and no-ops if called at the last
+  encounter** — but `ResolveVictory()` never calls it in that case, it calls `CompleteCampaign()`
+  instead (see "Battle results" above). The no-op path only fires if something calls
+  `AdvanceToNextEncounter()` directly at the last encounter (e.g. mashing
+  `CampaignProgressTool`'s button) — that's an intentionally inert dead-end, not a bug.
+- **`battleId`/`isTutorial` on `BattleSO` are still inert** — no logic reads them yet, forward-
+  looking data for the pre/post-battle phases this pass doesn't build. `energyReward` **is** now
+  consumed, by `CampaignProgressManager.ResolveVictory()`.
 - **A left-over saved `RunState` can look like "the wrong default encounter loads."** Progress is
   designed to persist across Editor Play sessions (the whole point of `RunState`/PlayerPrefs) — if
   `currentEncounterIndex` was previously advanced (including via the override-leak bug described

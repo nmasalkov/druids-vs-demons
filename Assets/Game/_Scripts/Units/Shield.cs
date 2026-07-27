@@ -27,7 +27,7 @@ namespace Game._Scripts.Creatures
         public void Init(int level)
         {
             Level = level;
-            Health.Init(Data.GetHpForLevel(level));
+            Health.Init(RewardBonuses.ApplyBonuses(Data, Data.GetHpForLevel(level)));
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace Game._Scripts.Creatures
         public void Promote(int level)
         {
             Level = level;
-            float maxHp = Data.GetHpForLevel(level);
+            float maxHp = RewardBonuses.ApplyBonuses(Data, Data.GetHpForLevel(level));
             Health.Init(maxHp);
             ShieldAnimator.PlayPromote();
         }

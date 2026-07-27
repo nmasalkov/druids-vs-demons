@@ -67,7 +67,7 @@ while (!gameOver):
 - `EndOfRoundState` is a pure marker — completes immediately, exists so the round boundary is
   visible in the state sequence and events.
 - `GameOverState` **never calls `CompleteState()`** — the round loop stops here, by design. It logs
-  the winner/draw, then hands off to `CampaignProgressManager.Instance.ResolveVictory()`/
+  the winner/draw, then hands off to `CampaignManager.Instance.ResolveVictory()`/
   `ResolveDefeat()`, which schedule the actual campaign transition (advance/reload/complete) after a
   delay — see `docs/Encounters.md`'s "Battle results" section. `GameManager.RestartBattle()`
   (triggered manually, or by that scheduled transition) is still the only way the round loop itself
@@ -120,7 +120,7 @@ static check.
   since the actual bug there is the field going null, not staleness — see below);
   `ExperienceManager.LaunchGemsToOwners()`'s per-gem flight closures (guarded twice: before
   `FlyTo`, and again before the arrival callback grants XP); and
-  `CampaignProgressManager.ResolveVictory()`/`ResolveDefeat()`'s 4-second post-battle delays (see
+  `CampaignManager.ResolveVictory()`/`ResolveDefeat()`'s 4-second post-battle delays (see
   `docs/Encounters.md`) — without the guard, a manual restart during that window would leave the
   stale delayed callback to fire anyway and double up on the transition.
 
@@ -165,7 +165,7 @@ more):
 | `Global/RollStateManager/RollStateManager.cs` | `ResetForRestart` | Clears `SpawnEntries`/`NukeEntries`/`SpellEntries`, resets `TripleRolled`/`LastRollType`, resets both slot machines' UI and deactivates them. |
 | `Units/ExperienceManager.cs` | `ClearForRestart` | Destroys any in-flight XP gem GameObjects, clears `pendingXp`/`activeGems`, resets `gemsInFlight` — discards XP rather than granting it (contrast with `ResolveGemsInstant`, which grants). |
 | `AI/AIController.cs` | `ReleaseControl` | Releases AI control of a slot machine if it currently holds one (now null-guarded — restart can fire this when the AI isn't in control at all). |
-| `Global/GameManager/EnergyController.cs` | `ResetForRestart` | Refills reroll energy to `CampaignManager.Instance.CurrentRun.currentEnergy` (read fresh, campaign-persistent — not a local baseline) and resets the reroll cost back to `baseRerollCost`. See `docs/Energy.md`. |
+| `Global/GameManager/EnergyController.cs` | `ResetForRestart` | Refills reroll energy to `CampaignStateManager.Instance.CurrentRun.currentEnergy` (read fresh, campaign-persistent — not a local baseline) and resets the reroll cost back to `baseRerollCost`. See `docs/Energy.md`. |
 
 Because subscribers are independent (none of them read another subscriber's post-reset state),
 firing order among them doesn't matter — `OnBattleRestart?.Invoke()` runs all of them
@@ -216,7 +216,7 @@ freeze correctly under `timeScale = 0`. `PauseMenuController.OnDestroy()` also r
   clearing every creature it summoned too (a deliberate campaign-era simplification; the original
   symmetric "eliminate the whole side" rule is gone).
 - **`GameOverState` never calls `CompleteState()`, but is no longer a silent dead end** — it hands
-  off to `CampaignProgressManager` (see above), which schedules a real transition. `RestartBattle()`
+  off to `CampaignManager` (see above), which schedules a real transition. `RestartBattle()`
   itself doesn't care what state the game was frozen in and remains the only way the round loop
   resumes, whether triggered manually (pause menu) or by that scheduled transition.
 - **Rule 7 (instant-resolve) relationship:** `RestartBattle()` itself doesn't need an instant-resolve

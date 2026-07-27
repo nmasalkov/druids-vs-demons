@@ -38,7 +38,7 @@ namespace Game._Scripts.PlayerView
         /// <summary>
         /// Destroys the current hero avatar and instantiates avatarPrefab in its place, preserving
         /// its local transform (keeps enemy-side mirroring intact) and rewiring hero/heroSlot.Unit.
-        /// Called from CampaignManager.Start() (SEO -100) before the old avatar's own Start() would
+        /// Called from CampaignStateManager (SEO -100) before the old avatar's own Start() would
         /// otherwise fire. See docs/Encounters.md.
         /// </summary>
         public void ReplaceHeroAvatar(GameObject avatarPrefab)

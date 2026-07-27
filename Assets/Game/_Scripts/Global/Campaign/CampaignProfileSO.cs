@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -33,4 +34,9 @@ public class CampaignProfileSO : ScriptableObject
 
     [Header("Progress")]
     public int currentEncounterIndex = 0;
+
+    [Header("Rewards")]
+    public List<StatusRewardSO> statusRewards = new List<StatusRewardSO>();
+    public List<BoostSO> boostRewards = new List<BoostSO>();
+    public List<CreatureSO> gatheredCreatures = new List<CreatureSO>();
 }

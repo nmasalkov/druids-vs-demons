@@ -305,6 +305,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Polygon Arsenal/Demo/Scenes/Interactive/PolyZones.unity
     guid: 704cc03b81f7a8548a23727ad4a7b68d
+  - enabled: 1
+    path: Assets/Game/_Scenes/MapScene.unity
+    guid: 867dc5018d4efda41ab768911c171682
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0

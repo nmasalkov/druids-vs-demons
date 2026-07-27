@@ -5,7 +5,8 @@
 Step 1 of turning the single self-contained `BattleScene` battle into a campaign: a series of battles
 with a pre-battle loadout phase and a post-battle reward phase around each one, plus
 player-improvable stats (max HP, reroll energy capacity) that persist across the run. This system is
-the **data layer** only — a `RunState` that saves/loads via `PlayerPrefs`/JSON, and the wiring that
+the **data layer** only — a `RunState` that saves/loads as JSON via a swappable storage backend
+(`PlayerPrefs` by default — see "Save system" below), and the wiring that
 makes `BattleScene` pull its starting values from it instead of pure hardcoded defaults. It does not
 implement the pre-battle/post-battle UI or reward selection — those are still follow-ups. Per-
 encounter enemy avatar/HP variation *is* now solved, one layer up — see `docs/Encounters.md`.
@@ -14,58 +15,111 @@ encounter enemy avatar/HP variation *is* now solved, one layer up — see `docs/
 has no player/enemy distinction — overriding `G`'s creature/nuke/spell defaults from campaign data
 keeps that behavior for both sides identically. Only the player's hero max HP is driven by
 `RunState` directly (`Hero == G.PlayerHero` check in `Hero.GetMaxHealth()`); the enemy's max HP is
-driven by the current `BattleSO` when one is active (`docs/Encounters.md`), falling back to its own
+driven by the current `FightSO` when one is active (`docs/Encounters.md`), falling back to its own
 `HeroSO.health` otherwise. True per-encounter *creature* composition (different summonable creatures
 per battle, not just a different enemy avatar/HP) still needs `SlotMachine` to gain a per-side
 loadout source — not solved here.
 
+## Two managers, split by concern
+
+Two cooperating singletons, both cross-scene-persistent (`DontDestroyOnLoad` + duplicate-guard),
+both placed as components on `_Prefabs/Campaign/CampaignProgress.prefab` (instanced as a root
+GameObject in both `BattleScene.unity` and `MapScene.unity`, so either can be the session's
+first-loaded scene):
+
+- **`CampaignStateManager`** — sole owner of `RunState` (loaded/created/saved here) and the
+  catalogs that resolve its ids back into assets (`GameCatalog`, `RewardListSO`). Also applies that
+  data to whatever scene needs it: resolves a run's loadout ids into `G`'s creature/nuke/spell pool
+  and pushes reroll energy/enemy avatar into `BattleScene`. This is the "data + apply" half.
+- **`CampaignManager`** — encounter navigation: knows which encounter is current and how to move
+  between them (advance/restart/defeat/victory/complete). Reads and mutates `RunState` through
+  `CampaignStateManager.Instance.CurrentRun` rather than owning any of it itself; owns
+  `EncounterListSO` and the `ProcessAllEncountersInBattleScene` debug flag. This is the "where are
+  you in the campaign" half. See `docs/Encounters.md` for its full navigation API.
+
+Splitting these two concerns into separate classes (rather than one doing both) keeps "what the run's
+data is" and "where the player currently is in the campaign" independently testable/overridable —
+e.g. `CampaignDebugTool` only ever needs to reach into `CampaignStateManager`, never `CampaignManager`,
+to replace a whole `RunState`.
+
 ## Key files
 
 - `Global/Campaign/RunState.cs` — the save data: a plain `[Serializable]` C# class (not a
-  `ScriptableObject` — see Gotchas), not saved directly, held by `CampaignManager`.
+  `ScriptableObject` — see Gotchas), not saved directly, held by `CampaignStateManager`.
+- `Global/Campaign/Save/ISaveStorage.cs`/`PlayerPrefsSaveStorage.cs`/`SaveStorage.cs` — the storage
+  abstraction `RunState` is persisted through. See "Save system" below.
 - `Global/Campaign/GameCatalog.cs` — SO listing every `CreatureSO`/`NukeSO`/`SpellSO` asset in the
   game; resolves `RunState`'s loadout id strings back to actual assets at battle start.
-- `Global/Campaign/CampaignManager.cs` — singleton MonoBehaviour; loads/creates `CurrentRun` in
-  `Awake()`, applies it to `G` and `EnergyController` in `Start()`, exposes `Save()`.
+- `Global/Campaign/CampaignStateManager.cs` (+ `CampaignStateManager.Debug.cs`) — cross-scene
+  persistent singleton; `CurrentRun` is the actual owned `RunState`, loaded once in `Awake()`.
+  Applies it to `G` and `EnergyController` whenever `BattleScene` is entered (boot-time, or via a
+  `SceneManager.sceneLoaded` subscription for every later load — see "Load → resolve → apply flow"
+  below).
+- `Global/Campaign/CampaignManager.cs` (+ `CampaignManager.Debug.cs`) — cross-scene persistent
+  singleton; encounter navigation only, reads/mutates `RunState` through
+  `CampaignStateManager.Instance.CurrentRun`. See `docs/Encounters.md`.
 - `Global/Campaign/CampaignDebugTool.cs` + `Global/Campaign/Editor/CampaignDebugToolEditor.cs` —
   Editor-only override tool, mirrors `Global/Balance/BalanceTool.cs`'s pattern. Check a box, drag in
-  a creature/nuke/spell asset (or set a number), press Play.
+  a creature/nuke/spell asset (or set a number), press Play. Cross-scene-persistent
+  (`DontDestroyOnLoad` + duplicate-guard, like `CampaignStateManager`/`CampaignManager` — see
+  `docs/Encounters.md`), reads/writes `CampaignStateManager.Instance.CurrentRun` directly, no
+  `CampaignManager` dependency.
 - `ScriptableObjects/ActionSO.cs` — gained a `public string id` field: the stable identifier
   `GameCatalog` looks assets up by (separate from `actionName`, which is just a display string).
 - `ScriptableObjects/CreaturesSO.cs`/`NukesSO.cs`/`SpellsSO.cs` (renamed from `Default*SO` — the
   asset instances on disk keep their original `Default*.asset` file names since those specific
   instances genuinely are the fallback defaults) — reused both as `G`'s hardcoded fallback and as the
-  shape `CampaignManager` builds a runtime instance into.
+  shape `CampaignStateManager` builds a runtime instance into.
 - `Global/G.cs` — gained the static `ApplyCampaignLoadout(CreaturesSO, NukesSO, SpellsSO)`, called
-  once by `CampaignManager.Start()`. Full detail: [`docs/G.md`](G.md).
-- `Global/GameManager/EnergyController.cs` — gained `ApplyCampaignEnergy(int)`, called from
-  `CampaignManager.ApplyEncounterToScene()` (initial load and every encounter transition). No more
-  local baseline — `CurrentEnergy` comes from `RunState.currentEnergy` exclusively; see
-  `docs/Energy.md` and Gotchas.
-- `Units/Hero.cs` — `GetMaxHealth()` reads `CampaignManager.Instance.CurrentRun.maxHp` for the
-  player's `Hero` only.
+  by `CampaignStateManager` whenever `BattleScene` is entered with a run active. Full detail:
+  [`docs/G.md`](G.md).
+- `Global/GameManager/EnergyController.cs` — gained `ApplyCampaignEnergy()`, called from
+  `CampaignStateManager.ApplyEncounterToScene()` (initial load and every encounter transition). No
+  local baseline — `CurrentEnergy` is a read-through onto `RunState.currentEnergy`, its one source of
+  truth; see `docs/Energy.md` and Gotchas.
+- `Units/Hero.cs` — `GetMaxHealth()` reads `CampaignStateManager.Instance.CurrentMaxHp` for the
+  player's `Hero` only (`RunState.maxHp` plus claimed `HpBoostRewardSO` bonuses — see
+  `docs/Rewards.md`).
 - `Global/Campaign/CampaignProfileSO.cs` — Editor-authorable snapshot of a whole `RunState` (SO
   references instead of ids), pluggable into `CampaignDebugTool`'s "Use Debug Profile" slot. See
   below and CLAUDE.md rule 21.
+- `Global/Campaign/Rewards/*.cs`, `Global/Campaign/RewardListSO.cs`, `Global/Campaign/
+  RewardBonuses.cs` — the reward-card pick system built on top of this data layer. See
+  `docs/Rewards.md`.
+- `Global/Campaign/RunStateMonitor.cs` — debug-only, lives as a child GameObject under
+  `_Prefabs/Campaign/CampaignProgress.prefab`. While enabled, re-serializes the *entire* live
+  `RunState` (via `JsonUtility.ToJson(..., true)`) into an Inspector-visible string every frame —
+  no hand-picked field list to keep in sync as `RunState` grows, no resolve button. Disabled by
+  default (a disabled `MonoBehaviour` never gets `Update()` called, so there's no per-frame cost
+  until a developer opts in).
 
 ## `RunState` shape
 
 ```csharp
-public int saveVersion = 1;          // for future save migration
+public const int CurrentSaveVersion = 1;
+public int saveVersion = CurrentSaveVersion; // see "Save system" below
 
 public int maxHp = 100;               // matches HeroSO.health's existing default
-public int energyCapacity = 50;       // upper bound a victory reward clamps currentEnergy to
-public int currentEnergy = 50;        // the only field a battle itself changes — see docs/Encounters.md
+public int energyCapacity = 50;       // not currently enforced anywhere — reserved for a future
+                                       // "capacity boost" reward; reward grants are purely additive
+public int currentEnergy = 50;        // changed by reroll spend and RewardPickSO/BonusEnergyRewardSO
+                                       // claims, uncapped — see docs/Encounters.md, docs/Rewards.md
 
 public string archerId = "archer", tankId = "tank", mageId = "mage";
 public string nukeAId = "firemagic", nukeBId = "starfall", nukeCId = "shock";
 public string spellAId = "battlecry", spellBId = "charm", spellCId = "shield";
 
 public int currentEncounterIndex = 0; // now consumed — see docs/Encounters.md
+
+// Reward-pick tracking — see docs/Rewards.md. The first list-shaped RunState fields; ids
+// resolved against RewardListSO.Find(), same pattern as the loadout ids above.
+public List<string> statusRewardIds = new List<string>();
+public List<string> boostRewardIds = new List<string>();
+public List<string> gatheredCreatureIds = new List<string>();
 ```
 
 The 9 loadout fields are ids, not direct SO references — `ScriptableObject` references don't survive
-a `JsonUtility` round-trip through `PlayerPrefs`. Every default above mirrors today's hardcoded
+a `JsonUtility` round-trip through storage. Every default above mirrors today's hardcoded
 game exactly (`HeroSO.health`, `EnergyController.startingEnergy`, and — id-for-id — whatever
 `_DefaultCreatures.asset`/`DefaultNukes.asset`/`DefaultSpells.asset` already point at), so a
 brand-new run (nothing saved yet) behaves identically to the game as it exists without this system,
@@ -75,87 +129,186 @@ Starfall/Shock, not Fireball, despite the filename suggesting otherwise.
 
 ## Load → resolve → apply flow
 
-1. `CampaignManager.Awake()`: `CurrentRun = PlayerPrefs.HasKey(SaveKey) ? JsonUtility.FromJson<RunState>(...) : new RunState()`.
-   Self-contained — only reads `PlayerPrefs`, no other script.
-2. `CampaignManager.Start()` (runs before every default-order `Start()` in the scene — see the Script
-   Execution Order note in Gotchas):
+1. `CampaignStateManager.Awake()`: `CurrentRun = LoadOrCreateRunState()` — see "Save system" below
+   for what that actually does now (storage abstraction + version validation). Self-contained — only
+   reads via `SaveStorage.Backend`, no other script. `CampaignStateManager` is the sole owner and
+   loader of `RunState`; `CampaignManager` never touches storage itself, only reads/mutates
+   `CampaignStateManager.Instance.CurrentRun`'s fields.
+2. Whenever `BattleScene` is actually entered — either at boot (`CampaignStateManager.Start()`
+   checking `SceneManager.GetActiveScene().name == SceneNames.BattleScene` directly, relying on its
+   early Script Execution Order — see Gotchas) or on every later load (a `SceneManager.sceneLoaded`
+   subscription set up in that same `Start()`, since `CampaignStateManager` is now a persistent
+   singleton whose own `Start()` only ever runs once per session) — a private `EnterBattleScene()`
+   first checks a boot-time guard: if `!CampaignManager.Instance.ProcessAllEncountersInBattleScene`
+   and `CurrentEncounter` isn't a `FightSO`, it redirects to `MapScene` instead
+   (`SceneManager.LoadScene(SceneNames.MapScene)`) and returns — `BattleScene` is only ever meant to
+   host a fight outside that debug flag. See `docs/Encounters.md`'s "MapScene" section. Otherwise:
    - `ApplyLoadoutToG()` builds one runtime `CreaturesSO`/`NukesSO`/`SpellsSO` via
      `ScriptableObject.CreateInstance<T>()`, resolving each of the 9 ids through `GameCatalog`
      (`FindArcher`/`FindTank`/`FindMage`/`FindNuke`/`FindSpell`). Any id that doesn't resolve
      (empty/unknown) falls back to whatever `G`'s own Inspector-wired default asset already has for
      that slot, logging a warning. Result is handed to the static `G.ApplyCampaignLoadout(...)`.
-   - `ApplyEncounterToScene()` calls `EnergyController.Instance.ApplyCampaignEnergy(CurrentRun.currentEnergy)`,
+   - `ApplyEncounterToScene()` calls `EnergyController.Instance.ApplyCampaignEnergy()`,
      which fires `OnEnergyChanged` so `EnergyDisplay` picks up the value (belt-and-suspenders —
-     `CampaignManager`'s execution order already guarantees this runs before `EnergyDisplay.Start()`
-     reads it once, but the event fire also makes this correct if that ordering ever changes). The
-     same method is reused for encounter transitions that don't reload the scene — see
-     `docs/Encounters.md`.
-3. `Hero.GetMaxHealth()` doesn't get pushed a value — it reads `CampaignManager.Instance.CurrentRun.maxHp`
-   directly (lazily) whenever called, which happens to be from the player `Hero`'s own `Start()` (via
-   `InitHealth()`). Safe purely from the Awake-before-Start guarantee: `CampaignManager.Awake()` has
-   already run by the time any `Start()` runs, anywhere in the scene.
-4. `CampaignManager.Save()` — `PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(CurrentRun))`. Not
-   called automatically by anything yet (no pre-battle/post-battle phase exists to trigger it) —
-   available for whatever calls it next (a future reward-selection step, or manual testing).
-   `SaveKey` (`"DvD_RunState"`) is `public const` specifically so tooling (see the debug tool's
-   "Saved Run" section below) can reference it instead of duplicating the string.
+     the `sceneLoaded` timing already guarantees this runs before any `Start()` in that scene,
+     including `EnergyDisplay.Start()`, but the event fire also makes this correct if that ordering
+     ever changes). The same method is reused for encounter transitions that don't reload the scene
+     — see `docs/Encounters.md`.
+3. `Hero.GetMaxHealth()` doesn't get pushed a value — it reads
+   `CampaignStateManager.Instance.CurrentMaxHp` directly (lazily) whenever called, which happens to
+   be from the player `Hero`'s own `Start()` (via `InitHealth()`). Safe purely from the
+   `sceneLoaded`-before-`Start()` guarantee (or, at boot, the Awake-before-Start guarantee plus SEO):
+   `CampaignStateManager`'s loadout/energy application has already run by the time any `Start()` runs
+   in `BattleScene`.
+4. `CampaignStateManager.Save()` — `SaveStorage.Backend.Write(JsonUtility.ToJson(CurrentRun))`.
+   Lives on `CampaignStateManager` (not `CampaignManager`) since `RunState`'s owner needs to be
+   callable from `MapScene` too, where reward/loadout pick screens run — see `docs/Encounters.md`.
+   Called automatically at well-defined points, never per-frame/per-action — see "Save system" below.
+
+## Save system
+
+Single-slot automatic save: created on first launch, updated at well-defined points, never via
+manual Save/Load buttons.
+
+- **Storage abstraction** (`Global/Campaign/Save/`): `ISaveStorage` (`Exists()`/`Read()`/
+  `Write(string)`/`Delete()`, single-slot — no key/slot parameter) is the only thing `RunState`/
+  `CampaignStateManager` know about; neither touches `PlayerPrefs` directly anymore.
+  `PlayerPrefsSaveStorage` is the default implementation (same `"DvD_RunState"` key
+  `CampaignStateManager` used to write directly, so existing dev saves stay valid).
+  `SaveStorage.Backend` is a static, settable property defaulting to `new PlayerPrefsSaveStorage()`
+  — a future platform build (CrazyGames/Poki/...) swaps it
+  (`SaveStorage.Backend = new CrazyGamesSaveStorage();`) before `CampaignStateManager.Awake()` runs,
+  without touching `RunState`'s shape or any calling code. Being plain C# (no Unity lifecycle), it's
+  also safely usable from Editor code — `CampaignDebugToolEditor`'s "Saved Run" section reads
+  through it too.
+- **Versioning**: `RunState.CurrentSaveVersion` is the single source of truth for "what version is
+  current." `CampaignStateManager.LoadOrCreateRunState()` → private `ParseRunState(json)`
+  try/catches `JsonUtility.FromJson<RunState>` and rejects (returns `null`, logs a warning) anything
+  that fails to parse or whose `saveVersion` doesn't match `CurrentSaveVersion`. A rejected/missing
+  save is replaced with a fresh `RunState`, immediately written back — this is deliberately the same
+  code path whether there was never a save or the save is corrupt/an unsupported version; full save
+  migration is out of scope, an unsupported version is just treated as "no save." Nothing can crash
+  the game over a bad save.
+- **Save trigger points** — exactly these three, never per-frame/per-action:
+  - *New run created*: `LoadOrCreateRunState()`'s fresh-write path (first-ever boot, or a
+    corrupt/invalid save being replaced) and `CampaignManager.StartNewRun()`'s
+    `CampaignStateManager.Instance.ReplaceRunState(new RunState())` + `Save()`.
+    `CampaignStateManager` is the sole owner and loader of `RunState` — there's exactly one load
+    call, not two.
+  - *Entering a new encounter*: `CampaignManager.AdvanceToNextEncounter()` saves (via
+    `CampaignStateManager.Instance.Save()`) right after bumping the index, before the new encounter
+    loads — every forward path (victory, `EncounterPlayer` completing a pick screen, `StartNewRun()`)
+    funnels through it. See `docs/Encounters.md`.
+  - *End of any encounter*: `RewardPickSO`'s claim is the one place that calls `Save()`
+    immediately, right after mutating `currentEnergy` — a real "end of encounter" persistence point
+    on top of (not instead of) the entering-next-encounter save that immediately follows. Battle
+    encounters don't get an explicit save at victory itself — but `EnergyController.TrySpendReroll()`
+    writes every reroll spend straight into `CurrentRun.currentEnergy` (in-memory only, never calling
+    `Save()` per-spend — that would violate "never per-frame/per-action"), so on a **victory**
+    (which carries the spend forward — see `docs/Energy.md`'s Restart interaction) whatever was
+    actually spent is already sitting in `RunState` by the time the next real trigger point
+    (entering the next encounter) writes it to storage. A **defeat retry** instead reverts the
+    spend back to what the encounter started with before any save happens, so nothing about the
+    abandoned attempt's spending ever reaches storage at all — consistent with "restarting must not
+    duplicate rewards or advance campaign progress."
+- **Debug tooling — "Use External Save"**: see the `CampaignDebugTool` section below.
 
 ## `CampaignDebugTool`
 
-Editor-only, lives on a `CampaignDebugTool` GameObject next to `BalanceTool` in `BattleScene.unity`.
-One `override<Field>` bool + matching value field per `RunState` entry. The 9 loadout fields are
+Editor-only, lives on a `CampaignDebugTool` GameObject next to `BalanceTool` in `BattleScene.unity` —
+and an identical GameObject placed in `MapScene.unity` too, since the tool is cross-scene-
+persistent (`DontDestroyOnLoad` + duplicate-guard, same pattern as `CampaignStateManager`/
+`CampaignManager` — see `docs/Encounters.md`): whichever scene loads first is the copy whose
+overrides actually apply for the session, the other's copy self-destructs in `Awake()`. One
+`override<Field>` bool + matching value field per `RunState` entry. The 9 loadout fields are
 **direct SO reference fields** (`ArcherSO archer`, `TankSO tank`, `MageSO mage`, `NukeSO nukeA/B/C`,
-`SpellSO spellA/B/C`) — drag an asset into the Inspector like any other object field — not id strings
-or a dropdown; the tool converts the picked asset's `.id` into the matching `RunState` id string in
-`Awake()`. `RunState` itself still stores plain id strings (see above) — only this debug tool's own
-authoring surface uses direct references, for convenience.
+`SpellSO spellA/B/C`) — drag an asset into the Inspector like any other object field — not id
+strings or a dropdown; the tool converts the picked asset's `.id` into the matching `RunState` id
+string in `Awake()`. `RunState` itself still stores plain id strings (see above) — only this debug
+tool's own authoring surface uses direct references, for convenience.
 
-- Applies in **`Awake()`**, mutating `CampaignManager.Instance.CurrentRun` directly for every
-  toggled-on override — before `CampaignManager.Start()` reads it back out to build the runtime
-  loadout SOs, and before `Hero.Start()` reads `CurrentRun.maxHp`. This needs `CampaignManager.Awake()`
-  to run first, which is the one place in this system that relies on Unity's **Script Execution
-  Order** project setting (`CampaignManager` before `CampaignDebugTool`) rather than the
-  Awake-before-Start guarantee alone — see Gotchas.
+- Applies in **`Awake()`**, mutating `CampaignStateManager.Instance.CurrentRun` directly for every
+  toggled-on override — before anything reads it out (`CampaignStateManager`'s own `Start()`/
+  `sceneLoaded` handler building the runtime loadout SOs in `BattleScene`, `Hero.Start()` reading
+  `maxHp`, `MapManager.Start()` resolving the current encounter in `MapScene`). This needs
+  `CampaignStateManager.Awake()` to run first, which is the one place in this system that relies on
+  Unity's **Script Execution Order** project setting (`CampaignStateManager` at `-100`, before
+  `CampaignDebugTool` at `-50`) rather than the Awake-before-Start guarantee alone — see Gotchas. No
+  dependency on `CampaignManager.Awake()` at all, so this works identically whether the session boots
+  into `BattleScene` or `MapScene`.
 - Never calls `Save()` — overrides are in-memory-only for the current Play session, so testing never
   overwrites a real saved run.
 - No mid-session "reapply" button. To try a different combination, stop and re-enter Play mode.
-- Its custom Editor also draws a **"Saved Run (PlayerPrefs)"** section, independent of the override
-  fields above: Unity has no built-in PlayerPrefs browser, so this is the debug affordance for it.
-  Reads `PlayerPrefs.HasKey/GetString(CampaignManager.SaveKey)` directly and pretty-prints the JSON
-  via `JsonUtility.ToJson(JsonUtility.FromJson<RunState>(raw), true)`; shows "no saved run yet" if the
-  key is absent (the common case — see the `Save()` bullet above). Works in Edit mode too, not just
-  Play mode. A "Clear Saved Run" button calls `PlayerPrefs.DeleteKey` + `Save()` directly — separate
-  from, and not gated by, the override toggles.
+- Its custom Editor also draws a **"Saved Run"** section, independent of the override fields above:
+  Unity has no built-in PlayerPrefs browser, so this is the debug affordance for it. Reads
+  `SaveStorage.Backend.Exists()`/`Read()` and pretty-prints the JSON via
+  `JsonUtility.ToJson(JsonUtility.FromJson<RunState>(raw), true)`; shows "no saved run yet" if
+  absent (the common case — see the `Save()` bullet above). Works in Edit mode too, not just Play
+  mode. A "Clear Saved Run" button calls `SaveStorage.Backend.Delete()` directly — separate from,
+  and not gated by, the override toggles.
+
+### "Use External Save" — paste a whole `RunState` JSON blob
+
+The coarsest override, highest precedence (above "Use Debug Profile" and every granular field):
+`CampaignDebugTool.useExternalSave` + `externalSaveJson` (a multiline text field). When checked,
+`Awake()` parses the pasted text via `CampaignStateManager.ParseExternalRunState(json)` — the exact
+same private `ParseRunState` real saves go through (see "Save system" above), so a deliberately
+corrupt/wrong-version paste exercises the real rejection path instead of a separate debug-only
+parser. A valid result replaces `RunState` wholesale via
+`CampaignStateManager.Instance.ReplaceRunState(run)` (the actual owner of `RunState`) and relocates
+`CampaignManager`'s index the same way "Use Debug Profile" does (see below). Like every other
+override here, it never calls `Save()` — the pasted save only exists in memory for that Play session.
+
+The Editor also has a **"Generate Save JSON from Profile"** button (next to "Use Debug Profile")
+that converts the currently assigned `CampaignProfileSO` into save JSON
+(`JsonUtility.ToJson(CampaignDebugTool.BuildRunStateFromProfile(profile), true)`) and writes it
+straight into `externalSaveJson`, so round-trip testing a profile through the real save-parsing
+path doesn't require hand-writing JSON. `BuildRunStateFromProfile` is the same field-mapping "Use
+Debug Profile" itself uses (see below) — extracted into a reusable `public static` method for
+exactly this.
 
 ### "Use Debug Profile" — `CampaignProfileSO`
 
 A coarser alternative to the per-field overrides above: `CampaignDebugTool.useDebugProfile` +
 `debugProfile` (a `CampaignProfileSO` asset, `Game/Campaign/Campaign Profile` in the Create menu).
-When checked, `Awake()` applies **every** `RunState` field from the profile wholesale
-(`ApplyDebugProfile`) and skips the granular override checks entirely — no mixing the two. Exists
-so a whole test scenario (loadout + stats + which encounter) can be saved as one reusable asset
-instead of re-checking a dozen boxes every session — drag in `CampaignProfileSO` assets for
-different scenarios ("mid-run, low energy," "final boss, maxed loadout," etc.) and swap between
-them.
+When checked, `Awake()` applies **every** `RunState` field from the profile wholesale and skips the
+granular override checks entirely — no mixing the two. Exists so a whole test scenario (loadout +
+stats + which encounter) can be saved as one reusable asset instead of re-checking a dozen boxes
+every session — drag in `CampaignProfileSO` assets for different scenarios ("mid-run, low energy,"
+"final boss, maxed loadout," etc.) and swap between them.
 
 `CampaignProfileSO`'s shape mirrors `RunState` field-for-field, but with direct SO references
 (`ArcherSO archer`, `NukeSO nukeA`, etc.) instead of id strings — same convenience tradeoff the
 per-field overrides already make, and for the same reason (id strings exist purely so `RunState`
-survives a `JsonUtility`/`PlayerPrefs` round-trip; a debug-only asset has no such constraint).
-`ApplyDebugProfile` converts each reference to its `.id` the same way the granular overrides do.
-Profile fields are treated as mandatory once `useDebugProfile` is checked (rule 5) — an unassigned
+survives a `JsonUtility` round-trip through `SaveStorage`; a debug-only asset has no such
+constraint). `CampaignDebugTool.BuildRunStateFromProfile(profile)` converts it into a whole
+`RunState` (each reference → its `.id`), which then goes through the same
+`ApplyRunStateOverride(run, sourceLabel)` helper "Use External Save" uses — replacing `RunState`
+wholesale via `CampaignStateManager.Instance.ReplaceRunState(run)` rather than mutating the existing
+object's fields in place (behaviorally equivalent: every consumer reads
+`CampaignStateManager.Instance.CurrentRun.<field>` fresh, nothing caches the reference). Profile
+fields are treated as mandatory once `useDebugProfile` is checked (rule 5) — an unassigned
 archer/tank/mage/nuke/spell throws immediately rather than silently resolving to `null`.
 
-**`currentEncounterIndex` needs one more step than the other fields**: setting
-`run.currentEncounterIndex` alone has no effect on which encounter loads, since
-`CampaignProgressManager` (`docs/Encounters.md`) bootstraps its own index from PlayerPrefs
-independently of the live `CurrentRun` object. `ApplyDebugProfile` also calls
-`CampaignProgressManager.Instance.SetSessionEncounterIndexOverride(profile.currentEncounterIndex)`
-— see `docs/Encounters.md`'s "Debug-only surface" section for why that method exists.
+**`currentEncounterIndex` no longer needs a separate relocation step.** `ApplyRunStateOverride` still
+calls `CampaignManager.Instance.SetSessionEncounterIndexOverride(run.currentEncounterIndex)`
+after `ReplaceRunState(run)`, but it's now a harmless no-op-equivalent (clamps against
+`CampaignManager`'s own `EncounterList`, then hands the index to
+`CampaignStateManager.ApplySessionEncounterIndexOverride` — which just reassigns the value
+`ReplaceRunState` already set). `CampaignStateManager.CurrentRun` *is* the `RunState` every consumer
+reads through to, not a separate bootstrap copy, so replacing it wholesale already relocates the
+index. `SetSessionEncounterIndexOverride` remains real (non-redundant) for
+`CampaignProgressTool`'s narrower case of overriding just the index within the existing `RunState`
+— see `docs/Encounters.md`'s "Debug-only surface" section.
 
 **Reminder (CLAUDE.md rule 21): every new persisted `RunState` field needs a matching field on
 `CampaignProfileSO` too, plus a granular override pair on `CampaignDebugTool` — nothing enforces
-this at compile time, so it's easy to add a `RunState` field and forget the other two.**
+this at compile time, so it's easy to add a `RunState` field and forget the other two.** This
+applies equally to list-shaped fields (see `docs/Rewards.md`'s `statusRewardIds`/`boostRewardIds`/
+`gatheredCreatureIds` — the first precedent for this): `CampaignProfileSO` gets a matching
+`List<T>` of direct SO refs, and `CampaignDebugTool`'s override pair is a toggle + `List<T>` drawn
+via `SerializedProperty` (`DrawToggleAndList` in `CampaignDebugToolEditor`) since the existing
+`ref`-based scalar helpers don't fit a list.
 
 ## Gotchas
 
@@ -172,72 +325,87 @@ this at compile time, so it's easy to add a `RunState` field and forget the othe
   layout change — the Editor's displayed value and the value a running instance actually holds can
   diverge across recompiles.
 - **`CampaignDebugTool` is the one place Awake-vs-Awake ordering matters**, because it needs to mutate
-  `CurrentRun` *before* `CampaignManager` reads it back out — but both of those are still within the
-  Awake phase relative to each other, which Unity doesn't order by itself. `Hero` needs no special
-  ordering: it reads `CampaignManager.Instance.CurrentRun.maxHp` lazily, straight from its own
-  `Start()`, which is safe purely from the Awake-before-Start guarantee. Don't add a third script that
-  also needs to mutate `CurrentRun` pre-`Start()` without reconsidering this — it doesn't scale past
-  the two-script execution-order pin.
+  `CampaignStateManager.Instance.CurrentRun` directly *before* anything reads it back out
+  (`CampaignStateManager`'s own boot-time `EnterBattleScene()` in `BattleScene`, `Hero.Start()`'s
+  `maxHp` read, `MapManager.Start()` in `MapScene`) — this depends on `CampaignStateManager.Awake()`
+  (`-100`, loads `RunState`) having already run, which `CampaignDebugTool`'s own `-50` Script
+  Execution Order entry guarantees. `CampaignDebugTool` has no dependency on `CampaignManager.Awake()`
+  at all, which is exactly what makes it work identically whether the session boots into
+  `BattleScene` or `MapScene`. `Hero` needs no special ordering of its own: it reads
+  `CampaignStateManager.Instance.CurrentMaxHp` lazily, straight from its own `Start()`, which is safe
+  purely from the Awake-before-Start guarantee. Don't add a third script that also needs to mutate
+  `RunState` pre-`Start()` without reconsidering this — it doesn't scale past the current
+  execution-order chain.
 - **`EnergyController.CurrentRerollCost` (not `CurrentEnergy`) is the one thing that must still be
   set in `Awake()`, not `Start()` — this was a real bug, caught live in testing, not just reasoned
   about.** An earlier version of this system moved both `CurrentEnergy`/`CurrentRerollCost`
   initialization from `Awake()` into `Start()`, reasoning (wrongly) that it needed to run after
-  `CampaignManager`. That broke `SlotColumn.Start()`, which reads
+  the loadout applier. That broke `SlotColumn.Start()`, which reads
   `EnergyController.Instance.CurrentRerollCost` synchronously to seed the reroll-cost label —
   Start()-vs-Start() order between unrelated components is unspecified, so the label intermittently
   showed `0` instead of the real cost depending on which `Start()` ran first. `CurrentRerollCost`
-  stays self-contained in `Awake()` for exactly this reason (`baseRerollCost`, no `CampaignManager`
-  dependency). `CurrentEnergy` is different — it's campaign-persistent data now (`docs/Energy.md`),
-  so it's deliberately left unset until `CampaignManager.ApplyEncounterToScene()` calls
-  `ApplyCampaignEnergy()`, safe because of `CampaignManager`'s early Script Execution Order (next
-  bullet), not because of the Awake/Start split.
-- **`CampaignManager`'s early Script Execution Order (`-100`) is why applying directly from its own
-  `Start()` is safe**, not despite it. Because `-100` is earlier than every default-order script,
-  `CampaignManager.Start()` runs before `EnergyController.Start()`/`EnergyDisplay.Start()`/etc. For
+  stays self-contained in `Awake()` for exactly this reason (`baseRerollCost`, no `CampaignStateManager`
+  dependency). `CurrentEnergy` is different — it's a read-through property onto
+  `CampaignStateManager.Instance.CurrentRun.currentEnergy` (`docs/Energy.md`), so unlike
+  `CurrentRerollCost` it needs no init of its own at all: it's already correct the instant
+  `CampaignStateManager.Awake()` creates `CurrentRun`, before any `Start()` runs anywhere. What
+  `CampaignStateManager.ApplyEncounterToScene()` calling `ApplyCampaignEnergy()` actually does is take
+  the `_encounterStartEnergy` restart-revert snapshot and fire `OnEnergyChanged` for the UI —
+  see `docs/Energy.md`'s Restart interaction — not make `CurrentEnergy` itself valid.
+- **`CampaignStateManager`'s early Script Execution Order (`-100`) is why applying directly from its
+  own `Start()`/`sceneLoaded` handler is safe**, not despite it. Because `-100` is earlier than
+  every default-order script, and `sceneLoaded` itself is guaranteed to fire after every GameObject's
+  `Awake()` but before any `Start()` in the newly loaded scene, `CampaignStateManager`'s loadout/
+  energy application always runs before `EnergyController.Start()`/`EnergyDisplay.Start()`/etc. For
   `CurrentRerollCost` this no longer matters for correctness (it's set standalone in `Awake()`), only
   for `EnergyDisplay` showing the right value on the very first frame instead of one frame later via
   the `OnEnergyChanged` catch-up — but for `CurrentEnergy` this ordering is load-bearing: nothing
-  else ever sets it, so if `CampaignManager.Start()` ran *after* some consumer's `Start()`, that
+  else ever sets it, so if the loadout/energy application ran *after* some consumer's `Start()`, that
   consumer would read a stale `0` with no catch-up until the next `OnEnergyChanged` fire.
 - **`RunState` is plain data, not a `ScriptableObject`, on purpose.** SOs are Editor-time assets;
   mutating one's fields at runtime doesn't persist in a build and risks polluting shared asset state.
   `CreaturesSO`/`NukesSO`/`SpellsSO` stay SOs because they're `G`'s existing shape (and the
-  `ScriptableObject.CreateInstance` runtime instances `CampaignManager` builds from them are
+  `ScriptableObject.CreateInstance` runtime instances `CampaignStateManager` builds from them are
   disposable, never saved as assets) — don't confuse "SO used at runtime" with "data that needs to
-  survive a session," which is what `RunState`/`PlayerPrefs` is for.
-- **`CampaignManager` itself is still not `DontDestroyOnLoad`.** It lives on the same
-  `Global/GameManager` GameObject as `G`/`GameManager`/`EnergyController`/`RollStateManager` (see
-  `docs/GameLoop.md`) and is recreated on every `BattleScene` load — `DontDestroyOnLoad` on that
-  GameObject would drag every battle-scoped sibling singleton into persistent scope too.
-  `CampaignProgressManager` (see `docs/Encounters.md`) is now the one exception in the codebase: a
-  dedicated, separately-placed root GameObject that *is* `DontDestroyOnLoad`, specifically because it
-  owns campaign navigation state that needs to survive scene reloads — read that doc for why it works
-  as a separate object instead of needing this same revisit for `CampaignManager`.
+  survive a session," which is what `RunState`/the save system is for.
+- **Both `CampaignStateManager` and `CampaignManager` are `DontDestroyOnLoad`, on the same
+  `CampaignProgress` prefab instance.** Unlike most other battle-scoped singletons (`G`/`GameManager`/
+  `EnergyController`/`RollStateManager`, see `docs/GameLoop.md`), which live on the per-scene
+  `Global/GameManager` GameObject and are recreated fresh on every `BattleScene` load, these two need
+  to survive scene reloads: `CampaignManager` owns navigation state that must persist across a
+  `BattleScene ↔ MapScene` transition, and `CampaignStateManager` owns `RunState` itself, which a
+  `MapScene`-hosted reward/loadout pick screen needs to read/write too. `CampaignStateManager`
+  compensates for no longer getting a fresh per-scene-load `Start()` (see "Load → resolve → apply
+  flow" above) by subscribing to `SceneManager.sceneLoaded` instead.
 - **A missing/unresolved catalog id doesn't throw** — `GameCatalog.Find*` returns `null`, and
-  `CampaignManager` falls back to `G`'s existing default for that slot with a logged warning, rather
-  than crashing on stale/bad save data. This is deliberately different from the project's usual
-  "let missing mandatory references throw" rule (rule 5) — that rule is about catching Editor-wiring
-  bugs, not about tolerating real user save data that can legitimately reference removed content after
-  a future update.
+  `CampaignStateManager` falls back to `G`'s existing default for that slot with a logged warning,
+  rather than crashing on stale/bad save data. This is deliberately different from the project's
+  usual "let missing mandatory references throw" rule (rule 5) — that rule is about catching
+  Editor-wiring bugs, not about tolerating real user save data that can legitimately reference removed
+  content after a future update.
 - **`RunState`'s field-initializer ids only resolve once the Editor setup is done** — they're plain
   string literals (`"archer"`, `"firemagic"`, etc., picked to match today's default assets
   id-for-id), so until `GameCatalog` actually has entries with matching `id`s assigned (Editor
   checklist), every fresh/no-save run logs fallback warnings and uses `G`'s original Inspector-wired
   defaults instead — harmless, just noisy, and self-resolves once the catalog is populated.
   `CampaignDebugTool` doesn't need `GameCatalog` at all (its fields are direct SO references), only
-  `CampaignManager` does, for resolving real saved/default `RunState` ids at battle start.
+  `CampaignStateManager` does, for resolving real saved/default `RunState` ids at battle start.
 
 ## Related docs
 
 - `docs/G.md` — `G`'s full accessor list and the static `ApplyCampaignLoadout` this system calls.
-- `docs/GameLoop.md` — `Global/GameManager` GameObject convention `CampaignManager` follows; the
+- `docs/GameLoop.md` — `Global/GameManager` GameObject convention most other battle-scoped
+  singletons follow (unlike `CampaignStateManager`/`CampaignManager` — see Gotchas); the
   `OnBattleRestart` event this system's fields interact with (`EnergyController.ResetForRestart`,
   `Hero.InitHealth`).
 - `docs/Energy.md` — `EnergyController`'s reroll cost system; `CurrentEnergy` itself is now fully
   owned by this system's `RunState.currentEnergy`, not a local baseline.
 - `docs/SlotMachine.md` — `SlotMachine.GetActionOptions()`, the sole consumer of `G.DefaultCreatures`/
   `DefaultNukes`/`DefaultSpells` that this system's loadout override ultimately affects.
-- `docs/Encounters.md` — the actual battle sequence built on top of this data layer:
-  `EncounterListSO`/`BattleSO`, `CampaignProgressManager`'s navigation API, and per-encounter enemy
-  avatar/HP substitution. Consumes `currentEncounterIndex` and is what makes it not "abstract"
-  anymore.
+- `docs/Encounters.md` — the actual fight sequence built on top of this data layer:
+  `EncounterListSO`/`FightSO`, `CampaignManager` (encounter navigation — see "Load → resolve → apply
+  flow" above for how it cooperates with `CampaignStateManager`) and its navigation API, the
+  `Encounter`/`EncounterPlayer` pick-screen dispatch, and per-encounter enemy avatar/HP substitution.
+- `docs/Rewards.md` — the reward-card pick system built on top of `RunState`/`RewardPickSO`/
+  `RewardEncounter`: `RewardSO` hierarchy, `RewardListSO`, `RewardDrawer`'s draw algorithm, and
+  `RewardBonuses`' resolver-side stat-boost hook.

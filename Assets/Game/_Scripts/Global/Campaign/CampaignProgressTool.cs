@@ -1,14 +1,14 @@
 using UnityEngine;
 
 /// <summary>
-/// Editor-only override tool for CampaignProgressManager, mirroring CampaignDebugTool's pattern:
-/// check a box, drag in an EncounterSO, press Play — CampaignProgressManager loads that encounter
+/// Editor-only override tool for CampaignManager, mirroring CampaignDebugTool's pattern:
+/// check a box, drag in an EncounterSO, press Play — CampaignManager loads that encounter
 /// instead of resuming from RunState.currentEncounterIndex. Never persists — session-only, same
 /// as CampaignDebugTool's overrides. See docs/Encounters.md.
 ///
-/// Requires CampaignProgressManager's Awake() to run before this one (Script Execution Order —
-/// see the Editor setup checklist in docs/Encounters.md), the same class of Awake-vs-Awake
-/// ordering CampaignDebugTool already relies on for CampaignManager.
+/// Requires CampaignManager's and CampaignStateManager's Awake() to both run before this one
+/// (Script Execution Order — see the Editor setup checklist in docs/Encounters.md), the same
+/// class of Awake-vs-Awake ordering CampaignDebugTool already relies on for CampaignStateManager.
 /// </summary>
 public class CampaignProgressTool : MonoBehaviour
 {
@@ -19,8 +19,8 @@ public class CampaignProgressTool : MonoBehaviour
     void Awake()
     {
         if (!overrideEncounter) return;
-        if (CampaignProgressManager.Instance == null) return;
+        if (CampaignManager.Instance == null) return;
 
-        CampaignProgressManager.Instance.SetSessionEncounterOverride(encounter);
+        CampaignManager.Instance.SetSessionEncounterOverride(encounter);
     }
 }

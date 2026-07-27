@@ -24,4 +24,4 @@ MonoBehaviour:
   spellA: {fileID: 11400000, guid: 9aefa2fb5a71dea44916beba67ae8a45, type: 2}
   spellB: {fileID: 11400000, guid: 42203bd9865269b40b0911f6362fb650, type: 2}
   spellC: {fileID: 11400000, guid: e5c16b4cdb8f87148a98bdb8f707e0c3, type: 2}
-  currentEncounterIndex: 1
+  currentEncounterIndex: 0

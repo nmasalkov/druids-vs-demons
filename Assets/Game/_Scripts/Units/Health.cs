@@ -79,6 +79,7 @@ public class Health : MonoBehaviour
         if (healFeedback != null) healFeedback.PlayFeedbacks();
     }
     public float CurrentHealth => currentHealth;
+    public float MaxHealth => maxHealth;
     public bool IsDead()
     {
         return currentHealth <= 0;

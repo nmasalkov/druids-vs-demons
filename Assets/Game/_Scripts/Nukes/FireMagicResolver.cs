@@ -18,7 +18,7 @@ namespace Game._Scripts.Nukes
             Shots.Clear();
 
             var targets = BuildPriorityTargets(enemyCreatures, enemyHero, enemyShield, source.IgnoresShield);
-            float remaining = source.GetDamageForLevel(level);
+            float remaining = RewardBonuses.ApplyBonuses(source, source.GetDamageForLevel(level));
 
             foreach (var target in targets)
             {

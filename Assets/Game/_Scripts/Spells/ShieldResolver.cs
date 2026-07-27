@@ -47,7 +47,7 @@ namespace Game._Scripts.Spells
             Shots.Add(new ShieldHealShot
             {
                 Target = existing,
-                Heal = shieldSO.GetHealForLevel(level),
+                Heal = RewardBonuses.ApplyBonuses(shieldSO, shieldSO.GetHealForLevel(level)),
             });
         }
     }

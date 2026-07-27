@@ -45,7 +45,8 @@ Targetable (MonoBehaviour, [RequireComponent(Health)])
   in order to end the round loop and enter `GameOverState` (see `docs/GameLoop.md`).
 - **`Creature`** (`Creature.cs:9`): `GetMaxHealth()` reads `Data.Stats(Experience.Level).health` —
   stats scale with the creature's `Experience.Level` (see `docs/Experience.md`). `DestroyCreature()`
-  is just a named wrapper over `DestroyUnit()`.
+  is just a named wrapper over `DestroyUnit()`. Overrides `HandleDeath()` to also splash damage its
+  own side's hero — see "Owner-hero splash damage on creature death" below.
 - **`Shield`** (`Shield.cs:10`): does **not** extend `Unit` — no animator/statuses/XP. `Init(level)`
   sets HP for that level and plays the summon animation (called once right after instantiation, from
   `ShieldResolver` — see `docs/ActionsAndSpells.md`); `Promote(level)` bumps level and fully refills
@@ -76,6 +77,41 @@ Targetable (MonoBehaviour, [RequireComponent(Health)])
 - `Heal(amount)` is a no-op if already dead; otherwise clamps up to `maxHealth`, fires `onHealed`,
   plays `healFeedback`.
 - `IsDead()` is simply `currentHealth <= 0`.
+- `MaxHealth` (public getter) exposes the value `Init()` set — used by
+  `Creature.HandleDeath()`'s owner-hero splash damage (below), which needs the creature's max HP,
+  not its current/overkill HP.
+
+## Owner-hero splash damage on creature death
+
+A Robotek-style mechanic: whenever a creature dies (from any cause — combat, a future nuke/DOT —
+not just melee/ranged combat), its own side's hero takes splash damage equal to 20% of that
+creature's max HP, rounded down. `Creature.cs`:
+
+```csharp
+public Hero OwnerHero => G.PlayerCreaturesManager.GetAllCreatures().Contains(this) ? G.PlayerHero : G.EnemyHero;
+
+private const float OwnerHeroDamageFraction = 0.2f;
+
+protected override void HandleDeath()
+{
+    base.HandleDeath();
+    OwnerHero.Health.TakeDamage(Mathf.Floor(Health.MaxHealth * OwnerHeroDamageFraction));
+}
+```
+
+- **Hooks `Targetable.HandleDeath()`** (already `virtual`, already the single place `Health.onDeath`
+  routes through) rather than `AttacksResolver`/`BattleState` — so it fires for a creature death from
+  any cause, symmetrically for both sides, with no changes needed to the attack-resolution code.
+- **`OwnerHero` is computed live, not cached at spawn** (CLAUDE.md rule 22) — `HeroView.ReplaceHeroAvatar()`
+  (`docs/Encounters.md`) destroys and replaces the enemy `Hero` between encounters, so a field cached
+  at spawn time would need its own invalidation; a live lookup through `G` never goes stale. The
+  `Contains` scan is over at most ~9 slots and only runs on death, not per-frame.
+- **Uses `Health.MaxHealth`, not remaining/overkill HP** — the splash amount is the same whether the
+  creature died at 1 HP or was overkilled by 50, matching the design intent directly.
+- **Fires once per real death** — `Health.onDeath` (and therefore `HandleDeath()`) only fires on the
+  transition into death, and `AttacksResolver.Resolve()`'s simulated-HP tracking already prevents a
+  single `Resolve()` call from hitting an already-dead-in-simulation target again — so this can't
+  double-fire within one battle resolution.
 
 ## Shield mechanics
 

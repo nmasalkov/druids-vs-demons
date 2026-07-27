@@ -1,14 +1,17 @@
 using System;
+using System.Collections.Generic;
 
 /// <summary>
 /// Persisted meta-progression state for the current campaign run. Plain data (no
-/// ScriptableObject, no MonoBehaviour) so it round-trips through JsonUtility for
-/// PlayerPrefs storage. See docs/Campaign.md.
+/// ScriptableObject, no MonoBehaviour) so it round-trips through JsonUtility for storage via
+/// SaveStorage.Backend (PlayerPrefs by default). See docs/Campaign.md.
 /// </summary>
 [Serializable]
 public class RunState
 {
-    public int saveVersion = 1;
+    public const int CurrentSaveVersion = 1;
+
+    public int saveVersion = CurrentSaveVersion;
 
     public int maxHp = 100;
     public int energyCapacity = 50;
@@ -34,4 +37,10 @@ public class RunState
     public string spellCId = "shield";
 
     public int currentEncounterIndex = 0;
+
+    // Reward-pick tracking, see docs/Rewards.md. Ids resolved via RewardListSO.Find(). Default-
+    // initialized so legacy saves lacking these keys deserialize to empty lists, not null.
+    public List<string> statusRewardIds = new List<string>();
+    public List<string> boostRewardIds = new List<string>();
+    public List<string> gatheredCreatureIds = new List<string>();
 }

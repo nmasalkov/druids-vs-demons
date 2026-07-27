@@ -11,16 +11,36 @@ public class CampaignDebugToolEditor : Editor
         var tool = (CampaignDebugTool)target;
 
         EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("External Save", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(
+            "When checked, the pasted JSON is parsed as a whole RunState (through the same " +
+            "validation a real save goes through) and becomes CurrentRun for this session — " +
+            "highest precedence, overrides Debug Profile and every granular field below. Never saved.",
+            MessageType.Info);
+        DrawToggleAndTextArea(tool, "Use External Save", ref tool.useExternalSave, ref tool.externalSaveJson);
+
+        EditorGUILayout.Space(10);
         EditorGUILayout.LabelField("Debug Profile", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
             "When checked, every RunState field is set from the profile asset wholesale — the " +
             "granular overrides below are ignored entirely. Never saved.", MessageType.Info);
         DrawToggleAndObject(tool, "Use Debug Profile", ref tool.useDebugProfile, ref tool.debugProfile);
 
+        EditorGUILayout.Space(4);
+        EditorGUI.BeginDisabledGroup(tool.debugProfile == null);
+        if (GUILayout.Button("Generate Save JSON from Profile"))
+        {
+            tool.externalSaveJson = JsonUtility.ToJson(CampaignDebugTool.BuildRunStateFromProfile(tool.debugProfile), true);
+            EditorUtility.SetDirty(tool);
+        }
+        EditorGUI.EndDisabledGroup();
+        if (tool.debugProfile == null)
+            EditorGUILayout.HelpBox("Assign a Debug Profile above to generate save JSON from it.", MessageType.None);
+
         EditorGUILayout.Space(10);
         EditorGUILayout.LabelField("Run State Overrides", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
-            "Checked fields override CampaignManager's RunState in Awake(), before anything " +
+            "Checked fields override CampaignStateManager's RunState in Awake(), before anything " +
             "reads it. Never saved — set overrides, press Play, test.", MessageType.Info);
 
         DrawToggleAndInt(tool, "Max HP", ref tool.overrideMaxHp, ref tool.maxHp);
@@ -42,31 +62,38 @@ public class CampaignDebugToolEditor : Editor
         DrawToggleAndObject(tool, "Spell B", ref tool.overrideSpellB, ref tool.spellB);
         DrawToggleAndObject(tool, "Spell C", ref tool.overrideSpellC, ref tool.spellC);
 
+        EditorGUILayout.Space(6);
+        serializedObject.Update();
+        DrawToggleAndList(serializedObject, "Status Rewards", "overrideStatusRewards", "statusRewards");
+        DrawToggleAndList(serializedObject, "Boost Rewards", "overrideBoostRewards", "boostRewards");
+        DrawToggleAndList(serializedObject, "Gathered Creatures", "overrideGatheredCreatures", "gatheredCreatures");
+        serializedObject.ApplyModifiedProperties();
+
         DrawSavedRunSection();
     }
 
     /// <summary>
-    /// Read-only view of whatever CampaignManager.Save() last wrote to PlayerPrefs — there's no
-    /// built-in Editor window for browsing PlayerPrefs, so this is the debug affordance for it.
-    /// Independent of the override fields above and of Play mode: reads PlayerPrefs directly,
-    /// works in Edit mode too.
+    /// Read-only view of whatever CampaignStateManager.Save() last wrote via SaveStorage.Backend —
+    /// there's no built-in Editor window for browsing PlayerPrefs (the default backend), so this
+    /// is the debug affordance for it. Independent of the override fields above and of Play mode:
+    /// reads storage directly, works in Edit mode too.
     /// </summary>
     private void DrawSavedRunSection()
     {
         EditorGUILayout.Space(10);
-        EditorGUILayout.LabelField("Saved Run (PlayerPrefs)", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Saved Run", EditorStyles.boldLabel);
 
-        bool hasSave = PlayerPrefs.HasKey(CampaignManager.SaveKey);
+        bool hasSave = SaveStorage.Backend.Exists();
         if (!hasSave)
         {
             EditorGUILayout.HelpBox(
-                "No saved run yet — nothing has called CampaignManager.Save() (this debug tool " +
+                "No saved run yet — nothing has called CampaignStateManager.Save() (this debug tool " +
                 "never does). A fresh RunState is used every time you press Play until something does.",
                 MessageType.None);
         }
         else
         {
-            string raw = PlayerPrefs.GetString(CampaignManager.SaveKey);
+            string raw = SaveStorage.Backend.Read();
             string pretty = raw;
             try
             {
@@ -82,8 +109,7 @@ public class CampaignDebugToolEditor : Editor
         EditorGUI.BeginDisabledGroup(!hasSave);
         if (GUILayout.Button("Clear Saved Run"))
         {
-            PlayerPrefs.DeleteKey(CampaignManager.SaveKey);
-            PlayerPrefs.Save();
+            SaveStorage.Backend.Delete();
         }
         EditorGUI.EndDisabledGroup();
         EditorGUILayout.EndHorizontal();
@@ -114,6 +140,34 @@ public class CampaignDebugToolEditor : Editor
         T nextValue = (T)EditorGUILayout.ObjectField(value, typeof(T), false);
         EditorGUI.EndDisabledGroup();
         EditorGUILayout.EndHorizontal();
+
+        if (nextOverride != overrideFlag || nextValue != value)
+        {
+            overrideFlag = nextOverride;
+            value = nextValue;
+            EditorUtility.SetDirty(dirty);
+        }
+    }
+
+    /// <summary>
+    /// List-shaped counterpart to DrawToggleAndObject — a single SO ref doesn't fit a
+    /// List&lt;T&gt; override, so this reads/writes via SerializedProperty instead of ref fields.
+    /// </summary>
+    private static void DrawToggleAndList(SerializedObject so, string label, string overridePropName, string listPropName)
+    {
+        var overrideProp = so.FindProperty(overridePropName);
+        overrideProp.boolValue = EditorGUILayout.ToggleLeft(label, overrideProp.boolValue);
+        EditorGUI.BeginDisabledGroup(!overrideProp.boolValue);
+        EditorGUILayout.PropertyField(so.FindProperty(listPropName), true);
+        EditorGUI.EndDisabledGroup();
+    }
+
+    private static void DrawToggleAndTextArea(Object dirty, string label, ref bool overrideFlag, ref string value)
+    {
+        bool nextOverride = EditorGUILayout.ToggleLeft(label, overrideFlag);
+        EditorGUI.BeginDisabledGroup(!nextOverride);
+        string nextValue = EditorGUILayout.TextArea(value, GUILayout.Height(140));
+        EditorGUI.EndDisabledGroup();
 
         if (nextOverride != overrideFlag || nextValue != value)
         {

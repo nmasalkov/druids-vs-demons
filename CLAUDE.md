@@ -19,7 +19,7 @@ and a post-battle reward phase, with player-improvable run stats (max HP, reroll
 persist across the run. See [`docs/Campaign.md`](docs/Campaign.md) for the run-state data layer this
 is built on so far, and [`docs/Encounters.md`](docs/Encounters.md) for the battle sequence built on
 top of it. A future `MapScene` will sit between battles — home for the pre-battle/post-battle phases
-and encounter navigation — once it exists; `CampaignProgressManager` is already built to work from it.
+and encounter navigation — once it exists; `CampaignManager` is already built to work from it.
 
 There is no custom `.asmdef` for `Assets/Game` — it compiles into the default `Assembly-CSharp`
 assembly.
@@ -44,6 +44,19 @@ commands. Development happens in the Unity Editor (6000.1.6f1):
 
 - Open the project in Unity Editor, enter Play mode on the main scene under `Assets/Game/_Scenes` to
   run the game.
+- **⚠️ GIANT RULE, do not skip: always sync a scene's saved-on-disk state with the Editor's live
+  in-memory state before entering Play mode (`play_game`) or leaving that scene (`open_scene` on a
+  different path).** Play mode always runs whatever is currently loaded in memory — not what's on
+  disk. A live edit made through a dedicated Coplay tool (`set_property`, `add_component`, ...) that
+  was never `save_scene`'d is not safe: opening a *different* scene silently discards it, no warning.
+  A direct file edit (`Edit`/`Write` on the `.unity` file itself) only lands on disk — the Editor's
+  in-memory copy doesn't know about it until you `open_scene` that same path again to force a reload;
+  pressing Play or saving before that reload silently runs/overwrites the stale in-memory version,
+  discarding the edit. Concretely: live Coplay-tool edit → `save_scene` before switching scenes or
+  playing. Direct file edit → `open_scene` on that same path before doing anything else. This has
+  caused real, live-caught data loss in this project already (see `docs/Encounters.md` Gotchas — a
+  scene switch without saving first silently dropped wiring work). Full detail in the Coplay MCP
+  section below.
 - `com.unity.test-framework` is installed as a package dependency, but no EditMode/PlayMode test
   assemblies currently exist in the repo — there is no automated test suite to run.
 - After changing any MonoBehaviour/ScriptableObject serialized fields, the change must be verified/
@@ -82,8 +95,9 @@ here — this list is added to over time and can lag behind the actual `docs/` f
 | Slot machine + AI roller | [`docs/SlotMachine.md`](docs/SlotMachine.md) | `SlotMachine`/`SlotColumn`, `RollStateManager`, `AIController` |
 | XP/leveling, gem pickups | [`docs/Experience.md`](docs/Experience.md) | `ExperienceManager`, `Experience`, `ExpirienceGem` |
 | Reroll energy/cost | [`docs/Energy.md`](docs/Energy.md) | `EnergyController`, `EnergyDisplay`, `SlotColumn`'s reroll cost gate |
-| Campaign/meta progression, run-state save data | [`docs/Campaign.md`](docs/Campaign.md) | `RunState`, `GameCatalog`, `CampaignManager`, `CampaignDebugTool`, `ActionSO.id` |
-| Encounters, campaign progress/navigation | [`docs/Encounters.md`](docs/Encounters.md) | `EncounterSO`/`BattleSO`/`EncounterListSO`, `CampaignProgressManager`, `CampaignProgressTool`, `HeroView.ReplaceHeroAvatar` |
+| Campaign/meta progression, run-state save data | [`docs/Campaign.md`](docs/Campaign.md) | `RunState`, `GameCatalog`, `CampaignStateManager`, `CampaignDebugTool`, `ActionSO.id` |
+| Encounters, campaign progress/navigation | [`docs/Encounters.md`](docs/Encounters.md) | `EncounterSO`/`FightSO`/`EncounterListSO`, `Encounter`/`EncounterPlayer`, `CampaignManager`, `CampaignProgressTool`, `HeroView.ReplaceHeroAvatar` |
+| Reward cards, boost rewards | [`docs/Rewards.md`](docs/Rewards.md) | `RewardSO`/`RewardListSO`, `RewardDrawer`, `RewardBonuses`, `RewardCard`/`RewardEncounter` |
 | Global service locator | [`docs/G.md`](docs/G.md) | `G`, `G.ApplyCampaignLoadout`, adding a new static accessor |
 
 **Keep these docs up to date** (rule 18 below): when a change alters how a documented system works
@@ -158,16 +172,18 @@ them for any new/modified game code under `Assets/Game`:
    singletons goes in `Start()` or later.
 5. **No null-checks on mandatory references** (e.g. `Creature.Slot`) — let them throw. Only guard
    values that are genuinely optional. This extends to singleton/manager `Instance` accessors that
-   are guaranteed to co-exist wherever the calling code runs — e.g. `CampaignManager.Instance`,
-   `CampaignProgressManager.Instance`, and `GameManager.Instance` are all wired into `BattleScene`
-   together, so code that only ever runs inside that scene (or inside another singleton also only
-   wired into it) shouldn't defensively null-check one from the other. If one is ever genuinely
-   missing, that's a scene-setup bug you want surfaced immediately as a `NullReferenceException` in
-   the console, not silently swallowed by an `if (x.Instance == null) return;`. This doesn't cover
-   guards against genuinely fragile *ordering* (e.g. an `Awake()`-vs-`Awake()` dependency between
-   two specific scripts pending on Script Execution Order, like `CampaignDebugTool`'s existing
-   `CampaignManager.Instance == null` check) — those are a different, documented risk and can keep
-   their guard.
+   are guaranteed to co-exist wherever the calling code runs — e.g. `CampaignStateManager.Instance`,
+   `CampaignManager.Instance`, and `GameManager.Instance` are all guaranteed present in `BattleScene`
+   (the first two are cross-scene-persistent singletons on the `CampaignProgress` prefab, not
+   `BattleScene`-local, but still always alive by the time anything in `BattleScene` runs — see
+   `docs/Campaign.md`), so code that only ever runs inside that scene (or inside another singleton
+   also only guaranteed there) shouldn't defensively null-check one from the other. If one is ever
+   genuinely missing, that's a scene-setup bug you want surfaced immediately as a
+   `NullReferenceException` in the console, not silently swallowed by an
+   `if (x.Instance == null) return;`. This doesn't cover guards against genuinely fragile *ordering*
+   (e.g. an `Awake()`-vs-`Awake()` dependency between two specific scripts pending on Script
+   Execution Order, like `CampaignDebugTool`'s existing `CampaignStateManager.Instance == null`
+   check) — those are a different, documented risk and can keep their guard.
 6. **After complex changes / new serialized fields**, always give a checklist of what needs manual
    Editor setup (components to add, fields to assign, SO assets to update).
 7. **Every animated/delayed game mechanic needs an instant-resolve counterpart** that skips animation,
@@ -227,11 +243,11 @@ them for any new/modified game code under `Assets/Game`:
     the Inspector while the game is running and know what's actually going on." If there's enough
     state that showing it all flatly gets noisy, group related values and collapse them behind a
     foldout — but any single piece of state that's load-bearing for understanding current behavior
-    stays visible by default, not hidden a click away. See `CampaignProgressManagerEditor` (shows
+    stays visible by default, not hidden a click away. See `CampaignManagerEditor` (shows
     the resolved current encounter index/id/asset live) for the pattern.
 20. **Keep debug-only surface out of the main class file.** When a script that's core game logic
     (not itself a debug tool) exposes a method/field that only a debug tool ever calls — e.g.
-    `CampaignProgressManager.SetSessionEncounterOverride`, called solely by `CampaignProgressTool`
+    `CampaignManager.SetSessionEncounterOverride`, called solely by `CampaignProgressTool`
     — split that surface into a `<ClassName>.Debug.cs` partial class file instead of mixing it into
     the main one. Same partial-class split already used for non-debug reasons elsewhere (e.g.
     `AttacksResolver.cs`/`AttacksResolver.Mechanics.cs`) — apply it here so the main file stays
@@ -244,7 +260,98 @@ them for any new/modified game code under `Assets/Game`:
     `ApplyDebugProfile` case, and `docs/Campaign.md` needs the field documented. Easy to forget
     one of the three since none of them fail to compile if you do — `CampaignProfileSO` and
     `CampaignDebugTool` are both plain data/Editor-only, so a missed field just silently doesn't
-    override, no error anywhere.
+    override, no error anywhere. Applies equally to list-shaped fields (see `docs/Rewards.md`'s
+    `statusRewardIds`/`boostRewardIds`/`gatheredCreatureIds`, the first precedent) —
+    `CampaignProfileSO` gets a matching `List<T>` of direct SO refs, and `CampaignDebugTool`'s
+    override pair is a toggle + `List<T>` drawn via `SerializedProperty` in its Editor, since the
+    existing `ref`-based scalar override helpers don't fit a list.
+22. **One source of truth per piece of state — never cache a copy that has to be kept in sync by
+    hand.** If two pieces of code both need the same value (current HP, current energy, whose turn
+    it is, ...), exactly one of them owns it; everything else either reads it live (a computed
+    property/method, not a field) or reacts to an event the owner fires when it changes. Don't
+    give a second script its own field that gets manually reassigned every time the source
+    changes — that's a copy that *can* drift, and eventually will, usually silently. Example:
+    `EnergyController.CurrentEnergy` is `=> CampaignStateManager.Instance.CurrentRun.currentEnergy`,
+    not a locally cached field kept in step by every call site that spends/restores energy — see
+    `docs/Energy.md`. This was a real, live-caught bug: an earlier version gave `EnergyController`
+    its own `CurrentEnergy` field that `TrySpendReroll()` updated but nothing wrote back to
+    `RunState`, so every encounter transition silently discarded whatever the player had just
+    spent. Applies equally to a transient in-memory snapshot as to persisted data — e.g.
+    `EnergyController`'s own `_encounterStartEnergy` (the value a same-encounter restart reverts
+    to) is fine as a local field precisely because *it*, not `CurrentEnergy`, is the one place
+    that value lives.
+23. **Most `ScriptableObject`s that represent one of several instances of a kind (creatures,
+    nukes, spells, rewards, ...) should carry a stable string `id` field**, used to resolve the
+    asset from campaign save data. `RunState` (and any other persisted data) stores these ids,
+    never a direct SO reference — `ScriptableObject` references don't survive a `JsonUtility`
+    round-trip through `SaveStorage`. Resolve an id back to its asset through a small catalog SO
+    with a flat `List<T>` + `Find(id)` (or per-subtype `Find*(id)`), never a per-call linear scan
+    written ad hoc at each call site. `ActionSO.id`/`GameCatalog` (`docs/Campaign.md`) is the
+    original example; `RewardSO.id`/`RewardListSO` (`docs/Rewards.md`) is the second.
+24. **For a fixed, small number of runtime-spawned slots (not a truly open-ended/dynamic list),
+    place one explicit, named anchor `Transform` per slot in the prefab/scene, each holding a
+    disabled instance of the thing that spawns there** (e.g. `CardSlot1`/`CardSlot2`/`CardSlot3`
+    each containing a disabled `RewardCard`, in `RewardEncounter.prefab`), instead of one generic
+    container relying purely on a `LayoutGroup` plus code-only `Instantiate` calls. Two wins over
+    the generic-container approach: (1) it's trivially debuggable — enable a slot's placeholder
+    child in the Inspector (Play mode or not) to see exactly what that slot will look like, with
+    no script run needed; (2) spawning is still simple — at runtime, destroy whatever's currently
+    parented under the anchor (the disabled placeholder, or a previous spawn) and instantiate the
+    real instance as its child, so each slot independently ends up with exactly one live child.
+    Reach for this whenever the slot count is fixed by design (a reward draw is always 3 cards, a
+    loadout is always N fixed ability slots, etc.) — for a genuinely unbounded/variable-length
+    list (arbitrary creature count in a battle, arbitrary log entries, ...) a single dynamic
+    container is still correct; don't force this pattern there.
+25. **Debug/test tools that override normal game behavior must hijack the flow at the earliest,
+    most localized point possible** — the single call site that produces the value being tested,
+    not a broader system further upstream or downstream. Example: `DebugRewards` (paired with
+    `CampaignManager`/`CampaignStateManager` on the `CampaignProgress` GameObject, same duplicate-guard pattern —
+    see rule below on why it must be root-level) overrides a reward draw by short-circuiting
+    exactly the `RewardDrawer.DrawThree(...)` call inside `RewardEncounter.SpawnCards()` — one
+    `if` at the site that would otherwise produce the random draw — rather than, say, patching
+    `RewardDrawer` itself, wrapping `RewardEncounter.Play()`, or requiring a fake `RunState`. This
+    keeps the override provably equivalent to the real path (same code runs afterward — spawning,
+    claiming, saving — only the *source* of the drawn rewards differs) and keeps the blast radius
+    of the debug tool to a single line at a single call site. A one-shot override (a specific "next
+    roll" or "next reward" rather than a standing mode) should also clear itself once consumed —
+    `DebugRewards.rollOnNextReward` flips back to `false` inside the same method that reads it —
+    so it can never silently keep firing after the tester forgets it's checked.
+26. **Any singleton `MonoBehaviour` that calls `DontDestroyOnLoad(gameObject)` must be a root
+    GameObject in every scene it's placed in** — `DontDestroyOnLoad` silently no-ops on a
+    non-root object (logs a one-line console warning, doesn't throw), so a nested copy quietly
+    fails to persist across a scene load while its doc comments/class intent claim otherwise. This
+    was a real, live-caught bug: `CampaignDebugTool` was nested under `Global` in
+    `BattleScene.unity` (but root in `MapScene.unity`), so if a session ever booted from
+    `BattleScene`, its `CampaignDebugTool` copy was silently destroyed on the next scene load
+    instead of surviving — and because the destroyed object still satisfied Unity's `!=` "fake-
+    null" check against the stale `Instance` field, the *next* scene's copy skipped its own
+    duplicate-guard and re-ran `Awake()`'s override-application logic again, on a second object,
+    using whatever values were authored in *that* scene's copy. Any debug-override checkbox left
+    checked in one scene's authored values would then silently re-stomp `RunState` on every
+    subsequent transition through that direction, instead of applying once at session boot as
+    intended. When adding a new cross-scene singleton (mirroring `CampaignManager`/
+    `CampaignStateManager`/`CampaignDebugTool`/`DebugRewards`), always place it directly under the scene root in every
+    scene it's duplicated into — verify via the Inspector (no parent shown) or by checking
+    `m_Father: {fileID: 0}` in the `.unity` file's `Transform` block.
+27. **For pure transform tweening (scale/position/rotation punches, moves, settles), use DOTween
+    via a dedicated `<Thing>Animator` component, not `MMF_Player`'s `MMF_Scale`/`MMF_Position`
+    feedbacks** — `TankAnimator`/`CreatureAnimator`/`ShieldAnimator`/`RewardCardAnimator` are the
+    pattern: a component owning `DOScale`/`DOMove`/`DOAnchorPos` calls, tracking the active
+    `Tween`(s) in a field, killing them at the start of every `Play*` call before starting a new
+    one, and always animating toward an absolute fixed target rather than a value relative to
+    wherever the target currently is — see `ShieldAnimator.KillActive()` for the shape. This keeps
+    rapid re-triggering (fast select/deselect, repeated hits) provably safe: no compounding, no
+    stuck mid-animation values, no two tweens racing on the same property. `MMF_Player`'s
+    `ToDestination` mode is a real trap here — it still runs the curve through
+    `RemapCurveZero`/`RemapCurveOne` on top of the already-lerped value, and those default to `1`/
+    `2` (meant for `Absolute`/`Additive` mode, not `ToDestination`) unless *explicitly* set to
+    `0`/`1` — a real, live-caught bug: `RewardCard`'s select/deselect feedback used
+    `MMF_Scale`/`ToDestination` without overriding those defaults, so every play landed on a wrong
+    intermediate scale that the *next* play then used as its own starting point, compounding across
+    repeated select/deselect into the card visibly growing far past its intended size before
+    snapping back at the end. Rule 15 (particles through Feel feedbacks) is unaffected — this rule
+    is specifically about transform tweens, where DOTween's explicit `Kill`+absolute-target
+    semantics are both simpler and safer than getting `MMF_Scale`'s remap settings right.
 
 ## Editor / IDE MCP integrations
 
@@ -272,6 +379,27 @@ state not exposed elsewhere, batch ops across many objects with no per-object to
 no MCP wrapper). A known quirk in a dedicated tool does not promote `execute_script` to default — use
 the dedicated tool first and only fall back if it actually fails for that call. Don't announce tool
 choice ("using execute_script per the gotcha…") — just use the right tool.
+
+**⚠️ GIANT RULE: sync the scene before entering Play mode or switching scenes — never assume Play mode
+sees your latest edit.** `play_game` always runs whatever the Editor currently has loaded **in
+memory** — not the `.unity` file on disk. Two failure directions, both real and both already bitten
+this project:
+1. *Live edit, never saved.* You mutate the scene through a dedicated Coplay tool (`set_property`,
+   `add_component`, `create_game_object`, ...). That edit lives in the Editor's memory. If you then
+   call `open_scene` on a **different** scene (or otherwise let that scene close) before calling
+   `save_scene`, the edit is silently discarded — no error, no warning, just gone.
+2. *Disk edit, never reloaded.* You edit a `.unity` file directly (`Edit`/`Write` tool, bypassing the
+   Editor entirely). That change is now on disk, but the Editor's in-memory copy of that scene — if it
+   was already open — doesn't know anything happened. Pressing Play or calling `save_scene` before
+   reopening it runs or overwrites the **stale in-memory version**, silently ignoring your file edit.
+
+The fix is mechanical: after a live Coplay-tool edit, call `save_scene` (full asset path — see
+Gotchas) before switching scenes or pressing Play. After a direct file edit, call `open_scene` on that
+exact path before doing anything else with it. Never chain "edit → immediately do something in another
+scene/Play mode" without one of these in between. This is not theoretical: a scene switch without
+saving first already silently dropped real wiring work in this project (`docs/Encounters.md` Gotchas
+has the writeup) — treat every scene edit as unsafe until it's either saved or the Editor has reloaded
+it from disk.
 
 - Compile / errors / logs: `check_compile_errors`, `get_unity_logs`, `get_unity_editor_state`
 - Scene + hierarchy: `list_game_objects_in_hierarchy`, `get_game_object_info`, `open_scene`,

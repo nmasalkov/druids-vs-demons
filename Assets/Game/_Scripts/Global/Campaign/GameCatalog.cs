@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// Master list of every creature/nuke/spell asset the game knows about. RunState's loadout
-/// ids are resolved against this at battle start (see CampaignManager). See docs/Campaign.md.
+/// ids are resolved against this at battle start (see CampaignStateManager). See docs/Campaign.md.
 /// </summary>
 [CreateAssetMenu(fileName = "GameCatalog", menuName = "Game/Campaign/Catalog")]
 public class GameCatalog : ScriptableObject

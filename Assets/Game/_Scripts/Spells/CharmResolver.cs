@@ -29,7 +29,7 @@ namespace Game._Scripts.Spells
             candidates.Sort((a, b) => charmSO.GetStrength(a.Creature).CompareTo(charmSO.GetStrength(b.Creature)));
             var (target, destination) = PickByLevel(candidates, level);
 
-            float chance = Mathf.Clamp01(charmSO.GetChanceForLevel(level) * alive.Count);
+            float chance = Mathf.Clamp01(RewardBonuses.ApplyBonuses(charmSO, charmSO.GetChanceForLevel(level)) * alive.Count);
             bool success = Random.value < chance;
 
             Shots.Add(new CharmShot

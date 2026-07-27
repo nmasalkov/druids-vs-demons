@@ -25,6 +25,9 @@ here" entry point for this codebase.
   dragged into on `G` — nothing on `HeroView`/`Hero` itself encodes side.
 - `testMode` (`bool`) — exposed as `G.TestMode`. Gates a debug-only `Update()` check
   (`Keyboard.current.jKey` spawns a test XP gem via `ExperienceManager`).
+- `G.EncounterList` — `CampaignManager.Instance.EncounterList` (`docs/Encounters.md`), not a
+  field of `G` itself. Added for consistency with `G`'s "reach other systems through here" role
+  rather than routing through `CampaignManager` directly for this one lookup.
 
 ## `ApplyCampaignLoadout` — the one mutation point
 
@@ -39,8 +42,9 @@ public static void ApplyCampaignLoadout(CreaturesSO creatures, NukesSO nukes, Sp
 
 A **static** method (not an instance method) — callers write `G.ApplyCampaignLoadout(...)`, not
 `G.Instance.ApplyCampaignLoadout(...)`, matching every other `G.*` access pattern in the codebase.
-Called once, from `CampaignManager.Start()`, to swap in a campaign-run-resolved loadout in place of
-the Inspector-wired defaults. If `CampaignManager` is absent from a scene, this is never called and
+Called by `CampaignStateManager` whenever `BattleScene` is entered, to swap in a campaign-run-resolved
+loadout in place of the Inspector-wired defaults. If `CampaignStateManager` is absent from a scene,
+this is never called and
 `G` keeps working exactly as it always has, off its own serialized fields — no hard dependency in
 either direction. Full detail on what builds the `CreaturesSO`/`NukesSO`/`SpellsSO` passed in here,
 and why it's safe regardless of component initialization order: [`docs/Campaign.md`](Campaign.md).
@@ -53,5 +57,5 @@ and why it's safe regardless of component initialization order: [`docs/Campaign.
   `G.DefaultCreatures` etc. only affects the player; today it affects both sides identically, by
   design (that's the existing, pre-campaign behavior too).
 - **`Awake()` only sets `Instance`.** Nothing else in `G` runs cross-script logic in `Awake()`, per
-  the project-wide rule — anything that reads another singleton (e.g. `CampaignManager`) does so from
-  its own `Start()` or later.
+  the project-wide rule — anything that reads another singleton (e.g. `CampaignStateManager`) does so
+  from its own `Start()` or later.

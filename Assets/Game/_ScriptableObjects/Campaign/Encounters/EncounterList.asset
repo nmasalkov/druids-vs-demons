@@ -13,6 +13,9 @@ MonoBehaviour:
   m_Name: EncounterList
   m_EditorClassIdentifier: 
   encounters:
+  - {fileID: 11400000, guid: 664ff9d5d0a96ee448af1f3b92c1d90d, type: 2}
   - {fileID: 11400000, guid: 95fb0993e7117f040aa56ead071a00af, type: 2}
+  - {fileID: 11400000, guid: a30594910ba994348a22bea85089b0b6, type: 2}
+  - {fileID: 11400000, guid: e3bc9b69a3a63054fab7c71f4b897ef0, type: 2}
   - {fileID: 11400000, guid: 1b01e21e9d2d9c544b2dc61690ea1cc0, type: 2}
   - {fileID: 11400000, guid: 5a2ae3d173af5e247b89c6f6d4343ad6, type: 2}

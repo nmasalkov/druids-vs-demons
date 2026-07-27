@@ -1,18 +1,35 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 /// <summary>
-/// Editor-only override tool for CampaignManager's RunState, mirroring BalanceTool's pattern
+/// Editor-only override tool for CampaignStateManager's RunState, mirroring BalanceTool's pattern
 /// (see BalanceTool.cs): check a box, drag in a creature/nuke/spell asset (or set a number) in
-/// the Inspector, press Play. Never calls CampaignManager.Save() — overrides are in-memory-only
+/// the Inspector, press Play. Never calls CampaignStateManager.Save() — overrides are in-memory-only
 /// for the current session, so testing never corrupts a real saved run. See docs/Campaign.md.
 ///
-/// "Use Debug Profile" is a separate, coarser mechanism: instead of checking individual fields,
-/// drag in one CampaignProfileSO and every RunState field is set from it wholesale (the granular
-/// overrides below are ignored while it's checked) — see docs/Campaign.md for when to use which.
+/// "Use Debug Profile" is a coarser mechanism: instead of checking individual fields, drag in one
+/// CampaignProfileSO and every RunState field is set from it wholesale (the granular overrides
+/// below are ignored while it's checked). "Use External Save" is coarser still: paste a whole
+/// RunState JSON blob and it becomes CurrentRun for the session, parsed through the exact same
+/// validation a real save goes through. Precedence: External Save > Debug Profile > granular
+/// overrides — see docs/Campaign.md for when to use which.
+///
+/// Cross-scene-persistent (DontDestroyOnLoad + duplicate-guard, same pattern as
+/// CampaignStateManager — see docs/Encounters.md): placed once in each of BattleScene/MapScene so
+/// overrides apply correctly no matter which scene the session actually boots from; whichever loads
+/// first survives, the other's copy self-destructs in Awake().
 /// </summary>
 public class CampaignDebugTool : MonoBehaviour
 {
-    [Header("Use Debug Profile (overrides everything below)")]
+    public static CampaignDebugTool Instance { get; private set; }
+
+    [Header("Use External Save (overrides everything below)")]
+    public bool useExternalSave;
+    [TextArea(6, 20)]
+    public string externalSaveJson;
+
+    [Header("Use Debug Profile (overrides everything below except External Save)")]
     public bool useDebugProfile;
     public CampaignProfileSO debugProfile;
 
@@ -52,20 +69,38 @@ public class CampaignDebugTool : MonoBehaviour
     public bool overrideSpellC;
     public SpellSO spellC;
 
+    [Header("Rewards")]
+    public bool overrideStatusRewards;
+    public List<StatusRewardSO> statusRewards = new List<StatusRewardSO>();
+    public bool overrideBoostRewards;
+    public List<BoostSO> boostRewards = new List<BoostSO>();
+    public bool overrideGatheredCreatures;
+    public List<CreatureSO> gatheredCreatures = new List<CreatureSO>();
+
     void Awake()
     {
-        // Must run after CampaignManager.Awake() (which creates CurrentRun) and before anything
-        // reads it (Hero.Start()'s InitHealth() reads maxHp immediately) — enforced via Script
-        // Execution Order, see the Editor setup checklist in docs/Campaign.md.
-        if (CampaignManager.Instance == null) return;
+        if (Instance != null) { Destroy(gameObject); return; }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
 
-        var run = CampaignManager.Instance.CurrentRun;
+        // Must run after CampaignStateManager.Awake() (which creates RunState) and before
+        // anything reads it (Hero.Start()'s InitHealth() reads maxHp immediately) — enforced via
+        // Script Execution Order, see the Editor setup checklist in docs/Campaign.md.
+        if (CampaignStateManager.Instance == null) return;
+
+        if (useExternalSave && !string.IsNullOrEmpty(externalSaveJson))
+        {
+            ApplyRunStateOverride(CampaignStateManager.ParseExternalRunState(externalSaveJson), "external save JSON");
+            return;
+        }
 
         if (useDebugProfile && debugProfile != null)
         {
-            ApplyDebugProfile(run, debugProfile);
+            ApplyRunStateOverride(BuildRunStateFromProfile(debugProfile), "debug profile");
             return;
         }
+
+        var run = CampaignStateManager.Instance.CurrentRun;
 
         if (overrideMaxHp) run.maxHp = maxHp;
         if (overrideEnergyCapacity) run.energyCapacity = energyCapacity;
@@ -79,36 +114,61 @@ public class CampaignDebugTool : MonoBehaviour
         if (overrideSpellA) run.spellAId = spellA.id;
         if (overrideSpellB) run.spellBId = spellB.id;
         if (overrideSpellC) run.spellCId = spellC.id;
+        if (overrideStatusRewards) run.statusRewardIds = statusRewards.Select(s => s.id).ToList();
+        if (overrideBoostRewards) run.boostRewardIds = boostRewards.Select(b => b.id).ToList();
+        if (overrideGatheredCreatures) run.gatheredCreatureIds = gatheredCreatures.Select(c => c.id).ToList();
     }
 
     /// <summary>
-    /// Wholesale RunState replacement from a CampaignProfileSO — every field, no granular
-    /// toggles. Profile fields are treated as mandatory once useDebugProfile is checked (rule 5):
-    /// an unassigned archer/tank/mage/nuke/spell throws immediately rather than silently
-    /// resolving to null.
-    ///
-    /// currentEncounterIndex additionally needs CampaignProgressManager.SetSessionEncounterIndexOverride
-    /// — CampaignProgressManager bootstraps its own index from PlayerPrefs independently of
-    /// CurrentRun (see docs/Encounters.md), so mutating run.currentEncounterIndex alone would have
-    /// no effect on which encounter actually loads this session.
+    /// Builds a whole RunState from a CampaignProfileSO — every field, no granular toggles.
+    /// Profile fields are treated as mandatory (rule 5): an unassigned archer/tank/mage/nuke/spell
+    /// throws immediately rather than silently resolving to null. Also used by
+    /// CampaignDebugToolEditor's "Generate Save JSON from Profile" button, so the round-trip
+    /// (profile → JSON → pasted into "Use External Save") exercises the exact same field mapping
+    /// "Use Debug Profile" itself uses.
     /// </summary>
-    private static void ApplyDebugProfile(RunState run, CampaignProfileSO profile)
+    public static RunState BuildRunStateFromProfile(CampaignProfileSO profile)
     {
-        run.maxHp = profile.maxHp;
-        run.energyCapacity = profile.energyCapacity;
-        run.currentEnergy = profile.currentEnergy;
-        run.archerId = profile.archer.id;
-        run.tankId = profile.tank.id;
-        run.mageId = profile.mage.id;
-        run.nukeAId = profile.nukeA.id;
-        run.nukeBId = profile.nukeB.id;
-        run.nukeCId = profile.nukeC.id;
-        run.spellAId = profile.spellA.id;
-        run.spellBId = profile.spellB.id;
-        run.spellCId = profile.spellC.id;
-        run.currentEncounterIndex = profile.currentEncounterIndex;
+        return new RunState
+        {
+            maxHp = profile.maxHp,
+            energyCapacity = profile.energyCapacity,
+            currentEnergy = profile.currentEnergy,
+            archerId = profile.archer.id,
+            tankId = profile.tank.id,
+            mageId = profile.mage.id,
+            nukeAId = profile.nukeA.id,
+            nukeBId = profile.nukeB.id,
+            nukeCId = profile.nukeC.id,
+            spellAId = profile.spellA.id,
+            spellBId = profile.spellB.id,
+            spellCId = profile.spellC.id,
+            currentEncounterIndex = profile.currentEncounterIndex,
+            statusRewardIds = profile.statusRewards.Select(s => s.id).ToList(),
+            boostRewardIds = profile.boostRewards.Select(b => b.id).ToList(),
+            gatheredCreatureIds = profile.gatheredCreatures.Select(c => c.id).ToList(),
+        };
+    }
 
-        if (CampaignProgressManager.Instance != null)
-            CampaignProgressManager.Instance.SetSessionEncounterIndexOverride(profile.currentEncounterIndex);
+    /// <summary>
+    /// Shared tail end of both "Use External Save" and "Use Debug Profile": replaces CurrentRun
+    /// wholesale and relocates CampaignManager's independently-bootstrapped encounter index to
+    /// match (see SetSessionEncounterIndexOverride's doc comment for why that's needed — mutating
+    /// run.currentEncounterIndex alone has no effect on which encounter actually loads). A null
+    /// run (parse failure/unsupported version) is ignored with a warning instead of clearing
+    /// CurrentRun.
+    /// </summary>
+    private static void ApplyRunStateOverride(RunState run, string sourceLabel)
+    {
+        if (run == null)
+        {
+            Debug.LogWarning($"CampaignDebugTool: {sourceLabel} was invalid or an unsupported version — ignoring.");
+            return;
+        }
+
+        CampaignStateManager.Instance.ReplaceRunState(run);
+
+        if (CampaignManager.Instance != null)
+            CampaignManager.Instance.SetSessionEncounterIndexOverride(run.currentEncounterIndex);
     }
 }

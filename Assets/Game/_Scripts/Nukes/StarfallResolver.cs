@@ -15,7 +15,7 @@ namespace Game._Scripts.Nukes
         {
             Shots.Clear();
 
-            float damage = source.GetDamageForLevel(level);
+            float damage = RewardBonuses.ApplyBonuses(source, source.GetDamageForLevel(level));
 
             foreach (var creature in enemyCreatures)
             {

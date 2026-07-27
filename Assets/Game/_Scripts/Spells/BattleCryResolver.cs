@@ -16,7 +16,7 @@ namespace Game._Scripts.Spells
             Shots.Clear();
 
             var battleCrySO = (BattleCrySO)source;
-            float buffMultiplier = battleCrySO.GetBuffMultiplierForLevel(level);
+            float buffMultiplier = RewardBonuses.ApplyBonuses(battleCrySO, battleCrySO.GetBuffMultiplierForLevel(level));
             float debuffMultiplier = battleCrySO.GetDebuffMultiplierForLevel(level);
 
             foreach (var own in casterView.CreaturesManager.GetAllCreatures())

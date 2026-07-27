@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca1d90d0e2e0b52469d28c3dfcad329c, type: 3}
+  m_Name: boost_shock
+  m_EditorClassIdentifier: 
+  id: boost_shock
+  rewardName: Boost Shock
+  description: +20% to Shock (currently no effect - Shock has no boostable stat yet).
+  typeLabel: Boost
+  icon: {fileID: 0}
+  unique: 1
+  action: {fileID: 11400000, guid: 8dea2a21e4a3fc2418c591e85da1005b, type: 2}
+  percentage: 0.2

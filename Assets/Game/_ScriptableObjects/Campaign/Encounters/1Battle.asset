@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 545cc407a1915d44080decac3f66031b, type: 3}
+  m_Name: 1Battle
+  m_EditorClassIdentifier: 
+  battleId: battle_1
+  isTutorial: 0
+  enemyData:
+    enemyAvatarPrefab: {fileID: 1872679886176264211, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
+    hp: 10
+  energyReward: 40

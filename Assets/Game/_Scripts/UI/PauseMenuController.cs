@@ -36,7 +36,7 @@ public class PauseMenuController : MonoBehaviour
 
     private void HandleRestartClicked()
     {
-        CampaignProgressManager.Instance.ResetCurrentEncounter();
+        CampaignManager.Instance.ResetCurrentEncounter();
         _isPaused = false;
         pausePanel.SetActive(false);
         Time.timeScale = 1f;

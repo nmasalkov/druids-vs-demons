@@ -95,7 +95,13 @@ Stopping, Bouncing }`, private, in `SlotColumn.Mechanics.cs`):
 
 ## `RollStateManager` — turning a roll into entries
 
-`RollStateManager.ActivateSlotMachine()` (called from `RollState`, not shown here) activates whichever
+`RollStateManager.ActivateSlotMachine()` (called from `RollState`, not shown here) first checks that
+`CampaignManager.Instance.CurrentEncounter` is actually a `FightSO` (renamed from `BattleSO`
+— campaign-layer naming only, unrelated to this file's own "roll" terminology) — outside a real fight
+(a `LoadoutPickSO`/`RewardPickSO` pick screen, see `docs/Encounters.md`) it does nothing and returns.
+This isn't optional polish: `SlotMachine.Update()` reads `Keyboard.current.spaceKey` directly to
+start/stop the reel, bypassing UI raycast blocking entirely, so a pick screen's overlay alone
+couldn't stop a stray Space press from spinning reels behind it. Otherwise, it activates whichever
 side's machine matches `GameManager.Instance.ActiveSide`; if it's the enemy, it also queues
 `AIController.Instance.TakeControl(machine)` via a zero-delay `Utils.DoAfterDelay.Execute` (so it runs
 after the current frame's activation settles).

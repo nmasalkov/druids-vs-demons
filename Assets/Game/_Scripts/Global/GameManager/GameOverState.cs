@@ -10,17 +10,17 @@ public class GameOverState : GameState
         if (playerDead && enemyDead)
         {
             Debug.Log("[GameOver] Draw! Both heroes have fallen.");
-            CampaignProgressManager.Instance.ResolveDefeat();
+            CampaignManager.Instance.ResolveDefeat();
         }
         else if (playerDead)
         {
             Debug.Log("[GameOver] Enemy wins! Your hero has fallen.");
-            CampaignProgressManager.Instance.ResolveDefeat();
+            CampaignManager.Instance.ResolveDefeat();
         }
         else if (enemyDead)
         {
             Debug.Log("[GameOver] Player wins! Enemy hero has fallen.");
-            CampaignProgressManager.Instance.ResolveVictory();
+            CampaignManager.Instance.ResolveVictory();
         }
 
         // Do not call CompleteState — the round loop stops here. ResolveVictory/ResolveDefeat

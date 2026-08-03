@@ -67,6 +67,8 @@ public class CampaignDebugToolEditor : Editor
         DrawToggleAndList(serializedObject, "Status Rewards", "overrideStatusRewards", "statusRewards");
         DrawToggleAndList(serializedObject, "Boost Rewards", "overrideBoostRewards", "boostRewards");
         DrawToggleAndList(serializedObject, "Gathered Creatures", "overrideGatheredCreatures", "gatheredCreatures");
+        DrawToggleAndList(serializedObject, "Gathered Nukes", "overrideGatheredNukes", "gatheredNukes");
+        DrawToggleAndList(serializedObject, "Gathered Spells", "overrideGatheredSpells", "gatheredSpells");
         serializedObject.ApplyModifiedProperties();
 
         DrawSavedRunSection();

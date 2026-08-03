@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 3355357735766849885}
   - component: {fileID: 6461283060384225427}
   - component: {fileID: 7838753059560661941}
+  - component: {fileID: 1836173990108148327}
   m_Layer: 0
   m_Name: RewardEncounter
   m_TagString: Untagged
@@ -114,6 +115,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 571ce7969b6f9884aa05a42764f1d9c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1836173990108148327
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 31536032491488467}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf7de5f37504c1940b13551df10c5246, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   messageText: {fileID: 599913539785384081}

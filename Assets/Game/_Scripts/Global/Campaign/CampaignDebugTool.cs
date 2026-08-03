@@ -76,6 +76,10 @@ public class CampaignDebugTool : MonoBehaviour
     public List<BoostSO> boostRewards = new List<BoostSO>();
     public bool overrideGatheredCreatures;
     public List<CreatureSO> gatheredCreatures = new List<CreatureSO>();
+    public bool overrideGatheredNukes;
+    public List<NukeSO> gatheredNukes = new List<NukeSO>();
+    public bool overrideGatheredSpells;
+    public List<SpellSO> gatheredSpells = new List<SpellSO>();
 
     void Awake()
     {
@@ -117,6 +121,8 @@ public class CampaignDebugTool : MonoBehaviour
         if (overrideStatusRewards) run.statusRewardIds = statusRewards.Select(s => s.id).ToList();
         if (overrideBoostRewards) run.boostRewardIds = boostRewards.Select(b => b.id).ToList();
         if (overrideGatheredCreatures) run.gatheredCreatureIds = gatheredCreatures.Select(c => c.id).ToList();
+        if (overrideGatheredNukes) run.gatheredNukeIds = gatheredNukes.Select(n => n.id).ToList();
+        if (overrideGatheredSpells) run.gatheredSpellIds = gatheredSpells.Select(s => s.id).ToList();
     }
 
     /// <summary>
@@ -147,6 +153,8 @@ public class CampaignDebugTool : MonoBehaviour
             statusRewardIds = profile.statusRewards.Select(s => s.id).ToList(),
             boostRewardIds = profile.boostRewards.Select(b => b.id).ToList(),
             gatheredCreatureIds = profile.gatheredCreatures.Select(c => c.id).ToList(),
+            gatheredNukeIds = profile.gatheredNukes.Select(n => n.id).ToList(),
+            gatheredSpellIds = profile.gatheredSpells.Select(s => s.id).ToList(),
         };
     }
 

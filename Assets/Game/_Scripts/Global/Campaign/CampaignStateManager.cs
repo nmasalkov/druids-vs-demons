@@ -23,6 +23,7 @@ public partial class CampaignStateManager : MonoBehaviour
     [SerializeField] private RewardListSO rewardList;
 
     public RewardListSO RewardList => rewardList;
+    public GameCatalog Catalog => catalog;
     public RunState CurrentRun { get; private set; }
     public FightSO CurrentFight { get; private set; }
 

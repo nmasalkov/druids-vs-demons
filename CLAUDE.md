@@ -96,8 +96,8 @@ here — this list is added to over time and can lag behind the actual `docs/` f
 | XP/leveling, gem pickups | [`docs/Experience.md`](docs/Experience.md) | `ExperienceManager`, `Experience`, `ExpirienceGem` |
 | Reroll energy/cost | [`docs/Energy.md`](docs/Energy.md) | `EnergyController`, `EnergyDisplay`, `SlotColumn`'s reroll cost gate |
 | Campaign/meta progression, run-state save data | [`docs/Campaign.md`](docs/Campaign.md) | `RunState`, `GameCatalog`, `CampaignStateManager`, `CampaignDebugTool`, `ActionSO.id` |
-| Encounters, campaign progress/navigation | [`docs/Encounters.md`](docs/Encounters.md) | `EncounterSO`/`FightSO`/`EncounterListSO`, `Encounter`/`EncounterPlayer`, `CampaignManager`, `CampaignProgressTool`, `HeroView.ReplaceHeroAvatar` |
-| Reward cards, boost rewards | [`docs/Rewards.md`](docs/Rewards.md) | `RewardSO`/`RewardListSO`, `RewardDrawer`, `RewardBonuses`, `RewardCard`/`RewardEncounter` |
+| Encounters, campaign progress/navigation | [`docs/Encounters.md`](docs/Encounters.md) | `EncounterSO`/`FightSO`/`EncounterListSO`, `Encounter`/`EncounterPlayer`, `CampaignManager`, `CampaignProgressTool`, `HeroView.ReplaceHeroAvatar`, `LoadoutPickEncounter` |
+| Reward cards, boost rewards | [`docs/Rewards.md`](docs/Rewards.md) | `RewardSO`/`RewardListSO`, `RewardDrawer`, `RewardBonuses`, `RewardCard`/`RewardEncounter`/`RewardEncounterView` |
 | Global service locator | [`docs/G.md`](docs/G.md) | `G`, `G.ApplyCampaignLoadout`, adding a new static accessor |
 
 **Keep these docs up to date** (rule 18 below): when a change alters how a documented system works
@@ -352,6 +352,39 @@ them for any new/modified game code under `Assets/Game`:
     snapping back at the end. Rule 15 (particles through Feel feedbacks) is unaffected — this rule
     is specifically about transform tweens, where DOTween's explicit `Kill`+absolute-target
     semantics are both simpler and safer than getting `MMF_Scale`'s remap settings right.
+28. **Encounter backend/view split for headless-testable pick screens.** Any `Encounter` subclass
+    that mutates `RunState` and has more than a trivial (click-anywhere) completion condition splits
+    into two components on the same prefab GameObject: the `Encounter` subclass itself is the
+    **backend** (owns all state — drawn/pending values, `RunState` reads/writes/`Save()` calls — and
+    exposes it only via public events and methods, never a UI reference), and a plain
+    `[RequireComponent(typeof(<Backend>))]` `MonoBehaviour` (`<Backend>View`, e.g.
+    `RewardEncounterView`) is the **view** (owns every `[SerializeField]` UI reference, subscribes to
+    the backend's events, calls the backend's public methods from clicks — never mutates `RunState`
+    or decides completion itself). See `RewardEncounter`/`RewardEncounterView` (`docs/Rewards.md`).
+    - `Encounter` exposes `public bool Headless { get; set; }` — a plain runtime property, **never**
+      `[SerializeField]`, so it can never be left accidentally checked on a real prefab; only test
+      code sets it, before calling `Play()` on a bare, view-less instance — and
+      `public void CompletePresentation() => Complete();`, a public wrapper so the View (a sibling
+      component, not a subclass) can trigger completion despite `Complete()` staying `protected`.
+      The backend's own completion-trigger method (`Confirm()` or equivalent) always performs its
+      real `RunState` mutation unconditionally, then only self-completes via
+      `if (Headless) CompletePresentation();` — in visual mode (`Headless` false, the default) the
+      View owns exactly when `CompletePresentation()` fires (e.g. after a discard animation
+      finishes), so a test harness gets full call-methods-directly control with zero UI, while real
+      gameplay's animation timing is untouched.
+    - **The View subscribes to the backend's events in its own `Awake()`, not `Start()`.**
+      `EncounterPlayer`/`MapManager` both call `Instantiate()` then `Play()` synchronously in the
+      same method. Unity runs `Awake()` synchronously as part of `Instantiate()`, but defers
+      `Start()` to later that frame — so a `Start()`-based subscription would miss whatever event
+      `Play()` fires inline. This is a narrow, deliberate exception to rule 4 — it's event
+      registration on a guaranteed `[RequireComponent]` sibling, cached via `GetComponent` the same
+      way rule 9 already caches sibling references in `Awake()`, not logic depending on the
+      sibling's own `Awake()`-time state. Ordinary UI button listeners (real clicks can't happen
+      before `Start()`) stay wired in `Start()`/unwired in `OnDestroy()` as before.
+    - The View never keeps its own copy of backend-owned state (rule 22) — reads it live off the
+      backend when needed.
+    - Simple `Encounter`s with no real state or animated completion (a click-anywhere dismiss, e.g.
+      the current placeholder `LoadoutEncounter`) don't need this split.
 
 ## Editor / IDE MCP integrations
 

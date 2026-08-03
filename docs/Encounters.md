@@ -43,13 +43,28 @@ encounter — see "Fight results" below.
   of 3 reward cards on top of the guaranteed energy — see `docs/Rewards.md`.
 - `Global/Campaign/Encounter.cs` — abstract `MonoBehaviour` base for anything `EncounterPlayer`
   instantiates: `Play(EncounterSO data)` (abstract) + `event Action OnCompleted` + protected
-  `Complete()`. Mirrors `GameState`'s "one runner, self-contained states" shape (`docs/GameLoop.md`).
+  `Complete()`, plus `Headless`/`CompletePresentation()` (CLAUDE.md rule 28 — the backend/view split
+  and headless-testability mechanism, see "`Encounter`/`EncounterPlayer`" below). Mirrors
+  `GameState`'s "one runner, self-contained states" shape (`docs/GameLoop.md`).
 - `Global/Campaign/LoadoutEncounter.cs` — plays `LoadoutPickSO`: shows `briefingText`, completes on
-  a mouse click anywhere.
-- `Global/Campaign/RewardEncounter.cs` — plays `RewardPickSO`: grants + clamps `currentEnergy`
-  immediately on `Play()`, then draws and offers 3 reward cards (`RewardDrawer`/`RewardCard` — see
-  `docs/Rewards.md`). Completes **only** via its Claim button (a stray click elsewhere must not
-  grant a reward early), which claims the selected card and calls `Save()` before completing.
+  a mouse click anywhere. Still the live, unsplit placeholder — simple enough (no `RunState`
+  mutation, trivial completion) that it doesn't need the backend/view split (rule 28).
+- `Global/Campaign/RewardEncounter.cs` — **backend only** (rule 28) for `RewardPickSO`: grants
+  `currentEnergy` and draws 3 reward cards on `Play()`, exposes `SelectReward(RewardSO)`/`Confirm()`
+  plus `OnRewardsDrawn`/`OnSelectionChanged`/`OnClaimed` events — no UI reference of any kind, fully
+  drivable headlessly (`Headless = true`, no prefab needed). See `docs/Rewards.md`.
+- `Global/Campaign/RewardEncounterView.cs` — the paired **view** (rule 28):
+  `[RequireComponent(typeof(RewardEncounter))]`, owns `messageText`/`claimButton`/`cardSlots`/
+  `cardPrefab`, subscribes to the backend's events in `Awake()`, forwards clicks to
+  `SelectReward`/`Confirm`, and calls `CompletePresentation()` once its discard animation finishes.
+  See `docs/Rewards.md`.
+- `Global/Campaign/LoadoutPickEncounter.cs` — **backend-only prototype** of the real pre-battle
+  loadout picker: current/pending/confirmed creature+nuke+spell loadout,
+  `gatheredCreatureIds`/`gatheredNukeIds`/`gatheredSpellIds`-gated availability, an `unlockAll` debug
+  bypass. **Not wired to any prefab/`EncounterSO`/scene yet** — no view exists, and
+  `LoadoutPickSO`/`LoadoutEncounter`/`LoadoutEncounter.prefab` remain the live, untouched placeholder
+  pre-fight screen described above. See `docs/Campaign.md`'s `gatheredNukeIds`/`gatheredSpellIds`
+  fields this reads.
 - `Global/Campaign/EncounterPlayer.cs` — generic instantiate/wait/cleanup dispatcher. Knows nothing
   about any individual `Encounter`'s presentation — see "Encounter/EncounterPlayer" below.
 - `Global/Campaign/EncounterListSO.cs` — `List<EncounterSO> encounters`, the ordered campaign
@@ -442,13 +457,19 @@ it `Play()`s and eventually fires `OnCompleted`. `Global/Campaign/Encounter.cs`:
 public abstract class Encounter : MonoBehaviour
 {
     public event Action OnCompleted;
+    public bool Headless { get; set; }
+
     public abstract void Play(EncounterSO data);
     protected void Complete() => OnCompleted?.Invoke();
+    public void CompletePresentation() => Complete();
 }
 ```
 
-`LoadoutEncounter`/`RewardEncounter` each own their own presentation entirely — `EncounterPlayer`
-itself has no `messageText`/`claimButton` fields of its own anymore:
+`LoadoutEncounter` still owns its own presentation entirely (it's simple enough — no `RunState`
+mutation, click-anywhere completion — that it doesn't need the backend/view split, rule 28).
+`RewardEncounter` instead splits into a headless-testable backend plus a paired
+`RewardEncounterView` that owns all the UI; `EncounterPlayer` itself still has no
+`messageText`/`claimButton` fields of its own:
 
 ```csharp
 public class LoadoutEncounter : Encounter
@@ -460,65 +481,87 @@ public class LoadoutEncounter : Encounter
 
 public class RewardEncounter : Encounter
 {
-    [SerializeField] private TMP_Text messageText;
-    [SerializeField] private Button claimButton;
-    [SerializeField] private Transform cardContainer;
-    [SerializeField] private RewardCard cardPrefab;
-    private RewardPickSO _data;
-    private RewardCard _selectedCard;
+    public RewardPickSO Data { get; private set; }
+    public IReadOnlyList<RewardSO> DrawnRewards { get; private set; }
+    public RewardSO SelectedReward { get; private set; }
 
-    void Start() => claimButton.onClick.AddListener(HandleClaimClicked);
+    public event Action<IReadOnlyList<RewardSO>> OnRewardsDrawn;
+    public event Action<RewardSO> OnSelectionChanged;
+    public event Action OnClaimed;
 
     public override void Play(EncounterSO data)
     {
-        _data = (RewardPickSO)data;
+        Data = (RewardPickSO)data;
         var run = CampaignStateManager.Instance.CurrentRun;
 
-        run.currentEnergy += _data.energyReward; // uncapped — see docs/Campaign.md's RunState shape
-        messageText.text = $"You got {_data.energyReward} energy!";
+        run.currentEnergy += Data.energyReward; // uncapped — see docs/Campaign.md's RunState shape
         CampaignStateManager.Instance.Save();
 
-        foreach (var reward in RewardDrawer.DrawThree(G.RewardList, run))
-        {
-            var card = Instantiate(cardPrefab, cardContainer);
-            card.Init(reward);
-            card.OnClicked += HandleCardClicked;
-        }
-        claimButton.interactable = false;
+        DrawnRewards = DrawRewards(run); // DebugRewards.ConsumeOverrideDraw() ?? RewardDrawer.DrawThree(...)
+        OnRewardsDrawn?.Invoke(DrawnRewards);
     }
 
-    private void HandleCardClicked(RewardCard card)
+    public void SelectReward(RewardSO reward)
     {
-        if (_selectedCard != null) _selectedCard.SetSelected(false);
-        _selectedCard = card;
-        _selectedCard.SetSelected(true);
-        claimButton.interactable = true;
+        SelectedReward = reward;
+        OnSelectionChanged?.Invoke(reward);
     }
 
-    private void HandleClaimClicked()
+    public void Confirm()
     {
-        if (_selectedCard == null) return;
+        if (SelectedReward == null) return;
         var run = CampaignStateManager.Instance.CurrentRun;
-        _selectedCard.Data.Claim(run);
+        SelectedReward.Claim(run);
         CampaignStateManager.Instance.Save();
-        Complete();
+        OnClaimed?.Invoke();
+        if (Headless) CompletePresentation();
     }
+}
+
+[RequireComponent(typeof(RewardEncounter))]
+public class RewardEncounterView : MonoBehaviour
+{
+    [SerializeField] private TMP_Text messageText;
+    [SerializeField] private Button claimButton;
+    [SerializeField] private Transform[] cardSlots;
+    [SerializeField] private RewardCard cardPrefab;
+    private RewardEncounter _backend;
+
+    void Awake() // not Start() — see rule 28's Awake-before-Start ordering note below
+    {
+        _backend = GetComponent<RewardEncounter>();
+        _backend.OnRewardsDrawn += HandleRewardsDrawn;
+        _backend.OnSelectionChanged += HandleSelectionChanged;
+        _backend.OnClaimed += HandleClaimed;
+    }
+
+    void Start() => claimButton.onClick.AddListener(() => _backend.Confirm());
+
+    private void HandleRewardsDrawn(IReadOnlyList<RewardSO> rewards) { /* spawn cards into cardSlots, set messageText */ }
+    private void HandleSelectionChanged(RewardSO reward) { /* SetSelected per card, claimButton.interactable */ }
+    private void HandleClaimed() { /* PlayDiscard on unselected cards, DoAfterDelay.Execute(_backend.CompletePresentation, discardDuration) */ }
 }
 ```
 
 - **`LoadoutEncounter` completes on a mouse click anywhere** — a click, not `Keyboard.current.anyKey`
   as an earlier version had it.
-- **`RewardEncounter` completes *only* via the Claim button** — deliberately not click-anywhere, so a
-  stray click elsewhere on screen can't grant a reward early. The guaranteed energy reward is applied
-  and saved immediately in `Play()`; the Claim button (disabled until a card is selected) finalizes
-  whichever `RewardSO` card was picked via `RewardDrawer` — see `docs/Rewards.md` for the full
-  card hierarchy/draw algorithm. `HandleClaimClicked` calls the selected card's `RewardSO.Claim(run)`
-  and `CampaignStateManager.Instance.Save()` (a real "end of encounter" state change — see
-  `docs/Campaign.md`'s Save system section) before calling `Complete()`. Reads/writes through
-  `CampaignStateManager` directly specifically so this works unchanged whether it's instantiated by
-  `EncounterPlayer` in `BattleScene` (under the debug flag) or by `MapManager` in `MapScene` (the
-  normal path) — both `CampaignStateManager` and `CampaignManager` are cross-scene-persistent, so
-  either is reachable from both scenes.
+- **`RewardEncounter` (backend) completes *only* via `Confirm()`** — deliberately not click-anywhere,
+  so a stray selection change alone can't grant a reward early. The guaranteed energy reward is
+  applied and saved immediately in `Play()`; `Confirm()` (called by `RewardEncounterView` from the
+  Claim button, or directly by test code) claims whichever `RewardSO` was selected via
+  `SelectReward()` — see `docs/Rewards.md` for the full card hierarchy/draw algorithm and the
+  `RewardEncounterView` walkthrough. `Confirm()`'s `RunState.Claim`/`Save()` always run
+  unconditionally; only the *timing* of `Complete()` differs — immediate if `Headless`, otherwise
+  whenever `RewardEncounterView.HandleClaimed()` finishes its discard animation and calls
+  `CompletePresentation()`. Reads/writes through `CampaignStateManager` directly specifically so this
+  works unchanged whether it's instantiated by `EncounterPlayer` in `BattleScene` (under the debug
+  flag) or by `MapManager` in `MapScene` (the normal path) — both `CampaignStateManager` and
+  `CampaignManager` are cross-scene-persistent, so either is reachable from both scenes.
+- **Why `RewardEncounterView` subscribes in `Awake()`, not `Start()`** (CLAUDE.md rule 28):
+  `EncounterPlayer`/`MapManager` call `Instantiate()` then `Play()` synchronously in the same method
+  (see below) — Unity runs `Awake()` synchronously inside `Instantiate()` but defers `Start()` to
+  later that frame, so a `Start()`-based subscription would miss `Play()`'s inline `OnRewardsDrawn`
+  and never spawn any cards in real (non-headless) play.
 
 `Global/Campaign/EncounterPlayer.cs` is the generic dispatcher, fully self-driving — no other script
 calls into it, and it makes no new call sites in `CampaignManager`. It stays `BattleScene`-only
@@ -584,15 +627,19 @@ previous real fight. Harmless — nothing meaningfully reads either during a pic
 self-correct the moment the next `FightSO` loads — but worth knowing if `CurrentFight` ever looks
 "wrong" mid pick-screen in the Inspector.
 
-**Known accepted gap: no instant-resolve path for pick screens (CLAUDE.md rule 7).** Unlike battle
-resolution, `LoadoutPickSO`/`RewardPickSO` block on real user input (a key press, a button click)
-with no headless equivalent — deliberately not built, since they're interstitial UI with no
-simulation-relevant math to short-circuit. `MapScene`'s reveal sequence has the same gap for the
-same reason. The automation consumer that does exist now uses
-`CampaignManager.ProcessAllEncountersInBattleScene` instead (see "Debug: single-scene
-automation" above) rather than an instant-resolve method on either `EncounterPlayer` or `MapManager`.
-Verified live: this flag already fully supports non-fight encounters too — `LoadoutPickSO`/
-`RewardPickSO` play in-place via `EncounterPlayer` inside `BattleScene`, never touching `MapScene`.
+**Narrowed gap: `RewardEncounter`'s core logic is now headlessly drivable (CLAUDE.md rule 28), but
+the placeholder `LoadoutEncounter` and the full campaign-automation path are not.**
+`RewardEncounter` (the backend) can be driven in complete isolation — a bare `GameObject`,
+`AddComponent<RewardEncounter>()`, `Headless = true`, `Play()`/`SelectReward()`/`Confirm()` called
+directly, no prefab/UI/`EncounterPlayer` involved at all — proving `RunState` mutates and
+`OnCompleted` fires with zero visuals (see `docs/Rewards.md`'s verification steps). What's still an
+accepted gap: the placeholder `LoadoutEncounter` (click-anywhere, no backend split — see rule 28's
+"simple `Encounter`s... don't need this split" carve-out) still has no headless equivalent, and
+neither does the full `EncounterPlayer`/`MapManager`/`MapScene` reveal-sequence automation path —
+driving an actual campaign run end-to-end headlessly still requires
+`CampaignManager.ProcessAllEncountersInBattleScene` (see "Debug: single-scene automation" above),
+unchanged by this work. Battle/roll resolution itself has the same kind of gap, one level down — see
+`docs/GameLoop.md`'s Gotchas.
 
 ## Debug-only surface: `CampaignManager.Debug.cs`
 
@@ -717,10 +764,13 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
   `LoadoutEncounter` component) and `_Prefabs/Campaign/RewardEncounter.prefab` (same, plus a Claim
   `Button`, three `cardSlots` anchors (`CardSlot1`/`CardSlot2`/`CardSlot3`, each holding a disabled
   placeholder card — CLAUDE.md's anchor+disabled-template rule) and `cardPrefab`
-  (`_Prefabs/UI/Cards/RewardCard.prefab`) for the 3 drawn reward cards — see `docs/Rewards.md`,
-  `RewardEncounter` component) — each is a fully self-contained `Canvas` (own `CanvasScaler`/
-  `GraphicRaycaster`, `sortingOrder 5`), instantiated fresh by whichever dispatcher is active
-  (`EncounterPlayer` or `MapManager`) and destroyed on completion, never left placed in a scene.
+  (`_Prefabs/UI/Cards/RewardCard.prefab`) for the 3 drawn reward cards — see `docs/Rewards.md`) — each
+  is a fully self-contained `Canvas` (own `CanvasScaler`/`GraphicRaycaster`, `sortingOrder 5`),
+  instantiated fresh by whichever dispatcher is active (`EncounterPlayer` or `MapManager`) and
+  destroyed on completion, never left placed in a scene. **`RewardEncounter.prefab`'s root GameObject
+  carries both the `RewardEncounter` (backend) and `RewardEncounterView` (UI) components** (rule 28)
+  — the `messageText`/`claimButton`/`cardSlots`/`cardPrefab` references live on `RewardEncounterView`,
+  not `RewardEncounter`.
 - `LoadoutPickSO`/`RewardPickSO` assets need their `EncounterPrefab` field wired to the matching
   prefab above (`FightSO` assets leave it unset).
 - `_Prefabs/Map/MapEncounterPoint.prefab` needs a `MapEncounterPoint` component, its

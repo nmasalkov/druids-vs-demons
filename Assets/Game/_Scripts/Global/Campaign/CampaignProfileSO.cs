@@ -39,4 +39,6 @@ public class CampaignProfileSO : ScriptableObject
     public List<StatusRewardSO> statusRewards = new List<StatusRewardSO>();
     public List<BoostSO> boostRewards = new List<BoostSO>();
     public List<CreatureSO> gatheredCreatures = new List<CreatureSO>();
+    public List<NukeSO> gatheredNukes = new List<NukeSO>();
+    public List<SpellSO> gatheredSpells = new List<SpellSO>();
 }

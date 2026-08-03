@@ -54,7 +54,9 @@ to replace a whole `RunState`.
   persistent singleton; `CurrentRun` is the actual owned `RunState`, loaded once in `Awake()`.
   Applies it to `G` and `EnergyController` whenever `BattleScene` is entered (boot-time, or via a
   `SceneManager.sceneLoaded` subscription for every later load — see "Load → resolve → apply flow"
-  below).
+  below). `Catalog` (public `GameCatalog` accessor, mirrors `RewardList`) lets an encounter backend
+  outside this file (e.g. `LoadoutPickEncounter`, see `docs/Encounters.md`) resolve loadout ids
+  without a second, independently-wired `GameCatalog` reference (rule 22).
 - `Global/Campaign/CampaignManager.cs` (+ `CampaignManager.Debug.cs`) — cross-scene persistent
   singleton; encounter navigation only, reads/mutates `RunState` through
   `CampaignStateManager.Instance.CurrentRun`. See `docs/Encounters.md`.
@@ -115,7 +117,13 @@ public int currentEncounterIndex = 0; // now consumed — see docs/Encounters.md
 // resolved against RewardListSO.Find(), same pattern as the loadout ids above.
 public List<string> statusRewardIds = new List<string>();
 public List<string> boostRewardIds = new List<string>();
-public List<string> gatheredCreatureIds = new List<string>();
+
+// Gathered/unlocked pools LoadoutPickEncounter reads availability from — see docs/Encounters.md.
+// Seeded with each loadout's starting ids (matching archerId/tankId/mageId/nukeAId../spellAId..
+// above) so a fresh run's own starting loadout is never locked out of its own picker.
+public List<string> gatheredCreatureIds = new List<string> { "archer", "tank", "mage" };
+public List<string> gatheredNukeIds = new List<string> { "firemagic", "starfall", "shock" };
+public List<string> gatheredSpellIds = new List<string> { "battlecry", "charm", "shield" };
 ```
 
 The 9 loadout fields are ids, not direct SO references — `ScriptableObject` references don't survive
@@ -125,7 +133,18 @@ game exactly (`HeroSO.health`, `EnergyController.startingEnergy`, and — id-for
 brand-new run (nothing saved yet) behaves identically to the game as it exists without this system,
 until something actually changes a field. Note `Fireball.asset` exists in the catalog (id
 `"fireball"`) but isn't any run's default — `DefaultNukes.asset` actually points at FireMagic/
-Starfall/Shock, not Fireball, despite the filename suggesting otherwise.
+Starfall/Shock, not Fireball, despite the filename suggesting otherwise; it only becomes reachable
+once something adds `"fireball"` to `gatheredNukeIds` (a future reward, or `LoadoutPickEncounter`'s
+`unlockAll` debug bypass).
+
+`gatheredNukeIds`/`gatheredSpellIds` are brand new — no existing save has these keys, so
+`JsonUtility` leaves the field-initializer value in place and every existing save retroactively
+backfills to this seed. `gatheredCreatureIds`'s reseed does **not** get that same retroactive
+backfill for a save made any time after the reward system shipped — that field already exists and
+is already explicitly serialized as `[]` in such a save (`JsonUtility` only preserves the
+field-initializer value for a key *absent* from the JSON, not one present-but-empty). Clear the
+local save via `CampaignDebugTool`'s "Clear Saved Run" once if testing this against an existing
+save.
 
 ## Load → resolve → apply flow
 
@@ -305,7 +324,8 @@ index. `SetSessionEncounterIndexOverride` remains real (non-redundant) for
 `CampaignProfileSO` too, plus a granular override pair on `CampaignDebugTool` — nothing enforces
 this at compile time, so it's easy to add a `RunState` field and forget the other two.** This
 applies equally to list-shaped fields (see `docs/Rewards.md`'s `statusRewardIds`/`boostRewardIds`/
-`gatheredCreatureIds` — the first precedent for this): `CampaignProfileSO` gets a matching
+`gatheredCreatureIds` — the first precedent for this, now joined by `gatheredNukeIds`/
+`gatheredSpellIds` above, added the same way): `CampaignProfileSO` gets a matching
 `List<T>` of direct SO refs, and `CampaignDebugTool`'s override pair is a toggle + `List<T>` drawn
 via `SerializedProperty` (`DrawToggleAndList` in `CampaignDebugToolEditor`) since the existing
 `ref`-based scalar helpers don't fit a list.

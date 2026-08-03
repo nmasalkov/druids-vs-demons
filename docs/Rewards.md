@@ -161,12 +161,66 @@ A picked unique reward can't repeat within the same draw (tracked via a `used` s
 
 ## `RewardCard` / `RewardEncounter` flow
 
+**`RewardEncounter` splits into a backend and a view (CLAUDE.md rule 28)**, so the whole pick can be
+driven headlessly by test code with zero UI:
+
+```csharp
+public class RewardEncounter : Encounter
+{
+    public RewardPickSO Data { get; private set; }
+    public IReadOnlyList<RewardSO> DrawnRewards { get; private set; }
+    public RewardSO SelectedReward { get; private set; }
+
+    public event Action<IReadOnlyList<RewardSO>> OnRewardsDrawn;
+    public event Action<RewardSO> OnSelectionChanged;
+    public event Action OnClaimed;
+
+    public override void Play(EncounterSO data)
+    {
+        Data = (RewardPickSO)data;
+        var run = CampaignStateManager.Instance.CurrentRun;
+        run.currentEnergy += Data.energyReward;
+        CampaignStateManager.Instance.Save();
+
+        DrawnRewards = DrawRewards(run);
+        OnRewardsDrawn?.Invoke(DrawnRewards);
+    }
+
+    private static List<RewardSO> DrawRewards(RunState run) =>
+        DebugRewards.Instance != null
+            ? DebugRewards.Instance.ConsumeOverrideDraw() ?? RewardDrawer.DrawThree(G.RewardList, run)
+            : RewardDrawer.DrawThree(G.RewardList, run);
+
+    public void SelectReward(RewardSO reward)
+    {
+        SelectedReward = reward;
+        OnSelectionChanged?.Invoke(reward);
+    }
+
+    public void Confirm()
+    {
+        if (SelectedReward == null) return;
+        var run = CampaignStateManager.Instance.CurrentRun;
+        SelectedReward.Claim(run);
+        CampaignStateManager.Instance.Save();
+        OnClaimed?.Invoke();
+        if (Headless) CompletePresentation();
+    }
+}
+```
+
+`RewardEncounter` has **no UI reference of any kind** — `Data`/`DrawnRewards`/`SelectedReward` are
+the entire "menu" a test controller needs (`RewardSO` objects, not `RewardCard` visuals), and
+`SelectReward`/`Confirm` are the entire "input" surface. `Confirm()`'s `RunState` mutation and
+`Save()` always run unconditionally; only whether `Complete()` fires immediately (`Headless`) or
+waits for the paired view depends on which mode it's running in — see CLAUDE.md rule 28.
+
 `RewardCard` (`Global/Campaign/Rewards/RewardCard.cs`, prefab
 `_Prefabs/UI/Cards/RewardCard.prefab`) — icon/name/type/description display, a single full-card
 `Button` as the click target (clicking anywhere on the card selects it — there's no separate
 sub-button), `Init(RewardSO)` (reads `EffectiveIcon`), `SetSelected(bool)` (delegates to the
 sibling `RewardCardAnimator`'s `PlaySelect()`/`PlayDeselect()`), `event Action<RewardCard>
-OnClicked`. No Claim button here — Claim lives once on `RewardEncounter`, shared across all 3
+OnClicked`. No Claim button here — Claim lives once on `RewardEncounterView`, shared across all 3
 spawned cards.
 
 `RewardCardAnimator` (`Global/Campaign/Rewards/RewardCardAnimator.cs`, `[RequireComponent]`d by
@@ -186,26 +240,33 @@ top of the already-lerped value, and those were left at their class defaults (`1
 that the *next* play then used as its own starting point — compounding across repeated
 select/deselect into a card visibly growing far past its intended size before snapping back.
 `DiscardDuration` (`RewardCardAnimator.DiscardDuration`, a plain serialized field) is read by
-`RewardEncounter` the same way as before (rule 22 — one source of truth, no duplicated magic
+`RewardEncounterView` the same way as before (rule 22 — one source of truth, no duplicated magic
 number).
 
-`RewardEncounter.Play(EncounterSO data)`:
+**`RewardEncounter` (backend) `Play(EncounterSO data)`:**
 
 1. Grants the guaranteed energy immediately (`run.currentEnergy += energyReward`, uncapped — see
-   "Energy grants are uncapped" below), sets `messageText.text = "You got {N} energy!"`, saves.
-2. `RewardDrawer.DrawThree(G.RewardList, run)`, one result per `cardSlots` anchor (see CLAUDE.md's
-   anchor+disabled-template rule) — destroys whatever's currently parented under each anchor (the
-   disabled placeholder card, or a leftover from a previous draw) and instantiates the real
-   `RewardCard` as its child, subscribing to `OnClicked`.
-3. `claimButton.interactable = false` until a card is selected.
+   "Energy grants are uncapped" below), saves.
+2. Draws via `DrawRewards()` (`DebugRewards.ConsumeOverrideDraw() ?? RewardDrawer.DrawThree(...)`),
+   sets `DrawnRewards`, fires `OnRewardsDrawn`.
 
-Clicking a card deselects the previously selected one (if any), selects the new one, enables
-Claim. Clicking Claim: `claimButton.interactable = false`, calls the selected card's
-`RewardSO.Claim(run)`, saves, then calls `PlayDiscard()` on every other spawned card (the claimed
-card just stays as-is) and delays `Complete()` by the longest `DiscardDuration` among them via
-`Utils.DoAfterDelay` — so the shrink-and-destroy animation is visible instead of getting cut off by
-the encounter-complete transition. Only the Claim button ever advances it — unlike LoadoutEncounter,
-a stray click elsewhere must not grant a reward early.
+**`RewardEncounterView` reacts to that event:** sets `messageText.text = "You got {N} energy!"`,
+spawns one `RewardCard` per `cardSlots` anchor (see CLAUDE.md's anchor+disabled-template rule) —
+destroying whatever's currently parented under each anchor (the disabled placeholder card, or a
+leftover from a previous draw) and instantiating the real `RewardCard` as its child, subscribing to
+`OnClicked` — and sets `claimButton.interactable = false` until a card is selected.
+
+Clicking a card calls `_backend.SelectReward(card.Data)`; the backend fires `OnSelectionChanged`,
+which the view reacts to by deselecting the previous card, selecting the new one, and enabling
+Claim. Clicking Claim calls `_backend.Confirm()`: `claimButton.interactable = false`, claims the
+selected card's `RewardSO.Claim(run)`, saves, fires `OnClaimed` — which the view reacts to by
+calling `PlayDiscard()` on every other spawned card (the claimed card just stays as-is) and delaying
+`_backend.CompletePresentation()` by the longest `DiscardDuration` among them via `Utils.DoAfterDelay`
+— so the shrink-and-destroy animation is visible instead of getting cut off by the encounter-complete
+transition. Only `Confirm()` ever advances it — unlike LoadoutEncounter, a stray selection change
+alone must not grant a reward early. A test controller can skip all of this UI entirely: set
+`Headless = true` before `Play()`, then call `SelectReward`/`Confirm` directly — `Confirm()`
+self-completes immediately instead of waiting on a view. See CLAUDE.md rule 28.
 
 ## Debugging: `DebugRewards` and `RunStateMonitor`
 
@@ -214,7 +275,7 @@ a stray click elsewhere must not grant a reward early.
 `rollOnNextReward` and assign `slot1`/`slot2`/`slot3` to force exactly those 3 `RewardSO`s on the
 next `RewardEncounter` instead of a random draw — the override auto-clears once consumed (see
 CLAUDE.md rule 25, and rule 26 for why this had to be a root-level GameObject component, not
-nested). `RewardEncounter.SpawnCards()` checks `DebugRewards.Instance?.ConsumeOverrideDraw()`
+nested). `RewardEncounter.DrawRewards()` checks `DebugRewards.Instance?.ConsumeOverrideDraw()`
 before ever calling `RewardDrawer.DrawThree` — the one hijack point, nothing upstream/downstream
 touched.
 
@@ -237,10 +298,13 @@ section (raw ids plus a resolve-to-assets button) that only covered the reward-s
   `RewardListSO.asset`. The 3 "Big" creature variants (`BubkaBig`/`TankBig`/`DragonBig`, ids
   `archer_big`/`tank_big`/`mage_big`, 1.5x prefab scale) back the 3 `CreatureRewardSO`s and are
   registered in `GameCatalog.asset`'s `allCreatures` alongside the originals.
-- **`RewardEncounter.prefab`'s `cardSlots` (`CardSlot1`/`CardSlot2`/`CardSlot3`, each holding a
-  disabled placeholder `RewardCard` for Inspector debugging — CLAUDE.md's anchor+disabled-template
-  rule) and `cardPrefab` fields** are wired; `claimButton` starts non-interactable by default in
-  the prefab itself (also enforced in code at `Play()`).
+- **`RewardEncounter.prefab`'s root GameObject carries both a `RewardEncounter` (backend) and a
+  `RewardEncounterView` (UI) component** (CLAUDE.md rule 28). `cardSlots` (`CardSlot1`/`CardSlot2`/
+  `CardSlot3`, each holding a disabled placeholder `RewardCard` for Inspector debugging — CLAUDE.md's
+  anchor+disabled-template rule), `cardPrefab`, `messageText`, and `claimButton` are all fields on
+  `RewardEncounterView`, not `RewardEncounter` — `RewardEncounter` itself has no serialized UI fields
+  at all. `claimButton` starts non-interactable by default in the prefab itself (also enforced in
+  code at `HandleRewardsDrawn()`).
 - **`CampaignStateManager`'s `rewardList` field is wired on `CampaignProgress.prefab`** — since
   it's a real prefab now (see `docs/Campaign.md`), this only needs setting once; both scene
   instances pick it up automatically. `slot1`/`slot2`/`slot3` on `DebugRewards` are left

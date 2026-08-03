@@ -223,8 +223,19 @@ freeze correctly under `timeScale = 0`. `PauseMenuController.OnDestroy()` also r
   counterpart — it's a UI-triggered meta action, already synchronous by construction, not an
   animated game mechanic whose *outcome* needs to be reproducible headlessly. The instant-resolve
   methods that do exist (`ResolveNukesInstant`, `ResolveSpellsInstant`, `ResolveBattleInstant`,
-  `ResolveGemsInstant`) are unrelated to restart — they let a full round run without animation for
-  balance-testing automation.
+  `ResolveGemsInstant`) are unrelated to restart.
+- **Battle/roll resolution has no headless path yet — a known, deliberately unfixed gap in rule 7's
+  "whole game cycle" goal.** `RunGameLoop()` has zero headless branch, and `RollState.OnEnter()`
+  unconditionally activates the slot machine and waits for `RollStateManager.OnRollFinished` —
+  unlike `NukeState`/`SpellState`/`BattleState`/`ExperienceManager` (which each have a
+  `ResolveInstant`/`ResolveNukesInstant`-style counterpart), there is no instant-resolve equivalent
+  for a roll itself, and none of the existing instant methods are actually called by
+  `RunGameLoop`/`PlaySide`/anything else today — each is a correctly-scoped building block in
+  isolation, but nothing wires them together into a "run a round without animation" path. So a full
+  battle round still cannot run without visually spinning the reels. Confirmed while building the
+  `RewardEncounter`/`LoadoutPickEncounter` backend/view split (CLAUDE.md rule 28, `docs/Rewards.md`,
+  `docs/Encounters.md`) — flagged here as scope, not fixed: only the pick-screen encounters became
+  headlessly testable in that work, not the battle/roll loop itself.
 - **Round 1 skips the post-player-turn battle** (`runBattleAfter: !firstRound` in `RunGameLoop`) —
   the player just summoned units and shouldn't be attacked immediately; the enemy's turn always
   runs battle after, including on round 1.

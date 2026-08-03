@@ -42,5 +42,16 @@ public class RunState
     // initialized so legacy saves lacking these keys deserialize to empty lists, not null.
     public List<string> statusRewardIds = new List<string>();
     public List<string> boostRewardIds = new List<string>();
-    public List<string> gatheredCreatureIds = new List<string>();
+
+    // Gathered/unlocked pools that LoadoutPickEncounter reads from (see docs/Encounters.md) — seeded
+    // with each loadout's starting ids (matching archerId/tankId/mageId/nukeAId../spellAId.. above)
+    // so a fresh run's own starting loadout is never locked out of its own picker. JsonUtility only
+    // overwrites keys present in a save's JSON, so gatheredNukeIds/gatheredSpellIds (brand new — no
+    // existing save has these keys) retroactively backfill to this seed on every existing save.
+    // gatheredCreatureIds does NOT get that same retroactive backfill for saves made since the reward
+    // system shipped — that field already exists and is already explicitly serialized as [] in them;
+    // clear the local save via CampaignDebugTool's "Clear Saved Run" once if testing against one.
+    public List<string> gatheredCreatureIds = new List<string> { "archer", "tank", "mage" };
+    public List<string> gatheredNukeIds = new List<string> { "firemagic", "starfall", "shock" };
+    public List<string> gatheredSpellIds = new List<string> { "battlecry", "charm", "shield" };
 }

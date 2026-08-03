@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: 1LoadoutPick
   m_EditorClassIdentifier: 
   encounterPrefab: {fileID: 4320323030151266056, guid: dce89df7310bca44d84b0498aaaa6717, type: 3}
-  briefingText: Welcome to the game!
+  briefingText: Pick your loadout!

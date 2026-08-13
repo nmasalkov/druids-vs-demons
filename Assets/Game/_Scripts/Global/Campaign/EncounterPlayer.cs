@@ -44,6 +44,19 @@ public class EncounterPlayer : MonoBehaviour
     {
         DestroyActiveEncounter();
 
+        // Genuinely inert outside the debug single-scene-automation flag, same reasoning as
+        // RollStateManager.ActivateSlotMachine()'s FightSO gate (see class doc comment). This is not
+        // a redundant check against CampaignStateManager.EnterBattleScene()'s own redirect-to-MapScene
+        // guard for a non-FightSO CurrentEncounter — a real, live-caught race: that redirect calls
+        // SceneManager.LoadScene(MapScene), but that doesn't halt the rest of BattleScene's Start()
+        // phase this frame, so this method still runs (Start()-phase ordering between components in
+        // the same scene isn't guaranteed) and would otherwise instantiate the pick screen right
+        // before the scene tears down — briefly flashing it in BattleScene before MapScene's own
+        // correct instantiation takes over a couple seconds later.
+        if (!CampaignManager.Instance.ProcessAllEncountersInBattleScene &&
+            CampaignManager.Instance.CurrentEncounter is not FightSO)
+            return;
+
         var encounterSO = CampaignManager.Instance.CurrentEncounter;
         // FightSO (EncounterPrefab unset) and an unassigned list slot (mid-edit in EncounterListSO,
         // encounterSO null) both mean "nothing to play here" — GameManager's loop handles a FightSO

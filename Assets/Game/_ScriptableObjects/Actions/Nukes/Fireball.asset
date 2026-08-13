@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: Fireball
   m_EditorClassIdentifier: 
   id: fireball
-  actionName: 
+  actionName: Fireball
+  description: A basic fireball nuke — a single burning projectile at the enemy shield or hero.
   cardSprite: {fileID: 21300000, guid: 10fa8f4f3ee301d41b60d8192ca99d15, type: 3}
   damagePerLevel:
   - 14

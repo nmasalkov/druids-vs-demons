@@ -6,8 +6,8 @@ using System.Collections.Generic;
 /// immediately, then offers 3 reward cards drawn by RewardDrawer — pick one, then Confirm to advance.
 /// Pure data/logic — no UI reference of any kind. Presentation (cards, buttons, discard animation)
 /// lives on the paired RewardEncounterView component (CLAUDE.md rule 28). Only Confirm() advances it
-/// — unlike LoadoutEncounter, a stray selection change alone must not grant a reward early. See
-/// docs/Rewards.md and docs/Encounters.md.
+/// — a stray selection change alone must not grant a reward early. See docs/Rewards.md and
+/// docs/Encounters.md.
 /// </summary>
 public class RewardEncounter : Encounter
 {

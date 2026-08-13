@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: shield
   actionName: Shield
+  description: Raises a protective shield in front of your hero, absorbing incoming damage.
   cardSprite: {fileID: 21300000, guid: e178e6e1f0d784049a540ca01f172325, type: 3}
   animationPrefab: {fileID: -2642668504331925229, guid: 68d7736ab134eb5498b695436819bb0a, type: 3}
   hpPerLevel:

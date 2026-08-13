@@ -8,6 +8,7 @@ public class SlotMachine : MonoBehaviour
 {
     [SerializeField] private List<SlotColumn> columns;
     [SerializeField] private float stopDelayBetweenColumns = 0.5f;
+    [SerializeField] private bool isPlayerMachine = true;
     [SerializeField] private Button spinButton;
     [SerializeField] private Button finishRollButton;
     [SerializeField] private Button creatureRollButton;
@@ -81,18 +82,18 @@ public class SlotMachine : MonoBehaviour
         {
             case RollType.Nuke:
             {
-                var dn = G.DefaultNukes;
-                return new ActionSO[] { dn.nukeA, dn.nukeB, dn.nukeC };
+                var n = isPlayerMachine ? G.DefaultNukes : G.EnemyNukes;
+                return new ActionSO[] { n.nukeA, n.nukeB, n.nukeC };
             }
             case RollType.Spell:
             {
-                var ds = G.DefaultSpells;
-                return new ActionSO[] { ds.spellA, ds.spellB, ds.spellC };
+                var s = isPlayerMachine ? G.DefaultSpells : G.EnemySpells;
+                return new ActionSO[] { s.spellA, s.spellB, s.spellC };
             }
             default:
             {
-                var dc = G.DefaultCreatures;
-                return new ActionSO[] { dc.tank, dc.mage, dc.archer };
+                var c = isPlayerMachine ? G.DefaultCreatures : G.EnemyCreatures;
+                return new ActionSO[] { c.tank, c.mage, c.archer };
             }
         }
     }

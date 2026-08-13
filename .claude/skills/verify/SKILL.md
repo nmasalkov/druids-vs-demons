@@ -40,3 +40,13 @@ instead of an actual playthrough.
 After any change to: `GameManager`/`GameState` subclasses, `SlotMachine`/`RollStateManager`,
 `CampaignManager`/`CampaignStateManager`/encounter flow, or scene/prefab wiring that anything
 gameplay-critical depends on. Not required for pure doc/comment-only edits.
+
+## Skipping for small fixes
+
+User-confirmed OK: for a small, narrowly-scoped fix (a single field's default, a one-line logic swap,
+something whose whole mechanism fits in one isolated `execute_script` check) it's fine to skip the
+full Play-mode checklist above — an isolated check that directly exercises the exact thing the bug was
+about is enough. Say so explicitly in the report ("skipped full verify — confirmed via an isolated
+check because X") rather than silently omitting steps or implying the full pass ran. Still run the
+full checklist for anything touching a multi-step flow (turn order, encounter transitions, restart,
+anything a single function-level check can't see the whole picture of).

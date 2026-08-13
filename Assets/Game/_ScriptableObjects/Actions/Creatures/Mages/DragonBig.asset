@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: mage_big
   actionName: Dragon Big
-  cardSprite: {fileID: 3428391033546482049, guid: 8bbd0405a7f5eb2429f3e6ac541dd2e9, type: 3}
+  description: An elder dragon mage, dealing significantly more damage per attack.
+  cardSprite: {fileID: -1994478078, guid: 6582f34ddd5f686408c019550cd94c9d, type: 3}
   creaturePrefab: {fileID: 7684626903797532360, guid: 8abdddd217dfa7c4ab999039c67a8a17, type: 3}
   levelStats:
   - damage: 9

@@ -600,11 +600,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   useExternalSave: 0
   externalSaveJson: "{\n    \"saveVersion\": 1,\n    \"maxHp\": 100,\n    \"energyCapacity\":
-    50,\n    \"currentEnergy\": 12,\n    \"archerId\": \"archer\",\n    \"tankId\":
+    50,\n    \"currentEnergy\": 68,\n    \"archerId\": \"archer_big\",\n    \"tankId\":
     \"tank\",\n    \"mageId\": \"mage\",\n    \"nukeAId\": \"firemagic\",\n    \"nukeBId\":
     \"starfall\",\n    \"nukeCId\": \"shock\",\n    \"spellAId\": \"battlecry\",\n   
     \"spellBId\": \"charm\",\n    \"spellCId\": \"shield\",\n    \"currentEncounterIndex\":
-    2\n}"
+    0,\n    \"statusRewardIds\": [],\n    \"boostRewardIds\": [],\n    \"gatheredCreatureIds\":
+    [\n        \"archer\",\n        \"tank\",\n        \"mage\",\n        \"archer_big\"\n   
+    ],\n    \"gatheredNukeIds\": [\n        \"firemagic\",\n        \"starfall\",\n       
+    \"shock\"\n    ],\n    \"gatheredSpellIds\": [\n        \"battlecry\",\n       
+    \"charm\",\n        \"shield\"\n    ]\n}"
   useDebugProfile: 0
   debugProfile: {fileID: 11400000, guid: 11f18481e64ba5c4899cf0ae83943ce6, type: 2}
   overrideMaxHp: 0
@@ -1257,6 +1261,9 @@ MonoBehaviour:
   defaultCreatures: {fileID: 11400000, guid: 4e99d11a578938e489166f389317480d, type: 2}
   defaultNukes: {fileID: 11400000, guid: 2c14d674982895e478619095303cccdc, type: 2}
   defaultSpells: {fileID: 11400000, guid: d8310756b5a8f5149909a142b15b8ca4, type: 2}
+  enemyCreatures: {fileID: 11400000, guid: 4e99d11a578938e489166f389317480d, type: 2}
+  enemyNukes: {fileID: 11400000, guid: 2c14d674982895e478619095303cccdc, type: 2}
+  enemySpells: {fileID: 11400000, guid: d8310756b5a8f5149909a142b15b8ca4, type: 2}
   playerView: {fileID: 3264854098524171688}
   enemyView: {fileID: 255697476}
   testMode: 1
@@ -3086,6 +3093,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7752793765383580469, guid: 9bce7353d35a9e34e8ffdfd23c2a820f, type: 3}
       propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8359403781201049581, guid: 9bce7353d35a9e34e8ffdfd23c2a820f, type: 3}
+      propertyPath: isPlayerMachine
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

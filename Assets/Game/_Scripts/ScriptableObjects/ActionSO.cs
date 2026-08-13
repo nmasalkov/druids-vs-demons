@@ -6,6 +6,7 @@ public abstract class ActionSO : ScriptableObject
     public string id;
 
     public string actionName;
+    [TextArea] public string description;
     public Sprite cardSprite;
 
     /// <summary>

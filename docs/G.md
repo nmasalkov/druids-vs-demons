@@ -16,9 +16,18 @@ here" entry point for this codebase.
 ## Fields and static accessors
 
 - `defaultCreatures` (`CreaturesSO`), `defaultNukes` (`NukesSO`), `defaultSpells` (`SpellsSO`) —
-  exposed as `G.DefaultCreatures`/`DefaultNukes`/`DefaultSpells`. These are Inspector-assigned by
-  default (pointing at the `_DefaultCreatures.asset`/`DefaultNukes.asset`/`DefaultSpells.asset`
-  fallback assets), but can be overridden at runtime — see `ApplyCampaignLoadout` below.
+  exposed as `G.DefaultCreatures`/`DefaultNukes`/`DefaultSpells`. This is the **player's** pool for
+  real battles (`SlotMachine`'s player instance reads it — see `docs/SlotMachine.md`) and is also what
+  `BalanceTool` spawns test units from for both sides. Inspector-assigned by default (pointing at the
+  `_DefaultCreatures.asset`/`DefaultNukes.asset`/`DefaultSpells.asset` fallback assets), but overridden
+  at runtime by a campaign run — see `ApplyCampaignLoadout` below.
+- `enemyCreatures`/`enemyNukes`/`enemySpells` — exposed as `G.EnemyCreatures`/`EnemyNukes`/
+  `EnemySpells`. The **enemy's** pool for real battles — `ApplyCampaignLoadout` never touches these,
+  so the enemy's roster stays fixed regardless of what the player picks in the loadout screen.
+  Inspector-assigned; currently point at the same fallback assets as `defaultCreatures`/`defaultNukes`/
+  `defaultSpells` do, so the enemy's roster is unchanged from pre-campaign behavior — a natural place
+  to later wire a per-`FightSO` enemy loadout once that data model exists (`FightSO`/`EnemyData` today
+  only carries `enemyAvatarPrefab`/`hp`, no loadout).
 - `playerView`/`enemyView` (`HeroView`) — exposed as `G.PlayerView`/`EnemyView`, and further as
   `G.PlayerCreaturesManager`/`EnemyCreaturesManager` (`.CreaturesManager`) and `G.PlayerHero`/
   `EnemyHero` (`.Hero`). Which `HeroView` is "player" vs "enemy" is purely which Inspector slot it's
@@ -43,19 +52,28 @@ public static void ApplyCampaignLoadout(CreaturesSO creatures, NukesSO nukes, Sp
 A **static** method (not an instance method) — callers write `G.ApplyCampaignLoadout(...)`, not
 `G.Instance.ApplyCampaignLoadout(...)`, matching every other `G.*` access pattern in the codebase.
 Called by `CampaignStateManager` whenever `BattleScene` is entered, to swap in a campaign-run-resolved
-loadout in place of the Inspector-wired defaults. If `CampaignStateManager` is absent from a scene,
-this is never called and
-`G` keeps working exactly as it always has, off its own serialized fields — no hard dependency in
-either direction. Full detail on what builds the `CreaturesSO`/`NukesSO`/`SpellsSO` passed in here,
-and why it's safe regardless of component initialization order: [`docs/Campaign.md`](Campaign.md).
+loadout in place of the Inspector-wired defaults. Only ever touches `defaultCreatures`/`defaultNukes`/
+`defaultSpells` (the player's pool) — `enemyCreatures`/`enemyNukes`/`enemySpells` are never written by
+this, by design (see Gotchas below). If `CampaignStateManager` is absent from a scene, this is never
+called and `G` keeps working exactly as it always has, off its own serialized fields — no hard
+dependency in either direction. Full detail on what builds the `CreaturesSO`/`NukesSO`/`SpellsSO`
+passed in here, and why it's safe regardless of component initialization order:
+[`docs/Campaign.md`](Campaign.md).
 
 ## Gotchas
 
-- **No side flag anywhere.** `SlotMachine.GetActionOptions()` (see `docs/SlotMachine.md`) reads
-  `G.DefaultNukes`/`DefaultSpells`/`DefaultCreatures` unconditionally regardless of which side's
-  machine is asking — both sides roll from the exact same pool. Don't assume overriding
-  `G.DefaultCreatures` etc. only affects the player; today it affects both sides identically, by
-  design (that's the existing, pre-campaign behavior too).
+- **`SlotMachine` picks its pool via its own `isPlayerMachine` flag, not by asking `G` which side is
+  active.** `SlotMachine.GetActionOptions()` (see `docs/SlotMachine.md`) reads
+  `G.DefaultCreatures`/`DefaultNukes`/`DefaultSpells` when `isPlayerMachine` is true, or
+  `G.EnemyCreatures`/`EnemyNukes`/`EnemySpells` when false — a plain Inspector-set bool per instance
+  (`true` on `SlotMachinePlayer/SlotMachine`, `false` on `SlotMachineEnemy/SlotMachine`, both in
+  `BattleScene`), not derived from `GameManager.ActiveSide` (which tracks whose *turn* it is, not
+  which physical machine a given `SlotMachine` component is). This was a real, live-caught bug: before
+  the split existed, both sides' machines read the exact same shared pool, so a player's campaign
+  loadout pick (e.g. swapping in a stronger tank via the loadout screen) leaked straight into the
+  enemy's roster for the next battle too. If you add a third `SlotMachine` instance anywhere, remember
+  to set `isPlayerMachine` explicitly — it defaults to `true`, so a forgotten enemy-side instance
+  would silently re-introduce the shared-pool bug rather than fail loudly.
 - **`Awake()` only sets `Instance`.** Nothing else in `G` runs cross-script logic in `Awake()`, per
   the project-wide rule — anything that reads another singleton (e.g. `CampaignStateManager`) does so
   from its own `Start()` or later.

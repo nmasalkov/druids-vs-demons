@@ -29,8 +29,8 @@ public class RewardCard : MonoBehaviour
     public float DiscardDuration => _animator.DiscardDuration;
 
     void Awake() => _animator = GetComponent<RewardCardAnimator>();
-    void Start() => button.onClick.AddListener(HandleClicked);
-    void OnDestroy() => button.onClick.RemoveListener(HandleClicked);
+    void Start() => button.onClick.AddListener(NotifyClicked);
+    void OnDestroy() => button.onClick.RemoveListener(NotifyClicked);
 
     public void Init(RewardSO reward)
     {
@@ -39,6 +39,20 @@ public class RewardCard : MonoBehaviour
         nameText.text = reward.rewardName;
         typeText.text = reward.typeLabel;
         descriptionText.text = reward.description;
+    }
+
+    /// <summary>Pure-display overload for LoadoutPickEncounterView's Comparison panel: shows an
+    /// ActionSO (not a RewardSO) with a caller-supplied type label instead of RewardSO.typeLabel. Data
+    /// (RewardSO-typed) stays null. Leaves Button.interactable alone deliberately —
+    /// LoadoutPickEncounterView never wires OnClicked for these instances, so interactable is a no-op
+    /// either way, and setting it false paints Button's default Disabled Color (semi-transparent grey)
+    /// over the card, which is never wanted here.</summary>
+    public void Init(ActionSO action, string typeLabel)
+    {
+        iconImage.sprite = action.cardSprite;
+        nameText.text = action.actionName;
+        typeText.text = typeLabel;
+        descriptionText.text = action.description;
     }
 
     public void SetSelected(bool selected)
@@ -55,5 +69,5 @@ public class RewardCard : MonoBehaviour
         _animator.PlayDiscard(() => Destroy(gameObject));
     }
 
-    private void HandleClicked() => OnClicked?.Invoke(this);
+    private void NotifyClicked() => OnClicked?.Invoke(this);
 }

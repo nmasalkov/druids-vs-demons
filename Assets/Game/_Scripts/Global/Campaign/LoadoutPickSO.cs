@@ -1,12 +1,11 @@
 using UnityEngine;
 
 /// <summary>
-/// Placeholder pre-battle encounter: a full-screen tint + briefing text, dismissed on any key
-/// press. Played by EncounterPlayer. See docs/Encounters.md.
+/// Marker EncounterSO for the pre-battle loadout picker — carries no data of its own;
+/// LoadoutPickEncounter derives everything from RunState/GameCatalog. Played by
+/// LoadoutPickEncounter/LoadoutPickEncounterView (CLAUDE.md rule 28). See docs/Loadout.md.
 /// </summary>
 [CreateAssetMenu(fileName = "LoadoutPick", menuName = "Game/Campaign/Loadout Pick")]
 public class LoadoutPickSO : EncounterSO
 {
-    [TextArea(2, 5)]
-    public string briefingText = "This will be a battle!";
 }

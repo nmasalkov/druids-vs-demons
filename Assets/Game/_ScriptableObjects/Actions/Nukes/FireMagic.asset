@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: firemagic
   actionName: Fire Magic
+  description: Blasts the enemy shield or hero with a burst of concentrated fire.
   cardSprite: {fileID: 21300000, guid: 10fa8f4f3ee301d41b60d8192ca99d15, type: 3}
   damagePerLevel:
   - 13

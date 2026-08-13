@@ -98,6 +98,7 @@ here — this list is added to over time and can lag behind the actual `docs/` f
 | Campaign/meta progression, run-state save data | [`docs/Campaign.md`](docs/Campaign.md) | `RunState`, `GameCatalog`, `CampaignStateManager`, `CampaignDebugTool`, `ActionSO.id` |
 | Encounters, campaign progress/navigation | [`docs/Encounters.md`](docs/Encounters.md) | `EncounterSO`/`FightSO`/`EncounterListSO`, `Encounter`/`EncounterPlayer`, `CampaignManager`, `CampaignProgressTool`, `HeroView.ReplaceHeroAvatar`, `LoadoutPickEncounter` |
 | Reward cards, boost rewards | [`docs/Rewards.md`](docs/Rewards.md) | `RewardSO`/`RewardListSO`, `RewardDrawer`, `RewardBonuses`, `RewardCard`/`RewardEncounter`/`RewardEncounterView` |
+| Pre-battle loadout picker | [`docs/Loadout.md`](docs/Loadout.md) | `LoadoutPickEncounter`, `LoadoutPickEncounterView`, `MiniCard`, `SlotKind`/`SlotRef` |
 | Global service locator | [`docs/G.md`](docs/G.md) | `G`, `G.ApplyCampaignLoadout`, adding a new static accessor |
 
 **Keep these docs up to date** (rule 18 below): when a change alters how a documented system works
@@ -385,6 +386,22 @@ them for any new/modified game code under `Assets/Game`:
       backend when needed.
     - Simple `Encounter`s with no real state or animated completion (a click-anywhere dismiss, e.g.
       the current placeholder `LoadoutEncounter`) don't need this split.
+    - **Name an event listener for what it actually does, not `Handle<EventName>`.**
+      `_backend.OnSwapped += HandleSwapped` says nothing a reader doesn't already know from the
+      event's own name. Prefer `OnPoolChanged += RebuildAvailablePool`, `OnConfirmed +=
+      ClosePresentation` — the method name is the documentation. Same for a component's own internal
+      listener wiring (e.g. `button.onClick.AddListener(NotifyClicked)`, not `HandleClicked`).
+    - **If a View needs several pieces of backend state together to redraw, expose one snapshot
+      getter instead of several piecemeal reads spread across handlers.** A nested `readonly struct
+      State` (rule 12) with a single `GetState()` method beats a scatter of properties/getters each
+      queried from a different event handler — it turns "5 events, 5 handlers, 5 different backend
+      calls" into "4 events, a couple of `Spawn*`/`Rebuild*` (structural) handlers, and every content
+      update running through one shared `Redraw()` that fetches one snapshot and hands it to a few
+      `Draw<Region>(state)` functions." This isn't a cache the View holds onto (rule 22 still applies
+      to the backend's own fields) — `State` is refetched fresh on every redraw, never stored and
+      mutated between frames. See `LoadoutPickEncounter.State`/`LoadoutPickEncounterView.Redraw()`
+      (`docs/Loadout.md`) for the worked example; reach for this shape on the next Encounter view
+      that ends up with more than 2-3 events.
 
 ## Editor / IDE MCP integrations
 
@@ -485,6 +502,16 @@ it from disk.
   that specific call fails.
 - Tools mutate the live editor. Treat them with the same care as editing files: confirm destructive
   operations (deleting GameObjects, removing components, overwriting assets) when intent is unclear.
+- `set_rect_transform` can silently no-op (reports success, RectTransform on disk is unchanged) —
+  verify anchor/position changes actually landed (re-read the file/`get_game_object_info`) before
+  trusting the reported success message; fall back to `execute_script` +
+  `PrefabUtility.LoadPrefabContents`/`SaveAsPrefabAsset` if a retry doesn't fix it.
+- No dedicated tool simulates a UI click — `capture_ui_canvas` only screenshots, it never proves an
+  element is actually clickable (raycast-routing bugs render correctly and still don't respond to
+  clicks). To verify click behavior, not just appearance, use `execute_script` with a real
+  `EventSystem.RaycastAll` + `ExecuteEvents.GetEventHandler`/`Execute` simulation — see
+  `docs/Loadout.md`'s "Testing UI clicks live via Coplay MCP" section for the full recipe and gotchas
+  (it's what caught a real click-routing bug that a screenshot alone had already missed).
 
 ### JetBrains MCP (Rider / IDE Access)
 

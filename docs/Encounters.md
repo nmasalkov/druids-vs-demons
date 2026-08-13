@@ -10,8 +10,8 @@ managers" below) — `CampaignManager` reads/mutates it through
 `CampaignStateManager.Instance.CurrentRun` rather than owning any of it itself. Three `EncounterSO` subclasses exist:
 `FightSO` (a real fight, each carrying its own enemy avatar/HP; renamed from `BattleSO` — campaign-
 layer naming only, unrelated to the per-turn `BattleState`/`RunBattle()` combat-resolution machinery,
-which keeps its own "Battle" naming), `LoadoutPickSO` (a placeholder pre-fight briefing screen), and
-`RewardPickSO` (a claimable energy reward screen — this is now where a victory's energy reward
+which keeps its own "Battle" naming), `LoadoutPickSO` (a marker for the pre-fight loadout picker — see
+`docs/Loadout.md`), and `RewardPickSO` (a claimable energy reward screen — this is now where a victory's energy reward
 actually comes from, not an automatic grant). `EncounterPlayer` is a generic dispatcher: it
 instantiates whatever `Encounter` component `CurrentEncounter.EncounterPrefab` points at, calls
 `Play()`, and waits for `OnCompleted` — see "Encounter/EncounterPlayer" below. `FightSO` leaves
@@ -36,8 +36,9 @@ encounter — see "Fight results" below.
   pre-fight phase. No longer carries an energy reward — see `RewardPickSO`.
 - `EnemyData` (nested `[Serializable] struct` in `FightSO.cs`) — `enemyAvatarPrefab` (`GameObject`),
   `hp` (int). Expandable later (e.g. an AI tactic enum) without touching `FightSO` itself.
-- `Global/Campaign/LoadoutPickSO.cs` — placeholder pre-fight encounter: just `briefingText`
-  (string, defaults to `"This will be a battle!"`). Played by `LoadoutEncounter`.
+- `Global/Campaign/LoadoutPickSO.cs` — marker `EncounterSO` for the pre-fight loadout picker; carries
+  no data of its own, since `LoadoutPickEncounter` derives everything from `RunState`/`GameCatalog`.
+  Played by `LoadoutPickEncounter`/`LoadoutPickEncounterView` — see `docs/Loadout.md`.
 - `Global/Campaign/RewardPickSO.cs` — post-fight reward encounter: `energyReward` (int) — moved
   off `FightSO`, see "Fight results" below. Played by `RewardEncounter`, which also offers a pick
   of 3 reward cards on top of the guaranteed energy — see `docs/Rewards.md`.
@@ -46,9 +47,6 @@ encounter — see "Fight results" below.
   `Complete()`, plus `Headless`/`CompletePresentation()` (CLAUDE.md rule 28 — the backend/view split
   and headless-testability mechanism, see "`Encounter`/`EncounterPlayer`" below). Mirrors
   `GameState`'s "one runner, self-contained states" shape (`docs/GameLoop.md`).
-- `Global/Campaign/LoadoutEncounter.cs` — plays `LoadoutPickSO`: shows `briefingText`, completes on
-  a mouse click anywhere. Still the live, unsplit placeholder — simple enough (no `RunState`
-  mutation, trivial completion) that it doesn't need the backend/view split (rule 28).
 - `Global/Campaign/RewardEncounter.cs` — **backend only** (rule 28) for `RewardPickSO`: grants
   `currentEnergy` and draws 3 reward cards on `Play()`, exposes `SelectReward(RewardSO)`/`Confirm()`
   plus `OnRewardsDrawn`/`OnSelectionChanged`/`OnClaimed` events — no UI reference of any kind, fully
@@ -58,13 +56,16 @@ encounter — see "Fight results" below.
   `cardPrefab`, subscribes to the backend's events in `Awake()`, forwards clicks to
   `SelectReward`/`Confirm`, and calls `CompletePresentation()` once its discard animation finishes.
   See `docs/Rewards.md`.
-- `Global/Campaign/LoadoutPickEncounter.cs` — **backend-only prototype** of the real pre-battle
-  loadout picker: current/pending/confirmed creature+nuke+spell loadout,
-  `gatheredCreatureIds`/`gatheredNukeIds`/`gatheredSpellIds`-gated availability, an `unlockAll` debug
-  bypass. **Not wired to any prefab/`EncounterSO`/scene yet** — no view exists, and
-  `LoadoutPickSO`/`LoadoutEncounter`/`LoadoutEncounter.prefab` remain the live, untouched placeholder
-  pre-fight screen described above. See `docs/Campaign.md`'s `gatheredNukeIds`/`gatheredSpellIds`
-  fields this reads.
+- `Global/Campaign/LoadoutPickEncounter.cs` — **backend only** (rule 28) for `LoadoutPickSO`: owns
+  the pending edit state for all 9 loadout slots (`SlotKind`/`SlotRef`-addressed), exposes
+  `SelectSlot`/`SelectCandidate`/`Swap()`/`Confirm()` plus `OnLoadoutLoaded`/`OnPoolChanged`/
+  `OnSelectionChanged`/`OnSwapped`/`OnConfirmed` events, gated by
+  `gatheredCreatureIds`/`gatheredNukeIds`/`gatheredSpellIds` (`docs/Campaign.md`) unless an
+  `unlockAll` debug bypass is set — fully drivable headlessly. See `docs/Loadout.md`.
+- `Global/Campaign/LoadoutPickEncounterView.cs` — the paired **view** (rule 28):
+  `[RequireComponent(typeof(LoadoutPickEncounter))]`, owns the 9 equipped-slot anchors, the
+  Available pool container, the Comparison panel, and the Swap/Finish buttons, subscribes to the
+  backend's events in `Awake()`. See `docs/Loadout.md`.
 - `Global/Campaign/EncounterPlayer.cs` — generic instantiate/wait/cleanup dispatcher. Knows nothing
   about any individual `Encounter`'s presentation — see "Encounter/EncounterPlayer" below.
 - `Global/Campaign/EncounterListSO.cs` — `List<EncounterSO> encounters`, the ordered campaign
@@ -465,20 +466,15 @@ public abstract class Encounter : MonoBehaviour
 }
 ```
 
-`LoadoutEncounter` still owns its own presentation entirely (it's simple enough — no `RunState`
-mutation, click-anywhere completion — that it doesn't need the backend/view split, rule 28).
-`RewardEncounter` instead splits into a headless-testable backend plus a paired
-`RewardEncounterView` that owns all the UI; `EncounterPlayer` itself still has no
-`messageText`/`claimButton` fields of its own:
+Both `RewardEncounter` and `LoadoutPickEncounter` split into a headless-testable backend plus a
+paired `<Name>View` that owns all the UI (rule 28); `EncounterPlayer` itself still has no
+`messageText`/`claimButton`-style fields of its own for either. (Rule 28's carve-out for a
+genuinely simple, no-split `Encounter` — no real `RunState` mutation, trivial completion — has no
+live example in this codebase right now; every current `Encounter` subclass has real state to
+manage. Reach for that carve-out again the next time a genuinely trivial one-off pick screen shows
+up.) `RewardEncounter`, the existing worked example:
 
 ```csharp
-public class LoadoutEncounter : Encounter
-{
-    [SerializeField] private TMP_Text messageText;
-    public override void Play(EncounterSO data) => messageText.text = ((LoadoutPickSO)data).briefingText;
-    void Update() { if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) Complete(); }
-}
-
 public class RewardEncounter : Encounter
 {
     public RewardPickSO Data { get; private set; }
@@ -543,8 +539,9 @@ public class RewardEncounterView : MonoBehaviour
 }
 ```
 
-- **`LoadoutEncounter` completes on a mouse click anywhere** — a click, not `Keyboard.current.anyKey`
-  as an earlier version had it.
+- **`LoadoutPickEncounter` (backend) completes *only* via `Confirm()`**, same as `RewardEncounter` —
+  browsing/comparing/swapping slots never completes the encounter by itself, only clicking Finish
+  does. See `docs/Loadout.md` for the full `SlotKind`/`SlotRef`-addressed API.
 - **`RewardEncounter` (backend) completes *only* via `Confirm()`** — deliberately not click-anywhere,
   so a stray selection change alone can't grant a reward early. The guaranteed energy reward is
   applied and saved immediately in `Play()`; `Confirm()` (called by `RewardEncounterView` from the
@@ -627,15 +624,15 @@ previous real fight. Harmless — nothing meaningfully reads either during a pic
 self-correct the moment the next `FightSO` loads — but worth knowing if `CurrentFight` ever looks
 "wrong" mid pick-screen in the Inspector.
 
-**Narrowed gap: `RewardEncounter`'s core logic is now headlessly drivable (CLAUDE.md rule 28), but
-the placeholder `LoadoutEncounter` and the full campaign-automation path are not.**
-`RewardEncounter` (the backend) can be driven in complete isolation — a bare `GameObject`,
-`AddComponent<RewardEncounter>()`, `Headless = true`, `Play()`/`SelectReward()`/`Confirm()` called
-directly, no prefab/UI/`EncounterPlayer` involved at all — proving `RunState` mutates and
-`OnCompleted` fires with zero visuals (see `docs/Rewards.md`'s verification steps). What's still an
-accepted gap: the placeholder `LoadoutEncounter` (click-anywhere, no backend split — see rule 28's
-"simple `Encounter`s... don't need this split" carve-out) still has no headless equivalent, and
-neither does the full `EncounterPlayer`/`MapManager`/`MapScene` reveal-sequence automation path —
+**Narrowed gap: `RewardEncounter`'s and `LoadoutPickEncounter`'s core logic are both headlessly
+drivable (CLAUDE.md rule 28), but the full campaign-automation path is not.**
+Both backends can be driven in complete isolation — a bare `GameObject`,
+`AddComponent<RewardEncounter>()`/`AddComponent<LoadoutPickEncounter>()`, `Headless = true`,
+`Play()` + their respective methods (`SelectReward()`/`Confirm()`, or
+`SelectSlot()`/`SelectCandidate()`/`Swap()`/`Confirm()`) called directly, no prefab/UI/
+`EncounterPlayer` involved at all — proving `RunState` mutates and `OnCompleted` fires with zero
+visuals (see `docs/Rewards.md`'s and `docs/Loadout.md`'s verification steps). What's still an
+accepted gap: the full `EncounterPlayer`/`MapManager`/`MapScene` reveal-sequence automation path —
 driving an actual campaign run end-to-end headlessly still requires
 `CampaignManager.ProcessAllEncountersInBattleScene` (see "Debug: single-scene automation" above),
 unchanged by this work. Battle/roll resolution itself has the same kind of gap, one level down — see
@@ -756,21 +753,22 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
   override re-apply on later scene transitions.
 - `Global/EncounterPlayer` (`EncounterPlayer` component, `encounterParent` optionally wired to a
   scene parent transform — left `None` is fine) stays in `BattleScene.unity`, used only under the
-  `ProcessAllEncountersInBattleScene` debug flag (it no-ops for a `FightSO`, which is the only thing
-  `CurrentEncounter` is ever allowed to be in `BattleScene` outside that flag). `MapScene.unity` gets
-  its own `MapManager` GameObject (`MapManager` component, `encounterParent` similarly optional) —
+  `ProcessAllEncountersInBattleScene` debug flag — it now explicitly self-gates on that flag (see the
+  Gotchas entry below on why "it no-ops for a `FightSO`" alone wasn't actually enough). `MapScene.unity`
+  gets its own `MapManager` GameObject (`MapManager` component, `encounterParent` similarly optional) —
   see "`MapEncounterPoint` and `MapManager`" above.
-- `_Prefabs/Campaign/LoadoutEncounter.prefab` (`Canvas` + tint `Image` + `TMP_Text`,
-  `LoadoutEncounter` component) and `_Prefabs/Campaign/RewardEncounter.prefab` (same, plus a Claim
-  `Button`, three `cardSlots` anchors (`CardSlot1`/`CardSlot2`/`CardSlot3`, each holding a disabled
-  placeholder card — CLAUDE.md's anchor+disabled-template rule) and `cardPrefab`
-  (`_Prefabs/UI/Cards/RewardCard.prefab`) for the 3 drawn reward cards — see `docs/Rewards.md`) — each
-  is a fully self-contained `Canvas` (own `CanvasScaler`/`GraphicRaycaster`, `sortingOrder 5`),
-  instantiated fresh by whichever dispatcher is active (`EncounterPlayer` or `MapManager`) and
-  destroyed on completion, never left placed in a scene. **`RewardEncounter.prefab`'s root GameObject
-  carries both the `RewardEncounter` (backend) and `RewardEncounterView` (UI) components** (rule 28)
-  — the `messageText`/`claimButton`/`cardSlots`/`cardPrefab` references live on `RewardEncounterView`,
-  not `RewardEncounter`.
+- `_Prefabs/Campaign/LoadoutEncounter.prefab` (`Canvas`, 9 equipped-slot anchors, an Available pool
+  grid, a Comparison panel, Swap/Finish buttons — see `docs/Loadout.md`'s Editor setup checklist)
+  and `_Prefabs/Campaign/RewardEncounter.prefab` (`Canvas` + tint `Image`, a Claim `Button`, three
+  `cardSlots` anchors (`CardSlot1`/`CardSlot2`/`CardSlot3`, each holding a disabled placeholder card
+  — CLAUDE.md's anchor+disabled-template rule) and `cardPrefab` (`_Prefabs/UI/Cards/RewardCard.prefab`)
+  for the 3 drawn reward cards — see `docs/Rewards.md`) — each is a fully self-contained `Canvas` (own
+  `CanvasScaler`/`GraphicRaycaster`, `sortingOrder 5`), instantiated fresh by whichever dispatcher is
+  active (`EncounterPlayer` or `MapManager`) and destroyed on completion, never left placed in a
+  scene. **Both prefabs' root GameObjects carry both their backend and paired `<Name>View`
+  components** (rule 28) — `LoadoutEncounter.prefab` carries `LoadoutPickEncounter` +
+  `LoadoutPickEncounterView`, `RewardEncounter.prefab` carries `RewardEncounter` +
+  `RewardEncounterView` — every UI reference lives on the `View` component, never the backend.
 - `LoadoutPickSO`/`RewardPickSO` assets need their `EncounterPrefab` field wired to the matching
   prefab above (`FightSO` assets leave it unset).
 - `_Prefabs/Map/MapEncounterPoint.prefab` needs a `MapEncounterPoint` component, its
@@ -793,7 +791,7 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
 ## Gotchas
 
 - **Every scene with clickable UGUI needs its own `EventSystem` GameObject — it doesn't carry over
-  between scenes.** Caught live: `MapScene`'s `LoadoutEncounter`/`RewardEncounter` panels have a real
+  between scenes.** Caught live: `MapScene`'s `LoadoutPickEncounter`/`RewardEncounter` panels have a real
   `Canvas`/`GraphicRaycaster`/`Button` (see above), but with no `EventSystem` anywhere in `MapScene`,
   `EventSystem.current` was `null` and clicks were never routed to the Button at all — the panel looked
   interactive but silently ignored every click. `BattleScene` already has one; `MapScene` didn't, since
@@ -825,13 +823,41 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
   above, before it was fixed) and never reset, a fresh Play without an override will correctly
   resume from that saved index, not restart at encounter 0. Use `CampaignProgressTool`'s "Start New
   Run" or `CampaignDebugTool`'s "Clear Saved Run" button to get back to a genuinely fresh state.
+- **A pick screen could briefly flash inside `BattleScene` before `MapScene`'s reveal sequence ever
+  ran — a real, live-caught race between two components' `Start()`.** Whenever `BattleScene` loads (or
+  the Editor session boots directly into it) with `CurrentEncounter` already a `LoadoutPickSO`/
+  `RewardPickSO` (not a `FightSO`), `CampaignStateManager.EnterBattleScene()` redirects to `MapScene`
+  via `SceneManager.LoadScene(SceneNames.MapScene)` — but that call doesn't halt the rest of
+  `BattleScene`'s `Start()` phase for the current frame; Unity gives no ordering guarantee between two
+  different components' `Start()` methods beyond Script Execution Order (`CampaignStateManager` is
+  `-100`, `EncounterPlayer` is default order, so `CampaignStateManager`'s runs first — but that's not
+  the problem). `EncounterPlayer.Start()` still runs later the same frame, sees `CurrentEncounter` is
+  still that same pick screen (its own `EncounterPrefab` is assigned — has to be, so it also works
+  under `ProcessAllEncountersInBattleScene`), and its old guard (`encounterSO == null ||
+  encounterSO.EncounterPrefab == null`) didn't catch this — so it instantiated the pick screen right
+  there in `BattleScene`, a couple of seconds before `MapScene`'s own correct
+  `StartCurrentEncounter()` instantiation. Visually: the pick screen flashes up immediately, vanishes
+  when `BattleScene` unloads a moment later, then the map's reveal animation plays, then the *real*
+  pick screen instance appears from `MapManager`. Fixed by giving `EncounterPlayer.RefreshForCurrentEncounter()`
+  the same explicit guard `CampaignStateManager.EnterBattleScene()` already uses (`!ProcessAllEncountersInBattleScene
+  && CurrentEncounter is not FightSO → return`) instead of relying on the *assumption* that
+  `CurrentEncounter` would always already be a `FightSO` by the time this runs outside the debug flag —
+  the same self-gating shape as `RollStateManager.ActivateSlotMachine()`'s own `FightSO` gate
+  (`docs/SlotMachine.md`), for the identical underlying reason: don't trust cross-component `Start()`
+  ordering, make the component provably inert on its own terms. Reproduced and verified live via
+  temporary `Time.realtimeSinceStartup`-stamped logging across `CampaignStateManager.EnterBattleScene`/
+  `EncounterPlayer.RefreshForCurrentEncounter`/`MapManager`'s reveal chain/`LoadoutPickEncounterView.Awake`
+  — confirmed the premature `BattleScene`-side instantiation before the fix, confirmed the guard
+  correctly short-circuits it (with the sole real instantiation now happening in `MapScene`, after the
+  full reveal sequence) after.
 
 ## `MapScene`
 
 `Assets/Game/_Scenes/MapScene.unity` sits between battles — the pre-battle loadout and post-battle
-reward pick screens now actually play there (still the same `LoadoutEncounter`/`RewardEncounter`
-prefabs, same tint/message/Claim button — this system doesn't change their presentation, only where
-they're shown), and it's the scene that visually shows campaign progress as points on a path. Campaign
+reward pick screens now actually play there (the same `LoadoutEncounter.prefab`/`RewardEncounter.prefab`
+assets — see `docs/Loadout.md`/`docs/Rewards.md` — this system doesn't change their presentation,
+only where they're shown), and it's the scene that visually shows campaign progress as points on a
+path. Campaign
 navigation still isn't player-driven choice yet — `EncounterListSO` stays a flat linear list, walked
 in order; `MapScene` visualizes that order rather than letting the player pick a branch.
 `CampaignManager`/`CampaignStateManager` both work from it exactly as designed for (they're
@@ -933,3 +959,5 @@ would run the round loop in place — `MapScene` never loads for either encounte
 - `docs/Rewards.md` — the reward-card pick `RewardEncounter` now offers alongside its guaranteed
   energy reward: `RewardSO` hierarchy, `RewardListSO`, `RewardDrawer`'s draw algorithm,
   `RewardBonuses`' resolver-side stat-boost hook.
+- `docs/Loadout.md` — the pre-battle loadout picker `LoadoutPickSO`/`LoadoutPickEncounter` play:
+  `SlotKind`/`SlotRef` addressing, `MiniCard`, `LoadoutPickEncounterView`.

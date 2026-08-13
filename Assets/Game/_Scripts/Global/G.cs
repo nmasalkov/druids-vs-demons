@@ -10,6 +10,9 @@ public class G : MonoBehaviour
     [SerializeField] private CreaturesSO defaultCreatures;
     [SerializeField] private NukesSO defaultNukes;
     [SerializeField] private SpellsSO defaultSpells;
+    [SerializeField] private CreaturesSO enemyCreatures;
+    [SerializeField] private NukesSO enemyNukes;
+    [SerializeField] private SpellsSO enemySpells;
     [SerializeField] private HeroView playerView;
     [SerializeField] private HeroView enemyView;
     [SerializeField] private bool testMode = true;
@@ -17,6 +20,9 @@ public class G : MonoBehaviour
     public static CreaturesSO DefaultCreatures => Instance.defaultCreatures;
     public static NukesSO DefaultNukes => Instance.defaultNukes;
     public static SpellsSO DefaultSpells => Instance.defaultSpells;
+    public static CreaturesSO EnemyCreatures => Instance.enemyCreatures;
+    public static NukesSO EnemyNukes => Instance.enemyNukes;
+    public static SpellsSO EnemySpells => Instance.enemySpells;
     public static RewardListSO RewardList => CampaignStateManager.Instance.RewardList;
     public static HeroView PlayerView => Instance.playerView;
     public static HeroView EnemyView => Instance.enemyView;
@@ -33,10 +39,12 @@ public class G : MonoBehaviour
     }
 
     /// <summary>
-    /// Overrides the default creature/nuke/spell loadout with a campaign-resolved one. Called
-    /// by CampaignStateManager when a run is active and BattleScene loads; if CampaignStateManager
-    /// is absent from the scene, G keeps using its own Inspector-wired defaults untouched. See
-    /// docs/G.md.
+    /// Overrides the default creature/nuke/spell loadout with a campaign-resolved one — the
+    /// player's pool only (Instance.defaultCreatures/defaultNukes/defaultSpells; SlotMachine's
+    /// enemy instance reads Instance.enemyCreatures/enemyNukes/enemySpells instead, which this
+    /// never touches). Called by CampaignStateManager when a run is active and BattleScene loads;
+    /// if CampaignStateManager is absent from the scene, G keeps using its own Inspector-wired
+    /// defaults untouched. See docs/G.md.
     /// </summary>
     public static void ApplyCampaignLoadout(CreaturesSO creatures, NukesSO nukes, SpellsSO spells)
     {

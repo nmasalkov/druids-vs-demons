@@ -42,8 +42,9 @@ Stopping, Bouncing }`, private, in `SlotColumn.Mechanics.cs`):
 
 1. `StartSpin()` → `PickRandomWinningAction()` picks a random option from
    `SlotMachine.GetActionOptions()` (the 3 SOs for the machine's current `RollType`, sourced from
-   `G.DefaultCreatures`/`G.DefaultNukes`/`G.DefaultSpells`) and stores it as `WinningAction`. State →
-   `Spinning`.
+   `G.DefaultCreatures`/`G.DefaultNukes`/`G.DefaultSpells` if this instance's `isPlayerMachine` is
+   true, else `G.EnemyCreatures`/`G.EnemyNukes`/`G.EnemySpells` — see `docs/G.md`'s Gotchas for why
+   the two sides don't share a pool) and stores it as `WinningAction`. State → `Spinning`.
 2. While `Spinning`, `UpdateSpinning()` scrolls the column via `Spin(speed)`, which moves
    `columnContainer` down by `speed * Time.deltaTime` and recycles the bottom card to the top every
    `CellHeight` (150px) of travel — an infinite scroll illusion over a fixed pool of `CardCount = 30`
@@ -169,6 +170,10 @@ system's delays go through `Utils.DoAfterDelay`, which was changed this session 
 
 ## Gotchas
 
+- **Player and enemy roll from separate pools, via `SlotMachine`'s own `isPlayerMachine` flag** — not
+  derived from `GameManager.ActiveSide`. See `docs/G.md`'s Gotchas for the live-caught bug this fixes
+  (a campaign loadout pick used to leak into the enemy's roster) and the Editor-setup expectation for
+  any new `SlotMachine` instance.
 - **AI never rerolls.** `AIRollController.Decide()` always returns `FinishRoll`; the enemy always
   locks in its first stop. If you implement real reroll AI, wire the `PostRollSlot1/2/3` cases in
   `AIController.HandlePostRolls` to call the matching column's reroll (there's no direct

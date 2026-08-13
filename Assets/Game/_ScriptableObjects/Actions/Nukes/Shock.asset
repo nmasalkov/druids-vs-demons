@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: shock
   actionName: Shock
+  description: Zaps the enemy shield or hero with a jolt of lightning damage.
   cardSprite: {fileID: 21300000, guid: 0e88a911e8a24914c998e8dacc41ac9e, type: 3}
   damagePerLevel:
   - 14

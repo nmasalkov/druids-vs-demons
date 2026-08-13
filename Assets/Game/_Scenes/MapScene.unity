@@ -1653,8 +1653,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: efea1da4384f37e468ff170559868e10, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useExternalSave: 0
-  externalSaveJson: '{"saveVersion":1,"maxHp":100,"energyCapacity":50,"currentEnergy":50,"archerId":"archer","tankId":"tank","mageId":"mage","nukeAId":"firemagic","nukeBId":"starfall","nukeCId":"shock","spellAId":"battlecry","spellBId":"charm","spellCId":"shield","currentEncounterIndex":1}'
+  useExternalSave: 1
+  externalSaveJson: "{\n    \"saveVersion\": 1,\n    \"maxHp\": 100,\n    \"energyCapacity\":
+    50,\n    \"currentEnergy\": 70,\n    \"archerId\": \"archer\",\n    \"tankId\":
+    \"tank\",\n    \"mageId\": \"mage\",\n    \"nukeAId\": \"firemagic\",\n    \"nukeBId\":
+    \"starfall\",\n    \"nukeCId\": \"shock\",\n    \"spellAId\": \"battlecry\",\n   
+    \"spellBId\": \"charm\",\n    \"spellCId\": \"shield\",\n    \"currentEncounterIndex\":
+    3,\n    \"statusRewardIds\": [],\n    \"boostRewardIds\": [],\n    \"gatheredCreatureIds\":
+    [\n        \"archer\",\n        \"tank\",\n        \"mage\",\n        \"tank_big\"\n   
+    ],\n    \"gatheredNukeIds\": [\n        \"firemagic\",\n        \"starfall\",\n       
+    \"shock\"\n    ],\n    \"gatheredSpellIds\": [\n        \"battlecry\",\n       
+    \"charm\",\n        \"shield\"\n    ]\n}"
   useDebugProfile: 0
   debugProfile: {fileID: 0}
   overrideMaxHp: 0
@@ -1687,6 +1696,10 @@ MonoBehaviour:
   boostRewards: []
   overrideGatheredCreatures: 0
   gatheredCreatures: []
+  overrideGatheredNukes: 0
+  gatheredNukes: []
+  overrideGatheredSpells: 0
+  gatheredSpells: []
 --- !u!4 &2131214862
 Transform:
   m_ObjectHideFlags: 0

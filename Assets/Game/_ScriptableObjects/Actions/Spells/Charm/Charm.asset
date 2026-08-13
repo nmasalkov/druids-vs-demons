@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: charm
   actionName: Charm
+  description: A chance to hack an enemy creature, turning it to fight for your side.
   cardSprite: {fileID: 21300000, guid: 5523ebed68f9a82479f223b6cb082b82, type: 3}
   animationPrefab: {fileID: 2913066308180658946, guid: 0a7cb8bf68db31c439b63a4ad5c6955a, type: 3}
   chancePerLevel:

@@ -37,6 +37,11 @@ public class RollStateManager : MonoBehaviour
 
     public event Action OnRollFinished;
 
+    /// <summary>Which side's machine is active right now, tracking GameManager.ActiveSide live —
+    /// one source of truth, never a separately-cached field.</summary>
+    public SlotMachine ActiveMachine =>
+        GameManager.Instance.ActiveSide == ActiveSide.Player ? playerSlotMachine : enemySlotMachine;
+
     public struct SpawnEntry
     {
         public CreatureSO Creature;
@@ -90,13 +95,7 @@ public class RollStateManager : MonoBehaviour
         // inactive GameObject, so this keeps the slot machine (and RollState, which waits on it)
         // genuinely inert rather than just visually hidden. See docs/Encounters.md.
         if (CampaignManager.Instance.CurrentEncounter is not FightSO) return;
-
-        var isPlayer = GameManager.Instance.ActiveSide == ActiveSide.Player;
-        var machine = isPlayer ? playerSlotMachine : enemySlotMachine;
-        machine.gameObject.SetActive(true);
-
-        if (!isPlayer)
-            Utils.DoAfterDelay.Execute(() => AIController.Instance.TakeControl(machine), 0f);
+        ActiveMachine.gameObject.SetActive(true);
     }
 
     private void HandleFinishRoll(List<ActionSO> actions, SlotMachine.RollType rollType)
@@ -104,12 +103,7 @@ public class RollStateManager : MonoBehaviour
         LastRollType = rollType;
         AnalyzeRoll(actions, rollType);
 
-        var isPlayer = GameManager.Instance.ActiveSide == ActiveSide.Player;
-        var activeMachine = isPlayer ? playerSlotMachine : enemySlotMachine;
-
-        if (!isPlayer)
-            AIController.Instance.ReleaseControl();
-
+        var activeMachine = ActiveMachine;
         activeMachine.gameObject.SetActive(false);
         activeMachine.ResetUI();
         OnRollFinished?.Invoke();

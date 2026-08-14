@@ -5,5 +5,6 @@ using UnityEngine;
 public class ShockSO : NukeSO
 {
     public override NukeResolver CreateResolver() => new ShockResolver();
+    public override ActionAIScorer CreateAIScorer() => new ShockAIScorer();
 }
 

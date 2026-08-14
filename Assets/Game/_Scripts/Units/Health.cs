@@ -80,6 +80,7 @@ public class Health : MonoBehaviour
     }
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
+    public float HealthPercent => maxHealth > 0 ? currentHealth / maxHealth : 0f;
     public bool IsDead()
     {
         return currentHealth <= 0;

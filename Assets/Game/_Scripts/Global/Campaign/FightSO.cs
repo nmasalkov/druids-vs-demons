@@ -12,6 +12,16 @@ public struct EnemyData
 {
     public GameObject enemyAvatarPrefab;
     public int hp;
+
+    [Tooltip("Weight (0-100) that the AI won't go with its calculated best decision and degrades to " +
+             "the next-best one instead (see AIDegrade). Decisions marked NO STUPID ignore this.")]
+    [Range(0, 100)] public int stupidityChance;
+    [Tooltip("Rolled only if stupidity triggers. If it also triggers, the AI picks a fully random " +
+             "option instead of degrading to the next-best one.")]
+    [Range(0, 100)] public int criticalFailureChance;
+    [Tooltip("Total rerolls the AI can spend across the WHOLE fight (not per turn) - depletes as it " +
+             "rerolls and never refills until the fight restarts. See docs/AI.md.")]
+    public int rerollsAmount;
 }
 
 /// <summary>

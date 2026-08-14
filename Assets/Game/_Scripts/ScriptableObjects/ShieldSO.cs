@@ -31,5 +31,6 @@ public class ShieldSO : SpellSO
     public Shield GetPrefab(bool isPlayer) => isPlayer ? playerShieldPrefab : enemyShieldPrefab;
 
     public override SpellResolver CreateResolver() => new ShieldResolver();
+    public override ActionAIScorer CreateAIScorer() => new ShieldAIScorer();
 }
 

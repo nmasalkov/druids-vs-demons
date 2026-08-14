@@ -13,6 +13,10 @@ namespace Game._Scripts.Global
         public ActiveSide ActiveSide { get; private set; } = ActiveSide.Player;
         public void SetActiveSide(ActiveSide side) => ActiveSide = side;
 
+        /// <summary>True during round 1 — read by ShouldSummonCreaturesDecision's NO-STUPID
+        /// first-turn rule (see docs/AI.md).</summary>
+        public bool IsFirstRound { get; private set; } = true;
+
         public int Generation { get; private set; }
         public static bool IsStale(int capturedGeneration) => capturedGeneration != Instance.Generation;
 
@@ -52,12 +56,11 @@ namespace Game._Scripts.Global
         {
             yield return Run(new GameStartState());
 
-            bool firstRound = true;
             while (!_gameOver)
             {
                 // Player turn. On round 1 the post-turn battle is skipped — the player just
                 // summoned units and shouldn't immediately attack.
-                yield return PlaySide(ActiveSide.Player, runBattleAfter: !firstRound);
+                yield return PlaySide(ActiveSide.Player, runBattleAfter: !IsFirstRound);
                 if (_gameOver) yield break;
 
                 // Enemy turn. Battle always runs after, including on round 1.
@@ -65,7 +68,7 @@ namespace Game._Scripts.Global
                 if (_gameOver) yield break;
 
                 yield return Run(new EndOfRoundState());
-                firstRound = false;
+                IsFirstRound = false;
             }
         }
 
@@ -180,6 +183,7 @@ namespace Game._Scripts.Global
             _currentState = null;
             _gameOver = false;
             SetActiveSide(ActiveSide.Player);
+            IsFirstRound = true;
 
             OnBattleRestart?.Invoke();
 

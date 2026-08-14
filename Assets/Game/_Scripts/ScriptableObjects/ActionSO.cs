@@ -22,5 +22,12 @@ public abstract class ActionSO : ScriptableObject
     /// override on Nuke/Spell-like SOs. Creature rolls don't use this path.
     /// </summary>
     public virtual ActionResolver CreateAndResolve(ActionContext ctx, int level) => null;
+
+    /// <summary>
+    /// Creates the enemy-AI scorer for this action (see docs/AI.md). Default is a no-op (score 0);
+    /// override on a NukeSO/SpellSO to plug it into the AI's scoring system. Creature rolls don't
+    /// use this — creature-type preference is its own decision, not scored per-SO.
+    /// </summary>
+    public virtual ActionAIScorer CreateAIScorer() => new NoOpActionAIScorer();
 }
 

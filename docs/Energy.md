@@ -46,9 +46,10 @@ it's genuinely `EnergyController`-owned state with no campaign-persistence conce
   changes nothing if the player can't afford it — `SlotColumn.OnRerollClicked` treats that as a
   no-op.
 - The cost resets back to `baseRerollCost` on `RollStateManager.Instance.OnRollFinished` — i.e.
-  whenever a roll phase (`RollState`) ends, for either side. Only the player ever actually rerolls
-  today (`AIController`'s reroll decision is a stub, see `docs/SlotMachine.md`), so resetting
-  unconditionally on both sides' roll-finish is harmless and avoids tracking whose turn it was.
+  whenever a roll phase (`RollState`) ends, for either side. The AI does reroll, but through its own
+  fight-wide reroll pool (`docs/AI.md`), never through `EnergyController` — so resetting the player's
+  cost unconditionally on both sides' roll-finish is still harmless and avoids tracking whose turn
+  it was.
 
 ## UI wiring
 

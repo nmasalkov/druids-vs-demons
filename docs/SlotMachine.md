@@ -19,8 +19,12 @@ match counts) that `GameManager`'s `RollState`/`ActionState` machinery consumes 
 - `Assets/Game/_Scripts/SlotMachine/Card.cs` — trivial sprite holder for one visible card cell.
 - `Assets/Game/_Scripts/Global/RollStateManager/RollStateManager.cs` — owns both `SlotMachine`
   instances (player/enemy), turns a finished roll into `SpawnEntries`/`NukeEntries`/`SpellEntries`.
-- `Assets/Game/_Scripts/AI/AIController.cs` — takes/releases control of the enemy's `SlotMachine`.
-- `Assets/Game/_Scripts/AI/AIRollController.cs` — the actual "AI" decision (currently a stub).
+  Exposes `ActiveMachine`, a computed property tracking `GameManager.ActiveSide` live.
+- `Assets/Game/_Scripts/Global/GameManager/RollState.cs` — for the AI-controlled side, this is the
+  orchestrator that asks `AI/AIController.cs` for decisions and executes them (`SetRollType`/
+  `StartAll`/`StopAll`/`TriggerReroll`/`FinishRoll`) — see `docs/AI.md`.
+- `Assets/Game/_Scripts/AI/AIController.cs` — the enemy AI's decision service. Never calls into
+  `SlotMachine`/`SlotColumn` itself; see `docs/AI.md`.
 
 ## `RollType` / `MachineState`
 
@@ -102,10 +106,10 @@ Stopping, Bouncing }`, private, in `SlotColumn.Mechanics.cs`):
 (a `LoadoutPickSO`/`RewardPickSO` pick screen, see `docs/Encounters.md`) it does nothing and returns.
 This isn't optional polish: `SlotMachine.Update()` reads `Keyboard.current.spaceKey` directly to
 start/stop the reel, bypassing UI raycast blocking entirely, so a pick screen's overlay alone
-couldn't stop a stray Space press from spinning reels behind it. Otherwise, it activates whichever
-side's machine matches `GameManager.Instance.ActiveSide`; if it's the enemy, it also queues
-`AIController.Instance.TakeControl(machine)` via a zero-delay `Utils.DoAfterDelay.Execute` (so it runs
-after the current frame's activation settles).
+couldn't stop a stray Space press from spinning reels behind it. Otherwise, it just activates
+`ActiveMachine` (a computed property tracking `GameManager.Instance.ActiveSide` live) — driving the
+AI's turn from there on is `RollState`'s job, not `RollStateManager`'s (see "AI control of the enemy
+machine" below and `docs/AI.md`).
 
 `HandleFinishRoll(actions, rollType)` (subscribed to both machines' `OnFinishRollCompleted`):
 1. Stores `LastRollType`.
@@ -117,28 +121,37 @@ after the current frame's activation settles).
    - `NukeEntry`/`SpellEntry` both implement `IActionEntry` (`Source => Nuke/Spell`, `Level =>
      Count`) — this is the shared shape `ActionState.PlayEntries<TEntry>` consumes; see
      `docs/ActionsAndSpells.md`.
-3. If the enemy just rolled, releases AI control (`AIController.Instance.ReleaseControl()`).
-4. Deactivates and `ResetUI()`s the machine that just finished, then fires `OnRollFinished`.
+3. Deactivates and `ResetUI()`s the machine that just finished (`ActiveMachine`, same computed
+   property), then fires `OnRollFinished`.
 
 `TripleRolled` is read by `GameManager.TakeTurn()` to decide whether to immediately re-roll and
 replay the action (see `docs/GameLoop.md`).
 
 ## AI control of the enemy machine
 
-`AIController` (singleton, `Instance` set in `Awake()`) is the enemy's stand-in "player":
+`RollState` (`Global/GameManager/RollState.cs`) is the orchestrator for the AI-controlled side —
+`AIController` itself never touches `SlotMachine`/`SlotColumn` (see `docs/AI.md` for the full
+architectural principle). When the active side is `Enemy` and the current encounter is a `FightSO`,
+`RollState.BeginAITurn()`:
 
-- `TakeControl(slotMachine)` stores `_targetMachine`, subscribes to its `OnPostRollsEnter`, calls
-  `StartAll()` to begin spinning, and schedules an unconditional auto-stop after **2 seconds**
-  (`Utils.DoAfterDelay.Execute(() => { if (_targetMachine != null) _targetMachine.StopAll(); }, 2f)`)
-  — this is what makes the enemy "decide" to stop spinning without real input.
-- `HandlePostRolls()` (fired once the machine reaches `PostRolls`) asks
-  `AIRollController.Decide()` what to do. **`AIRollController.Decide()` is currently a stub that
-  always returns `AIRollDecision.FinishRoll`** — the `PostRollSlot1/2/3` reroll-decision branches in
-  `AIController.HandlePostRolls` are unimplemented (`// TODO: handle rerolls`), so the enemy never
-  rerolls today, it always finishes immediately after its first stop.
-- `ReleaseControl()` unsubscribes from `OnPostRollsEnter` and clears `_targetMachine`. Called both
-  normally (`RollStateManager.HandleFinishRoll`, right after the enemy's roll is analyzed) and on
-  battle restart (see below).
+1. Asks `AIController` for a roll-type + desired-action decision, calls the machine's
+   `SetRollType(type)` (a public entry point mirroring the player's button-driven `SwitchRollType`,
+   minus the button-debounce lock) and `StartAll()`.
+2. Schedules an unconditional auto-stop after **2 seconds** (`AIThinkDelay`) — same fixed spin
+   duration as before, just now owned by `RollState` instead of `AIController`.
+3. Subscribes to the machine's `OnPostRollsEnter` and `OnRerollResolved` (see below), both driving
+   the same `EvaluateReroll()` method: ask `AIController.DecideReroll(...)` for a `RerollChoice`, and
+   either call `Columns[choice.SlotIndex].TriggerReroll()` or `FinishRoll()`.
+
+`SlotMachine.Columns` (`IReadOnlyList<SlotColumn>`) and `SlotColumn.TriggerReroll()` (a public
+reroll entry point mirroring the player's `OnRerollClicked`, minus the energy gate — the AI spends
+its own fight-wide reroll pool instead, see `docs/AI.md`) are the two additions that make this
+possible; both exist solely for `RollState` to call, never `AIController`.
+
+`SlotMachine.OnRerollResolved` is new too: fired in `HandleColumnStopped()`'s `PostRolls` branch once
+`_rerollingCount` reaches 0 (i.e. every in-flight reroll has settled) and the result isn't a triple —
+previously nothing fired there at all, so nothing could react to "a reroll just finished, decide
+again." This is what lets the AI's reroll loop continue past the first reroll.
 
 ## Restart integration
 
@@ -151,22 +164,18 @@ its own reset method. In this system:
   `TripleRolled`/`LastRollType` to defaults, and `ResetUI()` + deactivates both slot machines
   (mirrors what `HandleFinishRoll` already does per-machine after a normal roll, just applied to
   both sides unconditionally).
-- `AIController` subscribes `ReleaseControl` directly (it already matches the required
-  parameterless-`void` signature).
-
-Both `ReleaseControl()` and the 2-second auto-stop closure in `TakeControl()` had to be made
-null-safe for this: previously `ReleaseControl()` assumed `_targetMachine` was always non-null
-(true under the old, only call site — right after `TakeControl` during the enemy's own roll), but a
-battle restart can now call `ReleaseControl()` at any time, including while the AI never took control
-at all this round (e.g. restart during the player's turn). Similarly the auto-stop closure now
-null-checks `_targetMachine` before calling `StopAll()` on it, since a restart's `ReleaseControl()`
-could null that field out before the 2-second timer fires.
+- `AIController` subscribes its private `ResetRerollPool` — re-seeds the fight-wide reroll pool from
+  `CampaignStateManager.Instance.CurrentFight.enemyData.rerollsAmount` (see `docs/AI.md`). No
+  `SlotMachine` reference to null out anymore — `RollState`'s own per-turn fields need no restart
+  handling at all, since a fresh `RollState` is `new`'d every turn and `GameManager.RestartBattle()`
+  already tears down the current state (`OnStateEnd()` → `RollState.OnExit()`, unsubscribing from
+  whichever machine it was driving) before firing `OnBattleRestart`.
 
 Separately (not a `OnBattleRestart` subscription, but relevant to this system's timing): all of this
-system's delays go through `Utils.DoAfterDelay`, which was changed this session from
-`WaitForSecondsRealtime` to `WaitForSeconds` — so `AIController`'s 2-second auto-stop and
-`RollStateManager.ActivateSlotMachine`'s zero-delay `TakeControl` scheduling now correctly respect
-`Time.timeScale`, meaning they freeze during the game's pause feature instead of ticking through it.
+system's delays go through `Utils.DoAfterDelay`, which was changed from `WaitForSecondsRealtime` to
+`WaitForSeconds` — so `RollState`'s 2-second AI auto-stop and its zero-delay `BeginAITurn` scheduling
+now correctly respect `Time.timeScale`, meaning they freeze during the game's pause feature instead
+of ticking through it.
 
 ## Gotchas
 
@@ -174,11 +183,10 @@ system's delays go through `Utils.DoAfterDelay`, which was changed this session 
   derived from `GameManager.ActiveSide`. See `docs/G.md`'s Gotchas for the live-caught bug this fixes
   (a campaign loadout pick used to leak into the enemy's roster) and the Editor-setup expectation for
   any new `SlotMachine` instance.
-- **AI never rerolls.** `AIRollController.Decide()` always returns `FinishRoll`; the enemy always
-  locks in its first stop. If you implement real reroll AI, wire the `PostRollSlot1/2/3` cases in
-  `AIController.HandlePostRolls` to call the matching column's reroll (there's no direct
-  `SlotColumn.Reroll()` public method today — `OnRerollClicked` is private and button-driven, so
-  you'd need to expose a public reroll entry point on `SlotColumn` first).
+- **The AI rerolls via a fight-wide budget, not per-turn energy** — see `docs/AI.md` for the full
+  reroll-budget/decision flow. `SlotColumn.TriggerReroll()` (public, ungated by
+  `EnergyController`) is the AI-only entry point; `OnRerollClicked` (private, player-only) still goes
+  through the energy gate as before — both funnel into the same private `StartReroll()`.
 - **Triple always short-circuits rerolling**, both on the initial stop and after any reroll settles —
   `IsTriple()` is checked in both branches of `HandleColumnStopped`, and a resulting `FinishRoll()`
   bypasses `PostRolls` entirely (no reroll buttons ever appear for a triple that's true from the

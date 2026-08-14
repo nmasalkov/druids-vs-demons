@@ -5,4 +5,5 @@ using UnityEngine;
 public class FireMagicSO : NukeSO
 {
     public override NukeResolver CreateResolver() => new FireMagicResolver();
+    public override ActionAIScorer CreateAIScorer() => new FireMagicAIScorer();
 }

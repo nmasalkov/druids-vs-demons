@@ -5,4 +5,5 @@ using UnityEngine;
 public class StarfallSO : NukeSO
 {
     public override NukeResolver CreateResolver() => new StarfallResolver();
+    public override ActionAIScorer CreateAIScorer() => new StarfallAIScorer();
 }

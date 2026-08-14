@@ -12,9 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 545cc407a1915d44080decac3f66031b, type: 3}
   m_Name: 2Battle
   m_EditorClassIdentifier: 
-  battleId: battle_2
+  encounterPrefab: {fileID: 0}
+  fightId: battle_2
   isTutorial: 0
   enemyData:
     enemyAvatarPrefab: {fileID: 1872679886176264211, guid: 5731c4e569c007e44a4435360fc81cd3, type: 3}
     hp: 20
-  energyReward: 60
+    stupidityChance: 20
+    criticalFailureChance: 15
+    rerollsAmount: 10

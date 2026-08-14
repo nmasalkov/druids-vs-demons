@@ -22,4 +22,5 @@ public class CharmSO : SpellSO
     public float GetStrength(Creature c) => c.Health.CurrentHealth + c.Experience.Level * levelStrengthWeight;
 
     public override SpellResolver CreateResolver() => new CharmResolver();
+    public override ActionAIScorer CreateAIScorer() => new CharmAIScorer();
 }

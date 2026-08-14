@@ -205,6 +205,10 @@ elapsed. With the guard, that resumed call is a silent no-op instead.
    rule — see GameLoop.md). If it only mutates existing creatures/heroes via shots (like Charm/
    BattleCry), no new restart wiring is needed — it's covered transitively by the existing
    `CreaturesManager.ResetAll()`/`HeroView.ClearShield()`/`Hero.InitHealth()` subscribers.
+7. Optional: give the enemy AI a reason to pick it. Write a scorer in `AI/Scoring/` subclassing
+   `ActionAIScorer` and override `CreateAIScorer()` on your SO to return it — one line, same shape as
+   step 3's `CreateResolver()`. Without this, the SO falls back to `NoOpActionAIScorer` (score 0
+   always), so the AI simply never picks it. See `docs/AI.md`.
 
 ## Related docs
 - [GameLoop.md](GameLoop.md) — round/state sequence, `Generation`/`IsStale` mechanism, `OnBattleRestart` event and its subscribers, pause menu.

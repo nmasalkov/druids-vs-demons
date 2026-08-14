@@ -99,6 +99,7 @@ here — this list is added to over time and can lag behind the actual `docs/` f
 | Encounters, campaign progress/navigation | [`docs/Encounters.md`](docs/Encounters.md) | `EncounterSO`/`FightSO`/`EncounterListSO`, `Encounter`/`EncounterPlayer`, `CampaignManager`, `CampaignProgressTool`, `HeroView.ReplaceHeroAvatar`, `LoadoutPickEncounter` |
 | Reward cards, boost rewards | [`docs/Rewards.md`](docs/Rewards.md) | `RewardSO`/`RewardListSO`, `RewardDrawer`, `RewardBonuses`, `RewardCard`/`RewardEncounter`/`RewardEncounterView` |
 | Pre-battle loadout picker | [`docs/Loadout.md`](docs/Loadout.md) | `LoadoutPickEncounter`, `LoadoutPickEncounterView`, `MiniCard`, `SlotKind`/`SlotRef` |
+| Enemy AI decision-making | [`docs/AI.md`](docs/AI.md) | `AIController`, `AI/Decisions/*`, `AI/Scoring/*`, `AIDegrade`, the fight-wide reroll pool, `RollState`'s AI orchestration |
 | Global service locator | [`docs/G.md`](docs/G.md) | `G`, `G.ApplyCampaignLoadout`, adding a new static accessor |
 
 **Keep these docs up to date** (rule 18 below): when a change alters how a documented system works
@@ -139,9 +140,10 @@ detail, worked example, and how to add a new nuke/spell:
 
 `SlotMachine.cs` drives a multi-column reel (`SlotColumn`) across three roll types
 (`RollType.Creature/Nuke/Spell`). `RollStateManager` consumes the finished roll
-(`OnFinishRollCompleted`) into typed entries (`IActionEntry`) that `ActionState` plays, and also drives
-`AIController`'s control of the enemy's machine. Full detail:
-[`docs/SlotMachine.md`](docs/SlotMachine.md).
+(`OnFinishRollCompleted`) into typed entries (`IActionEntry`) that `ActionState` plays. For the
+AI-controlled side, `RollState` (not `RollStateManager`) drives the machine — asking `AIController`
+for decisions and executing them itself; `AIController` never touches `SlotMachine` directly (see
+[`docs/AI.md`](docs/AI.md)). Full detail: [`docs/SlotMachine.md`](docs/SlotMachine.md).
 
 ### Units
 

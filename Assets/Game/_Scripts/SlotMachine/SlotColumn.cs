@@ -89,6 +89,22 @@ public partial class SlotColumn : MonoBehaviour
     {
         if (!_postRollsEnabled || _state != State.Idle) return;
         if (!EnergyController.Instance.TrySpendReroll()) return;
+        StartReroll();
+    }
+
+    /// <summary>
+    /// AI-driven reroll entry point — same spin-restart as a player's reroll click, minus the
+    /// energy gate (the AI spends its own fight-wide reroll pool instead, see AIController). Only
+    /// ever called by RollState, never by AIController itself. See docs/AI.md.
+    /// </summary>
+    public void TriggerReroll()
+    {
+        if (!_postRollsEnabled || _state != State.Idle) return;
+        StartReroll();
+    }
+
+    private void StartReroll()
+    {
         _isReroll = true;
         OnRerollStarted?.Invoke();
         StartSpin();

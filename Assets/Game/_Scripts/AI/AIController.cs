@@ -1,58 +1,57 @@
-﻿using Game._Scripts.Global;
+using System.Collections.Generic;
+using Game._Scripts.Global;
 using UnityEngine;
 
-public class AIController : MonoBehaviour
+/// <summary>
+/// The enemy AI's decision service (see docs/AI.md). Every Decide* method is a pure function of
+/// live game state — it never touches SlotMachine/SlotColumn or any UI, never subscribes to their
+/// events, and has no coroutines. RollState is the only thing that ever acts on a decision by
+/// calling into SlotMachine, the same way a player's UI click would.
+///
+/// The one piece of genuine state this class owns is the fight-wide reroll pool
+/// (RerollsRemaining/SpendReroll) — that's the AI's own resource, mirroring how EnergyController
+/// owns the player's energy, not a SlotMachine coupling.
+/// </summary>
+public partial class AIController : MonoBehaviour
 {
     public static AIController Instance { get; private set; }
+    private int _rerollsRemaining;
 
-    private readonly AIRollController _rollController = new();
-    private SlotMachine _targetMachine;
-
-    void Awake()
-    {
-        Instance = this;
-    }
+    void Awake() { Instance = this; }
 
     void Start()
     {
-        GameManager.OnBattleRestart += ReleaseControl;
+        ResetRerollPool();
+        GameManager.OnBattleRestart += ResetRerollPool;
     }
 
-    void OnDestroy()
+    void OnDestroy() { GameManager.OnBattleRestart -= ResetRerollPool; }
+
+    private void ResetRerollPool()
     {
-        GameManager.OnBattleRestart -= ReleaseControl;
+        var fight = CampaignStateManager.Instance.CurrentFight;
+        if (fight == null) return; // boot-time redirect race into a non-fight encounter, see docs/Campaign.md
+        _rerollsRemaining = fight.enemyData.rerollsAmount;
     }
 
-    public void TakeControl(SlotMachine slotMachine)
-    {
-        _targetMachine = slotMachine;
-        _targetMachine.OnPostRollsEnter += HandlePostRolls;
+    public static int RerollsRemaining => Instance._rerollsRemaining;
+    public static void SpendReroll() => Instance._rerollsRemaining = Mathf.Max(0, Instance._rerollsRemaining - 1);
 
-        _targetMachine.StartAll();
-        Utils.DoAfterDelay.Execute(() => { if (_targetMachine != null) _targetMachine.StopAll(); }, 2f);
-    }
+    public static bool RollForProbability(int successChancePercent) =>
+        Random.Range(0, 100) < successChancePercent;
 
-    public void ReleaseControl()
-    {
-        if (_targetMachine == null) return;
-        _targetMachine.OnPostRollsEnter -= HandlePostRolls;
-        _targetMachine = null;
-    }
+    public static bool DecideShouldSummonCreatures() => new ShouldSummonCreaturesDecision().Decide();
 
-    private void HandlePostRolls()
-    {
-        var decision = _rollController.Decide();
-        switch (decision)
-        {
-            case AIRollDecision.FinishRoll:
-                _targetMachine.FinishRoll();
-                break;
-            case AIRollDecision.PostRollSlot1:
-            case AIRollDecision.PostRollSlot2:
-            case AIRollDecision.PostRollSlot3:
-                // TODO: handle rerolls
-                break;
-        }
-    }
+    public static CreatureSO DecidePreferredCreatureType(CreatureSO excludeCreature = null) =>
+        new PreferredCreatureTypeDecision().Decide(excludeCreature);
+
+    public static ActionSO DecidePreferredNukeOrSpell(ActionSO excludeAction = null) =>
+        new PickActionDecision().Decide(excludeAction);
+
+    public static int DecideRerollBudget(IReadOnlyList<ActionSO> initialLandedSlots, ActionSO desiredAction) =>
+        new RerollBudgetDecision().Decide(initialLandedSlots, desiredAction);
+
+    public static RerollChoice DecideReroll(IReadOnlyList<ActionSO> currentSlots, ActionSO desiredAction,
+        int rerollsUsedSoFar, int rerollBudget) =>
+        new ShouldRerollDecision().Decide(currentSlots, desiredAction, rerollsUsedSoFar, rerollBudget);
 }
-

@@ -25,4 +25,5 @@ public class BattleCrySO : SpellSO
     }
 
     public override SpellResolver CreateResolver() => new BattleCryResolver();
+    public override ActionAIScorer CreateAIScorer() => new BattleCryAIScorer();
 }

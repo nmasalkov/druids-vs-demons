@@ -32,7 +32,10 @@ public class SlotMachine : MonoBehaviour
     public event Action OnSlotMachineStop;
     public event Action OnPostRollsEnter;
     public event Action OnPostRollsExit;
+    public event Action OnRerollResolved;
     public event Action<List<ActionSO>, RollType> OnFinishRollCompleted;
+
+    public IReadOnlyList<SlotColumn> Columns => columns;
 
     void Awake()
     {
@@ -98,15 +101,32 @@ public class SlotMachine : MonoBehaviour
         }
     }
 
+    private void ApplyRollType(RollType newType)
+    {
+        CurrentRollType = newType;
+        Reset();
+    }
+
+    /// <summary>
+    /// AI-driven roll-type entry point — same set-and-reshuffle as the player's type buttons, minus
+    /// the button-debounce lock (not relevant to a non-UI caller). Only ever called by RollState,
+    /// never by AIController itself. See docs/AI.md.
+    /// </summary>
+    public void SetRollType(RollType type)
+    {
+        if (_machineState != MachineState.FirstRoll) return;
+        if (type == CurrentRollType) return;
+        ApplyRollType(type);
+    }
+
     private void SwitchRollType(RollType newType)
     {
         if (_typeButtonsLocked) return;
         if (_machineState != MachineState.FirstRoll) return;
         if (newType == CurrentRollType) return;
 
-        CurrentRollType = newType;
+        ApplyRollType(newType);
         _typeButtonsLocked = true;
-        Reset();
         Utils.DoAfterDelay.Execute(() => _typeButtonsLocked = false, typeSwitchSettleDelay);
     }
 
@@ -216,6 +236,7 @@ public class SlotMachine : MonoBehaviour
                 }
 
                 TurnOnFinishButton();
+                OnRerollResolved?.Invoke();
             }
         }
     }

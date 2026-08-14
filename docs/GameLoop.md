@@ -115,9 +115,9 @@ static check.
 - `ActionState.CompleteWithCleanup()` checks `IsStale` before calling `CleanUpDeadCreatures()`
   (and again implicitly via the guarded `CompleteState()` call after it).
 - Outside `GameState`, several more sites capture a local `int generation` at schedule time and
-  check `GameManager.IsStale(generation)` inside the delayed closure: `AIController`'s 2-second
-  `_targetMachine.StopAll()` timer (guarded with a plain null-check on `_targetMachine` instead,
-  since the actual bug there is the field going null, not staleness — see below);
+  check `GameManager.IsStale(generation)` inside the delayed closure: `RollState`'s 2-second AI
+  auto-stop timer uses the state's own `IsStale` property directly (it's a `GameState`, so no
+  separate captured generation is needed — see `docs/AI.md`);
   `ExperienceManager.LaunchGemsToOwners()`'s per-gem flight closures (guarded twice: before
   `FlyTo`, and again before the arrival callback grants XP); and
   `CampaignManager.ResolveVictory()`/`ResolveDefeat()`'s 4-second post-battle delays (see
@@ -164,7 +164,7 @@ more):
 | `PlayerView/CreaturesManager.cs` | `ResetAll` | Destroys every creature in every slot (native + both charm slots per class), unconditionally, no death animation. |
 | `Global/RollStateManager/RollStateManager.cs` | `ResetForRestart` | Clears `SpawnEntries`/`NukeEntries`/`SpellEntries`, resets `TripleRolled`/`LastRollType`, resets both slot machines' UI and deactivates them. |
 | `Units/ExperienceManager.cs` | `ClearForRestart` | Destroys any in-flight XP gem GameObjects, clears `pendingXp`/`activeGems`, resets `gemsInFlight` — discards XP rather than granting it (contrast with `ResolveGemsInstant`, which grants). |
-| `AI/AIController.cs` | `ReleaseControl` | Releases AI control of a slot machine if it currently holds one (now null-guarded — restart can fire this when the AI isn't in control at all). |
+| `AI/AIController.cs` | `ResetRerollPool` | Re-seeds the AI's fight-wide reroll pool from the current fight's `enemyData.rerollsAmount`. See `docs/AI.md`. |
 | `Global/GameManager/EnergyController.cs` | `ResetForRestart` | Refills reroll energy to `CampaignStateManager.Instance.CurrentRun.currentEnergy` (read fresh, campaign-persistent — not a local baseline) and resets the reroll cost back to `baseRerollCost`. See `docs/Energy.md`. |
 
 Because subscribers are independent (none of them read another subscriber's post-reset state),
@@ -235,7 +235,12 @@ freeze correctly under `timeScale = 0`. `PauseMenuController.OnDestroy()` also r
   battle round still cannot run without visually spinning the reels. Confirmed while building the
   `RewardEncounter`/`LoadoutPickEncounter` backend/view split (CLAUDE.md rule 28, `docs/Rewards.md`,
   `docs/Encounters.md`) — flagged here as scope, not fixed: only the pick-screen encounters became
-  headlessly testable in that work, not the battle/roll loop itself.
-- **Round 1 skips the post-player-turn battle** (`runBattleAfter: !firstRound` in `RunGameLoop`) —
+  headlessly testable in that work, not the battle/roll loop itself. `docs/AI.md`'s enemy-AI decision/
+  execution split (decisions expressed purely in domain types, never touching a live `SlotMachine`)
+  is a step toward this gap without closing it — it makes a future `SlotMachine`/`SlotColumn`
+  backend/view split purely additive later, but that split itself still doesn't exist yet.
+- **Round 1 skips the post-player-turn battle** (`runBattleAfter: !IsFirstRound` in `RunGameLoop`) —
   the player just summoned units and shouldn't be attacked immediately; the enemy's turn always
-  runs battle after, including on round 1.
+  runs battle after, including on round 1. `IsFirstRound` (public property, reset to `true` in
+  `RestartBattle()`) is also what `docs/AI.md`'s `ShouldSummonCreaturesDecision` reads for its
+  NO-STUPID first-turn rule.

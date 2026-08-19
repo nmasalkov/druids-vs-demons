@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 627cf2d0e9775fd4f868e80739937166
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247968
+  packageName: Space Shooter Projectile 2.5D Part 1 Package
+  packageVersion: 1.3
+  assetPath: Assets/YelScryptFireStudio/SpaceShooterProjectile2.5DP1Pack/Demo/Scripts/ShooterController.cs
+  uploadId: 939838

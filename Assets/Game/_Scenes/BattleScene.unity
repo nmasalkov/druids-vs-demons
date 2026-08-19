@@ -617,12 +617,12 @@ MonoBehaviour:
   energyCapacity: 50
   overrideCurrentEnergy: 0
   currentEnergy: 50
-  overrideArcher: 0
-  archer: {fileID: 0}
-  overrideTank: 0
-  tank: {fileID: 0}
-  overrideMage: 0
-  mage: {fileID: 0}
+  overrideArcher: 1
+  archer: {fileID: 11400000, guid: 8f9dc4d91505f50498dec78225f51a0d, type: 2}
+  overrideTank: 1
+  tank: {fileID: 11400000, guid: 7f869f61ff861674a8189b55479f780b, type: 2}
+  overrideMage: 1
+  mage: {fileID: 11400000, guid: 5d6ab51110a7e264fa951b31f902bae2, type: 2}
   overrideNukeA: 0
   nukeA: {fileID: 0}
   overrideNukeB: 0

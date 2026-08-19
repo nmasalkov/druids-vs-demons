@@ -1,0 +1,129 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8207057134314863154
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 9
+--- !u!114 &-452319238134820495
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 639247ca83abc874e893eb93af2b5e44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 0
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: matS_Plasma_Flashes_01
+  m_Shader: {fileID: -6465566751694194690, guid: c7977f1cb926f2d47b60c8b2c50b142f, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _SURFACE_TYPE_TRANSPARENT
+  m_InvalidKeywords:
+  - _GRADIENTFROMALPHA
+  - _RECEIVE_SHADOWS_OFF
+  m_LightmapFlags: 2
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    RenderType: Transparent
+  disabledShaderPasses:
+  - DepthOnly
+  - SHADOWCASTER
+  - MOTIONVECTORS
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - Texture2D_45413cccfebd425b9f90c12e486e617d:
+        m_Texture: {fileID: 2800000, guid: 24956469b3813ff488bb10ff19ffd2a1, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: 24956469b3813ff488bb10ff19ffd2a1, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - Vector1_081a243a95aa40679beea81b027ae312: 35.7
+    - Vector1_38a5947fe8b2472b9a05de7f28a0ce72: -0.33
+    - Vector1_3c92328138214064908e809f3bb7f0ce: -0.27
+    - Vector1_4e63e8e9b7ed472d87def17207dce91d: 1.58
+    - Vector1_6acf204a751042daab33d2aba708ee5a: 1.58
+    - Vector1_a46154fdfdf04f04ac1793241ea44897: -0.33
+    - Vector1_ac688af688694da8a5190b81c85153f6: 0
+    - Vector1_dafd6e1b562e4ab891d5268e4c446e27: 0.653
+    - Vector1_e2031b3cc40b41f4a26abe9e0557a61a: 1
+    - Vector1_e484b68489e84d41a1acd97d4e082615: 1
+    - Vector1_eff14538ef2945f59c96c65ce72e20e2: 0
+    - _AlphaClip: 0
+    - _BUILTIN_AlphaClip: 0
+    - _BUILTIN_Blend: 0
+    - _BUILTIN_CullMode: 2
+    - _BUILTIN_DstBlend: 0
+    - _BUILTIN_QueueControl: -1
+    - _BUILTIN_QueueOffset: 0
+    - _BUILTIN_SrcBlend: 1
+    - _BUILTIN_Surface: 1
+    - _BUILTIN_ZTest: 4
+    - _BUILTIN_ZWrite: 0
+    - _BUILTIN_ZWriteControl: 0
+    - _Blend: 0
+    - _CastShadows: 0
+    - _Cull: 2
+    - _DstBlend: 10
+    - _GRADIENTFROMALPHA: 1
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    - _ReceiveShadows: 0
+    - _SrcBlend: 5
+    - _Surface: 1
+    - _WorkflowMode: 1
+    - _ZTest: 4
+    - _ZWrite: 0
+    - _ZWriteControl: 0
+    m_Colors:
+    - Color_1: {r: 2.670157, g: 0.09662972, b: 0, a: 0}
+    - Color_2: {r: 1.905882, g: 1.364706, b: 0.1019608, a: 0}
+    - Color_7ccd7ade58f2495db32be60a45fde162: {r: 1.905882, g: 1.364706, b: 0.1019608, a: 1}
+    - Color_aa90bb9502c54a85a9c087156b4590e8: {r: 2.670157, g: 0.09662972, b: 0, a: 1}
+    - Vector2_1d610850cf0e472fa005f1b3f101362d: {r: -0.5, g: -0.5, b: 0, a: 0}
+    - Vector2_249faddc9f984a1f884aa00124e521b7: {r: 0, g: 0, b: 0, a: 0}
+    - Vector2_58662161dc4045a3b71c00d9bfa941ed: {r: -0.45, g: 0, b: 0, a: 0}
+    - Vector2_8597e2ac4f494850b6403f539e4502e2: {r: 1, g: 1, b: 0, a: 0}
+    - Vector2_c9b311f9e10e479f88e746da1a91cb4b: {r: 1, g: 1, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

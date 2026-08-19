@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10f79816516741e1932bb7af24ebaa19, type: 3}
+  m_Name: Cyclop
+  m_EditorClassIdentifier: 
+  id: cyclop
+  actionName: Cyclop
+  description: A hulking stone guardian that soaks up damage on the front line.
+  cardSprite: {fileID: 2402802549048977719, guid: e98cbabc6a5414f4bbc998ad6753d8d2, type: 3}
+  creaturePrefab: {fileID: 9185453430373264063, guid: 8fa2fa45e68d11a43aa65950e014b0b3, type: 3}
+  levelStats:
+  - damage: 4
+    health: 36
+    numberOfAttacks: 1
+  - damage: 6
+    health: 46
+    numberOfAttacks: 1
+  - damage: 8
+    health: 56
+    numberOfAttacks: 1
+  - damage: 10
+    health: 66
+    numberOfAttacks: 1
+  experienceReward: 1e0000003c00000078000000f0000000
+  xpThresholds: 00000000780000004001000058020000
+  healAmounts:
+  - 3
+  - 7
+  - 10
+  - 24

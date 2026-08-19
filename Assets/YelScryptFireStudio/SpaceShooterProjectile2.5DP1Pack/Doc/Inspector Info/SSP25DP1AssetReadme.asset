@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ee6ec754a0d33549b4b08dcc5a259a9, type: 3}
+  m_Name: SSP25DP1AssetReadme
+  m_EditorClassIdentifier: 
+  icon: {fileID: 2800000, guid: 5c2f28be33fc12443aa585b10c9dc552, type: 3}
+  title: Space Shooter Projectile 2.5D Part 1 Package
+  sections:
+  - heading: 
+    text: This is a set of 2D projectiles with VFX, created for 2D and 2.5D space
+      shooter games. It adds more weapon variety and speed up development, thanks
+      to fast implementation and customization.
+    linkText: 
+    url: 
+  - heading: 'Docs: Online & Offline (PDF)'
+    text: See the PDF doc in the package folder and the latest docs online.
+    linkText: Open Online Docs
+    url: https://yelsfstudio.com/game-assets/space-shooter-projectile-2-5d-part-1-package/

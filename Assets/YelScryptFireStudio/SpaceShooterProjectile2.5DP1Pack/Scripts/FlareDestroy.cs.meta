@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: d6cbdaa454bfbb847808be64ad03a0c1
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247968
+  packageName: Space Shooter Projectile 2.5D Part 1 Package
+  packageVersion: 1.3
+  assetPath: Assets/YelScryptFireStudio/SpaceShooterProjectile2.5DP1Pack/Scripts/FlareDestroy.cs
+  uploadId: 939838

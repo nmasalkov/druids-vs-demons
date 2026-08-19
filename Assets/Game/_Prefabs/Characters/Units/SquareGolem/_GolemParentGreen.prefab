@@ -165,6 +165,18 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: 1.198
       objectReference: {fileID: 0}
+    - target: {fileID: 4132787669293337708, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4132787669293337708, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4132787669293337708, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4895468980909370703, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -172,6 +184,14 @@ PrefabInstance:
     - target: {fileID: 5356506428025112429, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: m_Name
       value: GolemParentGreen
+      objectReference: {fileID: 0}
+    - target: {fileID: 5590096604262324029, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5590096604262324029, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5966096744159500695, guid: d90e61ea68ce3ac4ba9da798f8ba8d88, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -247,6 +267,8 @@ MonoBehaviour:
   attack: Attack
   CurrentAnimation: 
   walk: Walk
+  runSpeed: 7
+  minRunDuration: 0.35
   rangedDelay: 2.5
   runDuration: 0.5
   returnDuration: 0.3

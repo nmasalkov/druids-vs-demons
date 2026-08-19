@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: eafd5b5d03a4a6a4a84eda812bde86d7
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 625f186215c104763be7675aa2d941aa, type: 3}
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247968
+  packageName: Space Shooter Projectile 2.5D Part 1 Package
+  packageVersion: 1.3
+  assetPath: Assets/YelScryptFireStudio/SpaceShooterProjectile2.5DP1Pack/Shaders/shad_Trails.shadergraph
+  uploadId: 939838

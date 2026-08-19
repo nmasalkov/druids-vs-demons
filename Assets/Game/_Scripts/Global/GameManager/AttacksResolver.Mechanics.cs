@@ -236,8 +236,12 @@ public partial class AttacksResolver
         var hits = BuildHitInfos(byAttacker[head.Attacker]);
         Action onHit = hits.Count > 0 ? hits[0].OnHit : null;
 
-        // One-way tank→tank: wait for the opponent tank to finish its own attack first.
-        if (head.Target is Unit { Animator: TankAnimator opponentTank })
+        // One-way tank→tank: wait for the opponent tank to finish its own attack first —
+        // but only if that opponent tank is actually attacking this round (has its own
+        // AttackAssignment). A shocked/otherwise-skipped opponent tank never leaves its slot,
+        // so it never fires OnLeapBackStarted — waiting on it would stall this tank forever.
+        if (head.Target is Creature { Animator: TankAnimator opponentTank } opponentCreature
+            && byAttacker.ContainsKey(opponentCreature))
         {
             tank.WaitThenAttack(head.Target, onHit);
             opponentTank.OnLeapBackStarted += tank.StartPendingAttack;

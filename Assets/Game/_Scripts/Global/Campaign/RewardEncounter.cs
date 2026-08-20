@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// Post-fight encounter backend: grants the guaranteed energy reward (RewardPickSO.energyReward)
+/// Post-fight encounter backend: grants the guaranteed energy reward (FightSO.rewardAmount)
 /// immediately, then offers 3 reward cards drawn by RewardDrawer — pick one, then Confirm to advance.
 /// Pure data/logic — no UI reference of any kind. Presentation (cards, buttons, discard animation)
 /// lives on the paired RewardEncounterView component (CLAUDE.md rule 28). Only Confirm() advances it
@@ -11,7 +11,7 @@ using System.Collections.Generic;
 /// </summary>
 public class RewardEncounter : Encounter
 {
-    public RewardPickSO Data { get; private set; }
+    public int RewardAmount { get; private set; }
     public IReadOnlyList<RewardSO> DrawnRewards { get; private set; }
     public RewardSO SelectedReward { get; private set; }
 
@@ -19,12 +19,12 @@ public class RewardEncounter : Encounter
     public event Action<RewardSO> OnSelectionChanged;
     public event Action OnClaimed;
 
-    public override void Play(EncounterSO data)
+    public void Play(int rewardAmount)
     {
-        Data = (RewardPickSO)data;
+        RewardAmount = rewardAmount;
         var run = CampaignStateManager.Instance.CurrentRun;
 
-        run.currentEnergy += Data.energyReward;
+        run.currentEnergy += RewardAmount;
         CampaignStateManager.Instance.Save();
 
         DrawnRewards = DrawRewards(run);

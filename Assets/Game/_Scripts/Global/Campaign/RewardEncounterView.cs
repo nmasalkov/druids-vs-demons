@@ -22,7 +22,7 @@ public class RewardEncounterView : MonoBehaviour
     private RewardEncounter _backend;
     private readonly List<RewardCard> _spawnedCards = new List<RewardCard>();
 
-    // Subscribing here (not Start()) is required: EncounterPlayer/MapManager call Instantiate() then
+    // Subscribing here (not Start()) is required: BattleRewardPresenter calls Instantiate() then
     // Play() synchronously in the same method, and Play() fires OnRewardsDrawn inline — a
     // Start()-based subscription would miss it, since Unity defers Start() to later that frame. See
     // CLAUDE.md rule 28.
@@ -48,7 +48,7 @@ public class RewardEncounterView : MonoBehaviour
     /// leftover from a previous draw.</summary>
     private void HandleRewardsDrawn(IReadOnlyList<RewardSO> rewards)
     {
-        messageText.text = $"You got {_backend.Data.energyReward} energy!";
+        messageText.text = $"You got {_backend.RewardAmount} energy!";
         claimButton.interactable = false;
 
         _spawnedCards.Clear();

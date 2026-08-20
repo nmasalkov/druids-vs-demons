@@ -92,8 +92,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d0ac65fb0445374fbdabf747c0e8ffa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  encounterList: {fileID: 11400000, guid: 0f7c48921d7dc4041bd97f30fc070d1f, type: 2}
-  processAllEncountersInBattleScene: 0
+  encounterList: {fileID: 11400000, guid: cf40eeda27bcf7b4984dcc7d07b3e537, type: 2}
 --- !u!114 &2033612141814812376
 MonoBehaviour:
   m_ObjectHideFlags: 0

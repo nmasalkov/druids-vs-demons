@@ -22,14 +22,14 @@ public class CampaignManagerEditor : Editor
         EditorGUILayout.LabelField("Current Progress", EditorStyles.boldLabel);
 
         var encounterList = encounterListProp.objectReferenceValue as EncounterListSO;
-        if (encounterList == null || encounterList.encounters == null || encounterList.encounters.Count == 0)
+        if (encounterList == null || encounterList.fights == null || encounterList.fights.Count == 0)
         {
             EditorGUILayout.HelpBox("No Encounter List assigned (or it's empty).", MessageType.Warning);
             return;
         }
 
         // RunState (owned by CampaignStateManager) is only populated by its Awake(), which never
-        // runs outside Play mode — reading CurrentEncounterIndex/CurrentEncounter here otherwise
+        // runs outside Play mode — reading CurrentEncounterIndex/CurrentFight here otherwise
         // throws (this object is placed in both BattleScene and MapScene, so it gets selected/
         // inspected in Edit mode routinely).
         if (!Application.isPlaying)
@@ -42,11 +42,9 @@ public class CampaignManagerEditor : Editor
         {
             EditorGUILayout.IntField("Encounter Index", manager.CurrentEncounterIndex);
 
-            var current = manager.CurrentEncounter;
-            EditorGUILayout.ObjectField("Current Encounter", current, typeof(EncounterSO), false);
-
-            if (current is FightSO fight)
-                EditorGUILayout.TextField("Fight Id", fight.fightId);
+            var current = manager.CurrentFight;
+            EditorGUILayout.ObjectField("Current Encounter", current, typeof(FightSO), false);
+            EditorGUILayout.TextField("Fight Id", current.fightId);
         }
 
         if (Application.isPlaying) Repaint();

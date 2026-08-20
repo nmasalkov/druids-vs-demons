@@ -100,16 +100,19 @@ Stopping, Bouncing }`, private, in `SlotColumn.Mechanics.cs`):
 
 ## `RollStateManager` — turning a roll into entries
 
-`RollStateManager.ActivateSlotMachine()` (called from `RollState`, not shown here) first checks that
-`CampaignManager.Instance.CurrentEncounter` is actually a `FightSO` (renamed from `BattleSO`
-— campaign-layer naming only, unrelated to this file's own "roll" terminology) — outside a real fight
-(a `LoadoutPickSO`/`RewardPickSO` pick screen, see `docs/Encounters.md`) it does nothing and returns.
-This isn't optional polish: `SlotMachine.Update()` reads `Keyboard.current.spaceKey` directly to
-start/stop the reel, bypassing UI raycast blocking entirely, so a pick screen's overlay alone
-couldn't stop a stray Space press from spinning reels behind it. Otherwise, it just activates
+`RollStateManager.ActivateSlotMachine()` (called from `RollState`, not shown here) just activates
 `ActiveMachine` (a computed property tracking `GameManager.Instance.ActiveSide` live) — driving the
 AI's turn from there on is `RollState`'s job, not `RollStateManager`'s (see "AI control of the enemy
-machine" below and `docs/AI.md`).
+machine" below and `docs/AI.md`). It used to first check that
+`CampaignManager.Instance.CurrentEncounter` was actually a `FightSO` (renamed from `BattleSO` —
+campaign-layer naming only, unrelated to this file's own "roll" terminology), since
+`SlotMachine.Update()` reads `Keyboard.current.spaceKey` directly to start/stop the reel — bypassing
+UI raycast blocking entirely, so a pick screen's overlay alone couldn't stop a stray Space press from
+spinning reels behind it. That gate was removed once `FightSO` became `EncounterListSO`'s only entry
+type (`docs/Encounters.md`): the loadout-pick phase now fully resolves in `MapScene` before
+`BattleScene` ever loads, and the reward-pick phase only ever shows strictly after `GameOverState`,
+once the round loop has already permanently halted — so `BattleScene`'s round loop is now always
+running the actual fight it's supposed to, and the gate's premise can no longer occur.
 
 `HandleFinishRoll(actions, rollType)` (subscribed to both machines' `OnFinishRollCompleted`):
 1. Stores `LastRollType`.
@@ -131,8 +134,7 @@ replay the action (see `docs/GameLoop.md`).
 
 `RollState` (`Global/GameManager/RollState.cs`) is the orchestrator for the AI-controlled side —
 `AIController` itself never touches `SlotMachine`/`SlotColumn` (see `docs/AI.md` for the full
-architectural principle). When the active side is `Enemy` and the current encounter is a `FightSO`,
-`RollState.BeginAITurn()`:
+architectural principle). When the active side is `Enemy`, `RollState.BeginAITurn()`:
 
 1. Asks `AIController` for a roll-type + desired-action decision, calls the machine's
    `SetRollType(type)` (a public entry point mirroring the player's button-driven `SwitchRollType`,

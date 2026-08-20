@@ -88,13 +88,6 @@ public class RollStateManager : MonoBehaviour
 
     public void ActivateSlotMachine()
     {
-        // Outside a real fight (LoadoutPickSO/RewardPickSO), the slot machine must never be
-        // activated at all — SlotMachine.Update() reads Keyboard.current.spaceKey directly,
-        // bypassing UI raycast blocking entirely, so an EncounterPlayer overlay alone can't stop
-        // a stray Space press from spinning reels behind it. Unity never runs Update() on an
-        // inactive GameObject, so this keeps the slot machine (and RollState, which waits on it)
-        // genuinely inert rather than just visually hidden. See docs/Encounters.md.
-        if (CampaignManager.Instance.CurrentEncounter is not FightSO) return;
         ActiveMachine.gameObject.SetActive(true);
     }
 

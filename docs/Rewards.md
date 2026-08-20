@@ -2,13 +2,14 @@
 
 ## What this system does
 
-Extends `RewardPickSO`/`RewardEncounter` (`docs/Encounters.md`) beyond a single guaranteed energy
-grant: the player now also picks 1 of 3 randomly drawn reward cards. `RewardPickSO.energyReward` is
-still granted automatically (now at `Play()`, not on Claim); the Claim button finalizes whichever
-card was selected. Built on the `RewardSO` hierarchy (persisted by id in `RunState`, resolved via
-`RewardListSO` — the same `ActionSO.id`/`GameCatalog.Find*(id)` pattern the loadout system already
-uses), a draw/pooling algorithm (`RewardDrawer`), and a small stat-boost hook (`RewardBonuses`)
-resolvers call into.
+Extends `FightSO.hasReward`/`RewardEncounter` (`docs/Encounters.md`) beyond a single guaranteed energy
+grant: the player now also picks 1 of 3 randomly drawn reward cards. `FightSO.rewardAmount` is
+granted automatically at `Play()` (not on Claim); the Claim button finalizes whichever card was
+selected. Shown as an overlay directly inside `BattleScene` right after victory (not `MapScene` —
+see `docs/Encounters.md`'s "Encounter dispatch"), dispatched by `BattleRewardPresenter`. Built on the
+`RewardSO` hierarchy (persisted by id in `RunState`, resolved via `RewardListSO` — the same
+`ActionSO.id`/`GameCatalog.Find*(id)` pattern the loadout system already uses), a draw/pooling
+algorithm (`RewardDrawer`), and a small stat-boost hook (`RewardBonuses`) resolvers call into.
 
 ## `RewardSO` hierarchy
 
@@ -24,8 +25,8 @@ resolvers call into.
     `RunState.statusRewardIds` (duplicates allowed and expected — each claim stacks).
 - **`BonusEnergyRewardSO`** — `bonusEnergy` (int, default 50). `Claim` is a pure
   `run.currentEnergy += bonusEnergy` — uncapped by `RunState.energyCapacity`, same as
-  `RewardPickSO`'s guaranteed reward (see "Energy grants are uncapped" below). Not unique, not
-  tracked in any list — a pure one-time effect.
+  a fight's guaranteed `FightSO.rewardAmount` (see "Energy grants are uncapped" below). Not unique,
+  not tracked in any list — a pure one-time effect.
 - **`CreatureRewardSO`** — `creature` (`CreatureSO`). `Claim` appends `creature.id` to
   `RunState.gatheredCreatureIds`; `IsOwned` checks that same list. Unique. Not yet consumable —
   fielding a gathered creature into a loadout slot is a future follow-up (per the user request
@@ -70,10 +71,12 @@ the existing `ref`-based `DrawToggleAndObject`/`DrawToggleAndInt` helpers don't 
 
 ## Energy grants are uncapped
 
-`RewardPickSO`'s guaranteed reward (`RewardEncounter.Play()`) and `BonusEnergyRewardSO.Claim()`
-both do a plain `run.currentEnergy += reward` — **not** `Mathf.Min(current + reward,
+A fight's guaranteed reward (`RewardEncounter.Play(int rewardAmount)`, sourced from
+`FightSO.rewardAmount`) and `BonusEnergyRewardSO.Claim()` both do a plain
+`run.currentEnergy += reward` — **not** `Mathf.Min(current + reward,
 energyCapacity)`. This used to clamp (a pre-existing behavior on the original single-reward
-`RewardPickSO`, inherited by `BonusEnergyRewardSO` when it was added), which was a real, live-
+`RewardPickSO` — since folded into `FightSO`, see `docs/Encounters.md` — inherited by
+`BonusEnergyRewardSO` when it was added), which was a real, live-
 caught bug: a player who'd spent reroll energy mid-battle (say down to 44/50) would win, get
 granted the guaranteed reward, and see it silently eaten by the clamp (`44 + 20 = 64`, clamped
 back down to `50` — indistinguishable from "the reward didn't apply" without reading the actual
@@ -167,7 +170,7 @@ driven headlessly by test code with zero UI:
 ```csharp
 public class RewardEncounter : Encounter
 {
-    public RewardPickSO Data { get; private set; }
+    public int RewardAmount { get; private set; }
     public IReadOnlyList<RewardSO> DrawnRewards { get; private set; }
     public RewardSO SelectedReward { get; private set; }
 
@@ -175,11 +178,11 @@ public class RewardEncounter : Encounter
     public event Action<RewardSO> OnSelectionChanged;
     public event Action OnClaimed;
 
-    public override void Play(EncounterSO data)
+    public void Play(int rewardAmount)
     {
-        Data = (RewardPickSO)data;
+        RewardAmount = rewardAmount;
         var run = CampaignStateManager.Instance.CurrentRun;
-        run.currentEnergy += Data.energyReward;
+        run.currentEnergy += RewardAmount;
         CampaignStateManager.Instance.Save();
 
         DrawnRewards = DrawRewards(run);
@@ -209,8 +212,8 @@ public class RewardEncounter : Encounter
 }
 ```
 
-`RewardEncounter` has **no UI reference of any kind** — `Data`/`DrawnRewards`/`SelectedReward` are
-the entire "menu" a test controller needs (`RewardSO` objects, not `RewardCard` visuals), and
+`RewardEncounter` has **no UI reference of any kind** — `RewardAmount`/`DrawnRewards`/`SelectedReward`
+are the entire "menu" a test controller needs (`RewardSO` objects, not `RewardCard` visuals), and
 `SelectReward`/`Confirm` are the entire "input" surface. `Confirm()`'s `RunState` mutation and
 `Save()` always run unconditionally; only whether `Complete()` fires immediately (`Headless`) or
 waits for the paired view depends on which mode it's running in — see CLAUDE.md rule 28.
@@ -243,14 +246,15 @@ select/deselect into a card visibly growing far past its intended size before sn
 `RewardEncounterView` the same way as before (rule 22 — one source of truth, no duplicated magic
 number).
 
-**`RewardEncounter` (backend) `Play(EncounterSO data)`:**
+**`RewardEncounter` (backend) `Play(int rewardAmount)`:**
 
-1. Grants the guaranteed energy immediately (`run.currentEnergy += energyReward`, uncapped — see
+1. Grants the guaranteed energy immediately (`run.currentEnergy += rewardAmount`, uncapped — see
    "Energy grants are uncapped" below), saves.
 2. Draws via `DrawRewards()` (`DebugRewards.ConsumeOverrideDraw() ?? RewardDrawer.DrawThree(...)`),
    sets `DrawnRewards`, fires `OnRewardsDrawn`.
 
-**`RewardEncounterView` reacts to that event:** sets `messageText.text = "You got {N} energy!"`,
+**`RewardEncounterView` reacts to that event:** sets `messageText.text = "You got {N} energy!"`
+(reading `_backend.RewardAmount`),
 spawns one `RewardCard` per `cardSlots` anchor (see CLAUDE.md's anchor+disabled-template rule) —
 destroying whatever's currently parented under each anchor (the disabled placeholder card, or a
 leftover from a previous draw) and instantiating the real `RewardCard` as its child, subscribing to
@@ -313,9 +317,9 @@ section (raw ids plus a resolve-to-assets button) that only covered the reward-s
 
 ## Related docs
 
-- `docs/Encounters.md` — `RewardPickSO`/`RewardEncounter`'s original single-guaranteed-reward
-  shape this system extends, and the `Encounter`/`EncounterPlayer`/`MapManager` dispatch that
-  instantiates it.
+- `docs/Encounters.md` — `FightSO.hasReward`/`rewardAmount`/`RewardEncounter`'s original
+  single-guaranteed-reward shape this system extends, and the `Encounter`/`BattleRewardPresenter`
+  dispatch that instantiates it.
 - `docs/Campaign.md` — `RunState`, `CampaignProfileSO`, `CampaignDebugTool`, and the `ActionSO.id`/
   `GameCatalog` id-resolution pattern `RewardSO.id`/`RewardListSO` mirrors.
 - `docs/ActionsAndSpells.md`, `docs/Battle.md` — the resolvers `RewardBonuses.ApplyBonuses` is

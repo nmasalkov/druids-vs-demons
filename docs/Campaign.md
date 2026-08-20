@@ -34,8 +34,8 @@ first-loaded scene):
 - **`CampaignManager`** — encounter navigation: knows which encounter is current and how to move
   between them (advance/restart/defeat/victory/complete). Reads and mutates `RunState` through
   `CampaignStateManager.Instance.CurrentRun` rather than owning any of it itself; owns
-  `EncounterListSO` and the `ProcessAllEncountersInBattleScene` debug flag. This is the "where are
-  you in the campaign" half. See `docs/Encounters.md` for its full navigation API.
+  `EncounterListSO`. This is the "where are you in the campaign" half. See `docs/Encounters.md` for
+  its full navigation API.
 
 Splitting these two concerns into separate classes (rather than one doing both) keeps "what the run's
 data is" and "where the player currently is in the campaign" independently testable/overridable —
@@ -104,8 +104,8 @@ public int saveVersion = CurrentSaveVersion; // see "Save system" below
 public int maxHp = 100;               // matches HeroSO.health's existing default
 public int energyCapacity = 50;       // not currently enforced anywhere — reserved for a future
                                        // "capacity boost" reward; reward grants are purely additive
-public int currentEnergy = 50;        // changed by reroll spend and RewardPickSO/BonusEnergyRewardSO
-                                       // claims, uncapped — see docs/Encounters.md, docs/Rewards.md
+public int currentEnergy = 50;        // changed by reroll spend and FightSO.rewardAmount/
+                                       // BonusEnergyRewardSO claims, uncapped — see docs/Encounters.md, docs/Rewards.md
 
 public string archerId = "archer", tankId = "tank", mageId = "mage";
 public string nukeAId = "firemagic", nukeBId = "starfall", nukeCId = "shock";
@@ -158,10 +158,9 @@ save.
    early Script Execution Order — see Gotchas) or on every later load (a `SceneManager.sceneLoaded`
    subscription set up in that same `Start()`, since `CampaignStateManager` is now a persistent
    singleton whose own `Start()` only ever runs once per session) — a private `EnterBattleScene()`
-   first checks a boot-time guard: if `!CampaignManager.Instance.ProcessAllEncountersInBattleScene`
-   and `CurrentEncounter` isn't a `FightSO`, it redirects to `MapScene` instead
-   (`SceneManager.LoadScene(SceneNames.MapScene)`) and returns — `BattleScene` is only ever meant to
-   host a fight outside that debug flag. See `docs/Encounters.md`'s "MapScene" section. Otherwise:
+   applies the resolved loadout and current fight's data directly; every real navigation path only
+   ever loads `BattleScene` once `MapManager` has already resolved any loadout-pick phase, so the
+   current encounter is always the fight being played — see `docs/Encounters.md`'s "MapScene" section.
    - `ApplyLoadoutToG()` builds one runtime `CreaturesSO`/`NukesSO`/`SpellsSO` via
      `ScriptableObject.CreateInstance<T>()`, resolving each of the 9 ids through `GameCatalog`
      (`FindArcher`/`FindTank`/`FindMage`/`FindNuke`/`FindSpell`). Any id that doesn't resolve
@@ -216,9 +215,9 @@ manual Save/Load buttons.
     call, not two.
   - *Entering a new encounter*: `CampaignManager.AdvanceToNextEncounter()` saves (via
     `CampaignStateManager.Instance.Save()`) right after bumping the index, before the new encounter
-    loads — every forward path (victory, `EncounterPlayer` completing a pick screen, `StartNewRun()`)
-    funnels through it. See `docs/Encounters.md`.
-  - *End of any encounter*: `RewardPickSO`'s claim is the one place that calls `Save()`
+    loads — every forward path (victory, `BattleRewardPresenter` completing a reward pick,
+    `StartNewRun()`) funnels through it. See `docs/Encounters.md`.
+  - *End of any encounter*: a `FightSO.hasReward` claim is the one place that calls `Save()`
     immediately, right after mutating `currentEnergy` — a real "end of encounter" persistence point
     on top of (not instead of) the entering-next-encounter save that immediately follows. Battle
     encounters don't get an explicit save at victory itself — but `EnergyController.TrySpendReroll()`
@@ -425,7 +424,8 @@ via `SerializedProperty` (`DrawToggleAndList` in `CampaignDebugToolEditor`) sinc
 - `docs/Encounters.md` — the actual fight sequence built on top of this data layer:
   `EncounterListSO`/`FightSO`, `CampaignManager` (encounter navigation — see "Load → resolve → apply
   flow" above for how it cooperates with `CampaignStateManager`) and its navigation API, the
-  `Encounter`/`EncounterPlayer` pick-screen dispatch, and per-encounter enemy avatar/HP substitution.
-- `docs/Rewards.md` — the reward-card pick system built on top of `RunState`/`RewardPickSO`/
+  `Encounter`/`MapManager`/`BattleRewardPresenter` pick-screen dispatch, and per-encounter enemy
+  avatar/HP substitution.
+- `docs/Rewards.md` — the reward-card pick system built on top of `RunState`/`FightSO.hasReward`/
   `RewardEncounter`: `RewardSO` hierarchy, `RewardListSO`, `RewardDrawer`'s draw algorithm, and
   `RewardBonuses`' resolver-side stat-boost hook.

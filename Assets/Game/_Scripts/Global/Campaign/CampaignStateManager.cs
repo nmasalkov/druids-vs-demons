@@ -81,37 +81,28 @@ public partial class CampaignStateManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Boot-time/every-load redirect: if BattleScene was reached while the current encounter is
-    /// actually a pick screen, bounce to MapScene instead of applying anything — BattleScene is
-    /// only ever meant to host a FightSO outside the debug ProcessAllEncountersInBattleScene flag.
-    /// Otherwise applies the resolved loadout and current encounter's data to this scene's objects.
-    /// See docs/Encounters.md.
+    /// BattleScene load entry point: applies the resolved loadout and current fight's data to this
+    /// scene's objects. Every real navigation path only ever loads BattleScene once MapManager has
+    /// already resolved any loadout-pick phase, so the current encounter is always the fight being
+    /// played. See docs/Encounters.md.
     /// </summary>
     private void EnterBattleScene()
     {
-        if (!CampaignManager.Instance.ProcessAllEncountersInBattleScene &&
-            CampaignManager.Instance.CurrentEncounter is not FightSO)
-        {
-            SceneManager.LoadScene(SceneNames.MapScene);
-            return;
-        }
-
         ApplyLoadoutToG();
         ApplyEncounterToScene();
     }
 
     /// <summary>
-    /// Applies the current encounter's per-encounter run state to the scene: reroll energy (which
+    /// Applies the current fight's per-encounter run state to the scene: reroll energy (which
     /// may have just changed via a victory reward) and the enemy avatar/HP. Called once from
-    /// EnterBattleScene() for a scene's initial load, and reused by CampaignManager for an in-place
-    /// "soft reload" when navigating to a new encounter without leaving BattleScene (see
-    /// docs/Encounters.md) — public so it's callable from outside this object's own lifecycle.
+    /// EnterBattleScene() for a scene's initial load — public so it's callable from outside this
+    /// object's own lifecycle (e.g. debug tooling). See docs/Encounters.md.
     /// </summary>
     public void ApplyEncounterToScene()
     {
         EnergyController.Instance.ApplyCampaignEnergy();
 
-        if (CampaignManager.Instance.CurrentEncounter is not FightSO fight) return;
+        var fight = CampaignManager.Instance.CurrentFight;
         CurrentFight = fight;
         G.EnemyView.ReplaceHeroAvatar(fight.enemyData.enemyAvatarPrefab);
     }

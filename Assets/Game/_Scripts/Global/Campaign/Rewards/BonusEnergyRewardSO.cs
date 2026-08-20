@@ -3,7 +3,8 @@ using UnityEngine;
 /// <summary>
 /// One-time reroll energy grant, applied and forgotten immediately on claim (not tracked in any
 /// RunState list). Purely additive, uncapped by RunState.energyCapacity — same as
-/// RewardPickSO's guaranteed energy reward. See docs/Rewards.md and docs/Energy.md.
+/// a fight's guaranteed FightSO.rewardAmount (granted via RewardEncounter.Play). See
+/// docs/Rewards.md and docs/Energy.md.
 /// </summary>
 [CreateAssetMenu(fileName = "BonusEnergyReward", menuName = "Game/Campaign/Rewards/Bonus Energy Reward")]
 public class BonusEnergyRewardSO : RewardSO

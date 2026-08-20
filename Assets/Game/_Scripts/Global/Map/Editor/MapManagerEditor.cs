@@ -23,21 +23,21 @@ public class MapManagerEditor : Editor
             return;
         }
 
-        var current = CampaignManager.Instance.CurrentEncounter;
+        var current = CampaignManager.Instance.CurrentFight;
 
         MapEncounterPoint currentPoint = null;
         if (manager.Points != null)
         {
             foreach (var point in manager.Points)
             {
-                if (point.EncounterSO == current) { currentPoint = point; break; }
+                if (point.Fight == current) { currentPoint = point; break; }
             }
         }
 
         using (new EditorGUI.DisabledScope(true))
         {
             EditorGUILayout.IntField("Encounter Index", CampaignManager.Instance.CurrentEncounterIndex);
-            EditorGUILayout.ObjectField("Current Encounter", current, typeof(EncounterSO), false);
+            EditorGUILayout.ObjectField("Current Encounter", current, typeof(FightSO), false);
             EditorGUILayout.ObjectField("Current Map Point", currentPoint, typeof(MapEncounterPoint), true);
         }
 

@@ -10,14 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 545cc407a1915d44080decac3f66031b, type: 3}
-  m_Name: 1Battle
+  m_Name: Fight4 Elite
   m_EditorClassIdentifier: 
-  encounterPrefab: {fileID: 0}
-  fightId: battle_1
+  fightId: battle_4
   isTutorial: 0
   enemyData:
-    enemyAvatarPrefab: {fileID: 1872679886176264211, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
-    hp: 100
-    stupidityChance: 40
+    enemyAvatarPrefab: {fileID: 1872679886176264211, guid: 862b8254ef1ec5b4fb20c9a9ac3e8b61, type: 3}
+    hp: 1
+    stupidityChance: 20
     criticalFailureChance: 15
     rerollsAmount: 10
+  hasLoadoutPick: 1
+  hasReward: 1
+  rewardAmount: 50

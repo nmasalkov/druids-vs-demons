@@ -2,14 +2,16 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Base for anything EncounterPlayer instantiates/plays for a non-fight EncounterSO (LoadoutPickSO,
-/// RewardPickSO, ...) — mirrors GameState's "one runner, self-contained states" shape (see
+/// Base for a pick-screen phase played by MapManager (loadout, in MapScene) or BattleRewardPresenter
+/// (reward, in BattleScene) — mirrors GameState's "one runner, self-contained states" shape (see
 /// docs/GameLoop.md), except a MonoBehaviour since each Encounter owns its own scene UI. Each
-/// subclass owns its own presentation directly, or — for anything with real RunState mutation and a
-/// non-trivial completion condition — splits into this class as a headless-testable backend plus a
-/// paired "<Subclass>View" MonoBehaviour that owns UI and forwards clicks as method calls (CLAUDE.md
-/// rule 28; see RewardEncounter/RewardEncounterView in docs/Rewards.md). EncounterPlayer/MapManager
-/// only ever call Play() and wait for OnCompleted. See docs/Encounters.md.
+/// subclass — for anything with real RunState mutation and a non-trivial completion condition —
+/// splits into this class as a headless-testable backend plus a paired "<Subclass>View"
+/// MonoBehaviour that owns UI and forwards clicks as method calls (CLAUDE.md rule 28; see
+/// RewardEncounter/RewardEncounterView in docs/Rewards.md). Each subclass exposes its own concrete
+/// Play(...) (no shared signature — LoadoutPickEncounter needs none, RewardEncounter needs a reward
+/// amount) and fires OnCompleted when done; callers only ever call Play() and wait for OnCompleted.
+/// See docs/Encounters.md.
 /// </summary>
 public abstract class Encounter : MonoBehaviour
 {
@@ -22,8 +24,6 @@ public abstract class Encounter : MonoBehaviour
     /// for a View to call CompletePresentation(). See CLAUDE.md rule 28.
     /// </summary>
     public bool Headless { get; set; }
-
-    public abstract void Play(EncounterSO data);
 
     protected void Complete() => OnCompleted?.Invoke();
 

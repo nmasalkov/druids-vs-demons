@@ -23,7 +23,6 @@ public class RollState : GameState
         RollStateManager.Instance.ActivateSlotMachine();
 
         if (GameManager.Instance.ActiveSide != ActiveSide.Enemy) return;
-        if (CampaignManager.Instance.CurrentEncounter is not FightSO) return;
 
         Utils.DoAfterDelay.Execute(BeginAITurn, 0f);
     }

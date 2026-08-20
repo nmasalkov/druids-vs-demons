@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Editor-only override tool for CampaignManager, mirroring CampaignDebugTool's pattern:
-/// check a box, drag in an EncounterSO, press Play — CampaignManager loads that encounter
+/// check a box, drag in a FightSO, press Play — CampaignManager loads that encounter
 /// instead of resuming from RunState.currentEncounterIndex. Never persists — session-only, same
 /// as CampaignDebugTool's overrides. See docs/Encounters.md.
 ///
@@ -14,7 +14,7 @@ public class CampaignProgressTool : MonoBehaviour
 {
     [Header("Encounter Override")]
     public bool overrideEncounter;
-    public EncounterSO encounter;
+    public FightSO encounter;
 
     void Awake()
     {

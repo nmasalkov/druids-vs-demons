@@ -910,7 +910,7 @@ GameObject:
   - component: {fileID: 600259219}
   - component: {fileID: 600259220}
   m_Layer: 0
-  m_Name: EncounterPlayer
+  m_Name: BattleRewardPresenter
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -940,9 +940,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 600259218}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7f4b9f303feea9e4190d431c7b78d9ab, type: 3}
+  m_Script: {fileID: 11500000, guid: cae280a0c40cc0c42b51c5298f59e646, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  rewardEncounterPrefab: {fileID: 7838753059560661941, guid: 1116da0ba4812874c9735f802e10e110, type: 3}
   encounterParent: {fileID: 0}
 --- !u!1 &606451753
 GameObject:

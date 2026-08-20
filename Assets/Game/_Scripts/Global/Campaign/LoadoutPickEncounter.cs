@@ -99,7 +99,7 @@ public class LoadoutPickEncounter : Encounter
     private GameCatalog _catalog;
     private RunState _run;
 
-    public override void Play(EncounterSO data)
+    public void Play()
     {
         _catalog = CampaignStateManager.Instance.Catalog;
         _run = CampaignStateManager.Instance.CurrentRun;

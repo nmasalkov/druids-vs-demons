@@ -7,8 +7,9 @@ archer, mage, 3 nukes, 3 spells — the same `RunState` id fields `docs/Campaign
 whatever else they've gathered, before advancing to the next encounter. `LoadoutPickEncounter` (the
 backend) and `LoadoutPickEncounterView` (the UI) follow the same headless-testable backend/view split
 as `RewardEncounter`/`RewardEncounterView` (CLAUDE.md rule 28, `docs/Rewards.md`) — the backend never
-touches a UI reference, and only `Confirm()` ever persists into `RunState`. Played by
-`LoadoutPickSO`, on the same `_Prefabs/Campaign/LoadoutEncounter.prefab` that used to host a trivial
+touches a UI reference, and only `Confirm()` ever persists into `RunState`. Played by `MapManager`, in
+place at the current map node, whenever the current fight's `FightSO.hasLoadoutPick` is true — see
+`docs/Encounters.md`. Same `_Prefabs/Campaign/LoadoutEncounter.prefab` that used to host a trivial
 briefing-text placeholder.
 
 ## `SlotKind`/`SlotRef` addressing
@@ -57,7 +58,7 @@ public class LoadoutPickEncounter : Encounter
     public event Action OnSelectionChanged;
     public event Action OnConfirmed;
 
-    public override void Play(EncounterSO data) { /* seeds all 9 pending fields from RunState/GameCatalog, RefreshPool(), fires OnPoolChanged + OnLoadoutLoaded */ }
+    public void Play() { /* seeds all 9 pending fields from RunState/GameCatalog, RefreshPool(), fires OnPoolChanged + OnLoadoutLoaded */ }
     public State GetState() { /* one snapshot: BuildEquippedLookup(), the pool, SelectedSlot, SelectedCandidate */ }
     public bool IsSlotSelectable(SlotRef slot) { /* live-field version of State's own predicate — used by SetSelectedSlot's guard */ }
     public bool IsCandidateSelectable(ActionSO candidate) { /* live-field version — used by SetSelectedCandidate's guard */ }
@@ -115,7 +116,7 @@ truth stays on the backend's own private fields, exactly as rule 22 requires.
 - **Fully headless-drivable** — every method above is pure data/logic, no UI dependency anywhere:
   ```csharp
   Headless = true;
-  Play(so);
+  Play();
   SetSelectedCandidate(candidate);              // pool-first this time
   SetSelectedSlot(new SlotRef(SlotKind.Nuke, 1));
   Swap();
@@ -190,7 +191,7 @@ instances anyway, the fix is simply to leave it alone.
 ## `LoadoutPickEncounterView` (view)
 
 `[RequireComponent(typeof(LoadoutPickEncounter))]`, subscribes to the backend's events in `Awake()`
-(not `Start()`) — same reasoning as `RewardEncounterView`: `EncounterPlayer`/`MapManager` call
+(not `Start()`) — same reasoning as `RewardEncounterView`: `MapManager` calls
 `Instantiate()` then `Play()` synchronously in the same method, and `Play()` fires `OnLoadoutLoaded`/
 `OnPoolChanged` inline, so a `Start()`-based subscription would miss them.
 
@@ -340,8 +341,7 @@ confirm the resulting state (selection highlight, greyed cards, Comparison panel
 
 ## Related docs
 
-- `docs/Encounters.md` — `Encounter`/`EncounterPlayer`/`MapManager` dispatch this plays through,
-  `LoadoutPickSO`.
+- `docs/Encounters.md` — `Encounter`/`MapManager` dispatch this plays through, `FightSO.hasLoadoutPick`.
 - `docs/Rewards.md` — the sibling pick-screen system this mirrors: `RewardEncounter`/
   `RewardEncounterView`, `RewardCard`/`RewardCardAnimator`.
 - `docs/Campaign.md` — `RunState`'s 9 loadout id fields and `gatheredCreatureIds`/`gatheredNukeIds`/

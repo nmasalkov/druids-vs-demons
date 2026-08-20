@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// The ordered campaign sequence — indexed by RunState.currentEncounterIndex /
@@ -8,5 +9,5 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "EncounterList", menuName = "Game/Campaign/Encounter List")]
 public class EncounterListSO : ScriptableObject
 {
-    public List<EncounterSO> encounters;
+    [FormerlySerializedAs("encounters")] public List<FightSO> fights;
 }

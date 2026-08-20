@@ -48,9 +48,9 @@ public class LoadoutPickEncounterView : MonoBehaviour
     private RewardCard _leftCard;
     private RewardCard _rightCard;
 
-    // Subscribing here (not Start()) is required: EncounterPlayer/MapManager call Instantiate() then
-    // Play() synchronously in the same method, and Play() fires OnLoadoutLoaded/OnPoolChanged inline
-    // — a Start()-based subscription would miss them. See CLAUDE.md rule 28.
+    // Subscribing here (not Start()) is required: MapManager calls Instantiate() then Play()
+    // synchronously in the same method, and Play() fires OnLoadoutLoaded/OnPoolChanged inline — a
+    // Start()-based subscription would miss them. See CLAUDE.md rule 28.
     void Awake()
     {
         _backend = GetComponent<LoadoutPickEncounter>();

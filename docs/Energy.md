@@ -71,8 +71,9 @@ driving transforms directly.
 Two different things both currently fire through the exact same `GameManager.RestartBattle()` →
 `OnBattleRestart` mechanism (see `docs/GameLoop.md`), but need opposite energy behavior:
 
-- **A real encounter transition** (victory → next encounter, a claimed `RewardPickSO`, ...) should
-  **carry the spend over** — if you fought a battle down to 5 energy, the next encounter starts at 5.
+- **A real encounter transition** (victory → next encounter, a claimed reward via `FightSO.hasReward`,
+  ...) should **carry the spend over** — if you fought a battle down to 5 energy, the next encounter
+  starts at 5.
 - **A same-encounter restart** (pause menu "Restart", a defeat retry) should **revert** any reroll
   spend from the abandoned attempt — you get back exactly what you had when *this* encounter began,
   not a free top-up, but also not permanently punished for retrying.

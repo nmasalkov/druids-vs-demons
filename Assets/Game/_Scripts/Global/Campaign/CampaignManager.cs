@@ -21,18 +21,18 @@ public partial class CampaignManager : MonoBehaviour
     public static CampaignManager Instance { get; private set; }
 
     // How long the "Player wins!"/"Enemy wins!" message sits on screen before the campaign
-    // transition (advance/reload/complete) actually happens.
+    // transition (advance/reload/complete, or the post-victory reward pick) actually happens.
     private const float BattleResultDelaySeconds = 4f;
 
     [SerializeField] private EncounterListSO encounterList;
 
     public EncounterListSO EncounterList => encounterList;
 
-    public EncounterSO CurrentEncounter =>
-        encounterList.encounters[Mathf.Clamp(CampaignStateManager.Instance.CurrentRun.currentEncounterIndex, 0, encounterList.encounters.Count - 1)];
+    public FightSO CurrentFight =>
+        encounterList.fights[Mathf.Clamp(CampaignStateManager.Instance.CurrentRun.currentEncounterIndex, 0, encounterList.fights.Count - 1)];
 
     public int CurrentEncounterIndex => CampaignStateManager.Instance.CurrentRun.currentEncounterIndex;
-    public bool HasNextEncounter => CampaignStateManager.Instance.CurrentRun.currentEncounterIndex < encounterList.encounters.Count - 1;
+    public bool HasNextEncounter => CampaignStateManager.Instance.CurrentRun.currentEncounterIndex < encounterList.fights.Count - 1;
 
     void Awake()
     {
@@ -74,10 +74,10 @@ public partial class CampaignManager : MonoBehaviour
 
     /// <summary>
     /// Called by GameOverState once the player has won: after a delay (so the "Player wins!"
-    /// message is readable), either advances to the next encounter or, if this was the last one,
-    /// completes the campaign. No RunState change happens here anymore — energy rewards are now
-    /// granted explicitly by a RewardPickSO encounter, not automatically on victory. See
-    /// docs/Encounters.md.
+    /// message is readable), either shows the current fight's reward pick as an overlay inside
+    /// BattleScene (if hasReward — BattleRewardPresenter.HandleRewardCompleted() then calls
+    /// CompleteCurrentEncounter() once it's confirmed), or completes/advances immediately if there's
+    /// no reward. See docs/Encounters.md.
     /// </summary>
     public void ResolveVictory()
     {
@@ -85,16 +85,20 @@ public partial class CampaignManager : MonoBehaviour
         DoAfterDelay.Execute(() =>
         {
             if (GameManager.IsStale(generation)) return;
-            CompleteCurrentEncounter();
+
+            if (CurrentFight.hasReward)
+                BattleRewardPresenter.Instance.ShowReward(CurrentFight);
+            else
+                CompleteCurrentEncounter();
         }, BattleResultDelaySeconds);
     }
 
     /// <summary>
     /// Advances to the next encounter, or completes the campaign if this was the last one.
-    /// Shared by ResolveVictory() (after its delay) and EncounterPlayer's pick-screen completion
-    /// (immediately), so a LoadoutPickSO/RewardPickSO that happens to be the campaign's last entry
-    /// correctly completes the campaign instead of hitting AdvanceToNextEncounter()'s "already at
-    /// the last encounter" no-op. See docs/Encounters.md.
+    /// Called directly by ResolveVictory() when there's no reward, or by
+    /// BattleRewardPresenter once the reward pick is confirmed — so a fight that happens to be the
+    /// campaign's last entry correctly completes the campaign instead of hitting
+    /// AdvanceToNextEncounter()'s "already at the last encounter" no-op. See docs/Encounters.md.
     /// </summary>
     public void CompleteCurrentEncounter()
     {
@@ -129,23 +133,14 @@ public partial class CampaignManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Applies the (new) current encounter, scene-aware. Under the debug
-    /// ProcessAllEncountersInBattleScene flag, always soft-reloads BattleScene in place exactly like
-    /// before MapScene existed (the headless/automation-friendly path — CLAUDE.md rule 7). Otherwise,
-    /// every real transition routes through MapScene first — MapManager decides whether the new
-    /// current encounter is played in place (a pick screen) or hands off to BattleScene (a fight) —
-    /// so this only ever needs to either refresh MapManager in place (already in MapScene) or load
-    /// MapScene (arriving from BattleScene after a fight). See docs/Encounters.md.
+    /// Applies the (new) current fight, scene-aware. Every real transition routes through MapScene
+    /// first — MapManager decides whether the new current fight shows its loadout-pick phase in
+    /// place first or hands off to BattleScene directly — so this only ever needs to either refresh
+    /// MapManager in place (already in MapScene) or load MapScene (arriving from BattleScene after a
+    /// fight/reward). See docs/Encounters.md.
     /// </summary>
     private void LoadCurrentEncounter()
     {
-        if (ProcessAllEncountersInBattleScene)
-        {
-            CampaignStateManager.Instance.ApplyEncounterToScene();
-            GameManager.Instance.RestartBattle();
-            return;
-        }
-
         if (SceneManager.GetActiveScene().name == SceneNames.MapScene)
             MapManager.Instance.RefreshForCurrentEncounter();
         else

@@ -6,19 +6,21 @@ using UnityEngine.Splines;
 using Utils;
 
 /// <summary>
-/// One encounter's point on the map: toggles its Future/Current/Complete visuals, optionally reveals
+/// One fight's point on the map: toggles its Future/Current/Complete visuals, optionally reveals
 /// the spline paths leading in/out of it, and plays a short "arrived" feedback when it becomes the
-/// current encounter (a shake for a fight, a yoyo/punch scale otherwise). Which EncounterSO this
-/// point represents is assigned once by MapManager.AssignEncounters() (positional against
-/// EncounterListSO), not wired per-instance in the Inspector. See MapManager and docs/Encounters.md.
+/// current fight (PlayArriveFightFeedback for the fight-about-to-start shake, PlayArriveRegularFeedback
+/// for the plain "you've arrived here" yoyo/punch, played instead when the fight has a loadout-pick
+/// phase to show first — see MapManager). Which FightSO this point represents is assigned once by
+/// MapManager.AssignEncounters() (positional against EncounterListSO), not wired per-instance in the
+/// Inspector. See MapManager and docs/Encounters.md.
 /// </summary>
 public class MapEncounterPoint : MonoBehaviour
 {
     // Serialized (not just an auto-property) so it's visible in the Inspector even though it's
     // runtime-assigned — CLAUDE.md rule 19: load-bearing runtime state stays visible by default,
     // not buried in a private field only a debugger can see.
-    [SerializeField] private EncounterSO encounterSO;
-    public EncounterSO EncounterSO => encounterSO;
+    [SerializeField] private FightSO fight;
+    public FightSO Fight => fight;
 
     [SerializeField] private GameObject futureEncounterVisual;
     [SerializeField] private GameObject currentEncounterVisual;
@@ -29,14 +31,14 @@ public class MapEncounterPoint : MonoBehaviour
     [Tooltip("Optional. The spline path the player walks out on after this point.")]
     [SerializeField] private SplineContainer pathOut;
 
-    [Tooltip("Played when this point becomes the current encounter and it's a fight.")]
+    [Tooltip("Played right before the fight actually starts (a shake).")]
     [FormerlySerializedAs("reachFeedback")]
     [SerializeField] private MMF_Player arriveFightFeedback;
-    [Tooltip("Played when this point becomes the current encounter and it's not a fight (a yoyo/punch, as opposed to the fight's shake).")]
+    [Tooltip("Played when this point first becomes current, if it has a loadout-pick phase to show before the fight (a yoyo/punch, as opposed to the fight's shake).")]
     [FormerlySerializedAs("arriveFeedback")]
     [SerializeField] private MMF_Player arriveRegularFeedback;
 
-    public void SetEncounter(EncounterSO encounter) => encounterSO = encounter;
+    public void SetFight(FightSO f) => fight = f;
 
     public void SetFuture()
     {

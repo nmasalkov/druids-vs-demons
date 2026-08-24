@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: baddeee814d7429cb1d8dc2d9ddde911, type: 3}
+  m_Name: OrkMage
+  m_EditorClassIdentifier: 
+  id: orkMage
+  actionName: Ork Mage
+  description: A savage orc spellcaster that hurls crackling battle magic at anything
+    within range.
+  cardSprite: {fileID: 3428391033546482049, guid: 8bbd0405a7f5eb2429f3e6ac541dd2e9, type: 3}
+  creaturePrefab: {fileID: 2825608144389139685, guid: 0c36cf8634589724282fc9cf9f34d0da, type: 3}
+  levelStats:
+  - damage: 11
+    health: 24
+    numberOfAttacks: 1
+  - damage: 17
+    health: 28
+    numberOfAttacks: 1
+  - damage: 24
+    health: 32
+    numberOfAttacks: 1
+  - damage: 38
+    health: 42
+    numberOfAttacks: 1
+  experienceReward: 1e0000003c00000078000000f0000000
+  xpThresholds: 00000000780000004001000058020000
+  healAmounts:
+  - 3
+  - 7
+  - 10
+  - 24

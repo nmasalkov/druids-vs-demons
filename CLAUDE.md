@@ -223,7 +223,24 @@ them for any new/modified game code under `Assets/Game`:
     status/attempt effect. Also: particle systems on units must
     use main-module **Scaling Mode = Local**, not Hierarchy — the enemy side is mirrored via
     `localScale.x = -1`, and Hierarchy-scaled Billboard/Mesh particles inherit the negative scale
-    and render invisible (verified live: identical simulation, nothing drawn).
+    and render invisible (verified live: identical simulation, nothing drawn). A world-space UI
+    `Canvas` nested under a unit (e.g. `HpbarCanvas.prefab`'s health bar/text) has the opposite
+    problem — it renders fine but mirrored (fill direction reversed, text backwards) — fixed via a
+    small self-correcting `MirrorCorrector` component (`Assets/Game/_Scripts/UI/MirrorCorrector.cs`)
+    on the Canvas root: corrects once in `Awake()` (covers every normal spawn — the parent slot's
+    scale is already final by then) and again on `CreatureAnimator.OnRunToSlotArrived`
+    (`GetComponentInParent<CreatureAnimator>()`, null-guarded — Heroes have no `CreatureAnimator`
+    and are never reparented after spawn, so they only ever need the `Awake()` correction). That
+    event is the one point a unit's ancestor scale can change *after* spawn without the Canvas's own
+    immediate parent ever changing — `CharmShot` reparents an existing (never destroyed/reinstantiated)
+    creature into a slot on the opposite side, and `CreatureAnimator.RunToCurrentSlot`/
+    `FinishRunToSlot` (the visual run-in for that move) settles the creature root's own scale right
+    before firing this event. No per-frame polling — Unity has no "an ancestor's scale changed"
+    event in general, but this game has exactly one call path that ever changes it post-spawn, so
+    hooking that specific event beats polling for it. Reach for the same `MirrorCorrector` component
+    on any future world-space UI nested under a unit; if a future mechanic ever reparents a unit
+    across sides through some *other* path, wire that path's own settle point into `Correct()` too
+    rather than falling back to polling.
 16. **Entities/state-holding scripts must support battle restart.** Any script that spawns entities
     (creatures, shields, gems, projectiles, ...) or holds battle-scoped state (pending rolls, pending
     XP, AI control, ...) must subscribe to the static `GameManager.OnBattleRestart` event in its own
@@ -404,6 +421,81 @@ them for any new/modified game code under `Assets/Game`:
       mutated between frames. See `LoadoutPickEncounter.State`/`LoadoutPickEncounterView.Redraw()`
       (`docs/Loadout.md`) for the worked example; reach for this shape on the next Encounter view
       that ends up with more than 2-3 events.
+29. **Player and enemy creature/nuke/spell pools are two separate resolution chains that must never
+    cross — this has already caused a real, live-caught bug twice.** Exact data flow, follow it
+    precisely whenever touching either side:
+    - **Player pool**: `RunState` (`archerId`/`tankId`/`mageId`/...) is the sole source of truth —
+      populated from a real save (`SaveStorage`), a pasted "Use External Save" JSON, a "Use Debug
+      Profile" `CampaignProfileSO`, or `CampaignDebugTool`'s granular overrides (precedence: External
+      Save > Debug Profile > granular overrides, see `CampaignDebugTool.cs`), and mutated going
+      forward by the loadout-pick screen (`LoadoutPickEncounter.Confirm()`, `docs/Loadout.md`). Every
+      `BattleScene` load, `CampaignStateManager.ApplyLoadoutToG()` resolves those ids through
+      `GameCatalog` and writes the result to `G.defaultCreatures`/`defaultNukes`/`defaultSpells` via
+      `G.ApplyCampaignLoadout(...)` — falling back to `G.DefaultCreatures.*`'s *own current value*
+      (the Inspector-wired default, since this fallback read happens before this same call overwrites
+      it) only if a catalog lookup for that id fails.
+    - **Enemy pool**: `FightSO.enemyData.creatures` (a direct per-fight SO reference, author-set in
+      the Inspector, not an id/catalog lookup) if non-null, **else `G.DefaultCreatures`** — resolved
+      by `CampaignStateManager.ResolveEnemyCreatures(fight)` and written to `G.enemyCreatures` via
+      `G.ApplyCampaignEnemyCreatures(...)`, called every `BattleScene` load right after
+      `ApplyLoadoutToG()` (so `G.DefaultCreatures` is already this encounter's freshly-resolved player
+      pool by the time the enemy fallback reads it — never a stale value). `enemyNukes`/`enemySpells`
+      have no per-fight data yet and stay fixed Inspector defaults.
+    - **The enemy fallback must target `G.DefaultCreatures`, never `G.EnemyCreatures` itself.**
+      `G.enemyCreatures` is a plain mutable field with no reset between encounters — falling back to
+      "whatever it currently holds" means a fight with no roster of its own silently inherits
+      whatever the *previous* fight last wrote there, forever, with nothing in that fight's own data
+      to blame. `G.DefaultCreatures` is safe to fall back to only because it's unconditionally
+      recomputed from `RunState` on every single encounter, never a leftover.
+    - **`SlotMachine.isPlayerMachine`** (a plain per-instance Inspector bool, `true` on the player
+      machine / `false` on the enemy machine) is the *only* thing that decides which pool a given
+      `SlotMachine` reads — `true` → `G.DefaultCreatures`/`DefaultNukes`/`DefaultSpells`, `false` →
+      `G.EnemyCreatures`/`EnemyNukes`/`EnemySpells`. Never derive this from `GameManager.ActiveSide`
+      (whose *turn* it is) or anything else — a third `SlotMachine` instance must have this flag set
+      explicitly (it defaults to `true`).
+    - **`CampaignDebugTool`'s granular creature/nuke/spell overrides touch `RunState` — the player
+      side — only.** They have no path to the enemy pool and must never grow one; if enemy-side
+      debug overrides are ever needed, they get their own dedicated fields, not a repurposing of
+      these. Conversely, because they're real committed/saved scene state, a checked override left
+      on after testing silently keeps re-applying on every subsequent Play session — always leave
+      them unchecked (bool `0` **and** the referenced asset cleared to `{fileID: 0}`, matching every
+      currently-unused override already sitting that way in `CampaignDebugTool`) once done. Live
+      incident: `BattleScene.unity`'s `CampaignDebugTool` had `overrideArcher`/`overrideTank`/
+      `overrideMage` left checked (pointing at the same demon-themed creatures used to build one
+      fight's enemy roster) from earlier testing — invisible in normal play (`MapScene`'s clean copy
+      always wins the cross-scene singleton race there), but the instant `BattleScene` was played
+      directly for isolated testing, this copy won instead and force-set the player's ids to match
+      the enemy's before `ApplyLoadoutToG()` ever ran — both sides ended up rolling the same roster,
+      which looked exactly like a bug in whichever creature-pool code had just been touched, when the
+      actual cause was this unrelated leftover checkbox. See `docs/G.md` and `docs/Encounters.md` for
+      the full writeup.
+30. **Keep a class's entry-point method (`Decide()`, `Resolve()`, `Apply()`, and similar — the method
+    a reader opens first to understand what the class does) narrative-thin: as few inline comparisons/
+    boolean operators as possible.** It should read as a short sequence of guard-clause-style early
+    returns, each line naming *what* is being decided, with the actual comparison, RNG roll, or
+    multi-branch logic pushed into a small, well-named private helper the entry method just calls.
+    Concretely: no bare `&&`/`||` at that level, no arithmetic/bucket comparisons, no direct
+    `Random`/`RollForProbability` calls — if a branch needs one of those, it belongs in a helper the
+    entry method calls by name instead. It's fine — expected — to end up with several small private
+    helpers below it; that's the trade this rule is making (readability of the one method everyone
+    opens first, over a minimal method count). See `ShouldSummonCreaturesDecision.Decide()`
+    (`AI/Decisions/`, `docs/AI.md`) for the shape:
+    ```csharp
+    public SummonChoice Decide()
+    {
+        if (GameManager.Instance.IsFirstRound) return new SummonChoice(true, null);   // NO STUPID
+        if (TryRepairShockedCreature(out var repair)) return repair;
+        if (AIController.EnemyBoardFull) return new SummonChoice(false, null);        // NO STUPID
+        return new SummonChoice(Degrade(DesiredSummon()), null);
+    }
+    ```
+    Every other `AI/Decisions/*.cs` class already follows this shape — treat it as the canonical
+    reference whenever writing or reviewing a new decision-style class, not just AI code specifically.
+    **When one decision needs to hand a specific choice (not just true/false) forward to whatever acts
+    on it, return a small `readonly struct` pairing the bool with that choice** (`RerollChoice`,
+    `SummonChoice`) rather than a bare `bool` plus a second, independent piece of code re-deriving the
+    same choice from live state elsewhere — one call site should own picking *which* thing, not two
+    call sites separately agreeing on it by coincidence.
 
 ## Editor / IDE MCP integrations
 

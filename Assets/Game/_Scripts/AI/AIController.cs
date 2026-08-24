@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Game._Scripts.Global;
 using UnityEngine;
@@ -17,6 +18,12 @@ public partial class AIController : MonoBehaviour
     public static AIController Instance { get; private set; }
     private int _rerollsRemaining;
 
+    /// <summary>Fires on every change to the reroll pool (a spend or a reset) — for UI text.</summary>
+    public event Action<int> OnRerollsChanged;
+
+    /// <summary>Fires only when the AI actually spends a reroll — for UI feedback (see EnergyController's OnEnergySpent, docs/Energy.md).</summary>
+    public event Action OnRerollSpent;
+
     void Awake() { Instance = this; }
 
     void Start()
@@ -32,18 +39,25 @@ public partial class AIController : MonoBehaviour
         var fight = CampaignStateManager.Instance.CurrentFight;
         if (fight == null) return; // boot-time redirect race into a non-fight encounter, see docs/Campaign.md
         _rerollsRemaining = fight.enemyData.rerollsAmount;
+        OnRerollsChanged?.Invoke(_rerollsRemaining);
     }
 
     public static int RerollsRemaining => Instance._rerollsRemaining;
-    public static void SpendReroll() => Instance._rerollsRemaining = Mathf.Max(0, Instance._rerollsRemaining - 1);
+
+    public static void SpendReroll()
+    {
+        Instance._rerollsRemaining = Mathf.Max(0, Instance._rerollsRemaining - 1);
+        Instance.OnRerollsChanged?.Invoke(Instance._rerollsRemaining);
+        Instance.OnRerollSpent?.Invoke();
+    }
 
     public static bool RollForProbability(int successChancePercent) =>
-        Random.Range(0, 100) < successChancePercent;
+        UnityEngine.Random.Range(0, 100) < successChancePercent;
 
-    public static bool DecideShouldSummonCreatures() => new ShouldSummonCreaturesDecision().Decide();
+    public static SummonChoice DecideShouldSummonCreatures() => new ShouldSummonCreaturesDecision().Decide();
 
-    public static CreatureSO DecidePreferredCreatureType(CreatureSO excludeCreature = null) =>
-        new PreferredCreatureTypeDecision().Decide(excludeCreature);
+    public static CreatureSO DecidePreferredCreatureType(CreatureSO repairTarget = null, CreatureSO excludeCreature = null) =>
+        new PreferredCreatureTypeDecision().Decide(repairTarget, excludeCreature);
 
     public static ActionSO DecidePreferredNukeOrSpell(ActionSO excludeAction = null) =>
         new PickActionDecision().Decide(excludeAction);

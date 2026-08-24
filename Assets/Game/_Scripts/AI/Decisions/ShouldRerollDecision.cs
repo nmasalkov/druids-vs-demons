@@ -7,8 +7,9 @@ public class ShouldRerollDecision
         int rerollsUsedSoFar, int rerollBudget)
     {
         var nonMatching = NonMatchingIndices(currentSlots, desiredAction);
-        if (rerollsUsedSoFar >= rerollBudget || nonMatching.Count == 0)
-            return new RerollChoice(false, -1); // physically nothing left to do — no degrade
+        int matchCount = currentSlots.Count - nonMatching.Count;
+        if (rerollsUsedSoFar >= rerollBudget || nonMatching.Count == 0 || matchCount == 1)
+            return new RerollChoice(false, -1); // nothing left to do, or already has exactly one desired — no degrade
 
         int slotIndex = nonMatching[Random.Range(0, nonMatching.Count)];
         var fight = CampaignStateManager.Instance.CurrentFight.enemyData;

@@ -15,7 +15,7 @@ MonoBehaviour:
   id: bat
   actionName: Bat
   description: A fire-breathing mage that scorches enemies with arcane damage.
-  cardSprite: {fileID: 21300000, guid: 08cc8b33c0dfc96438e862ec71d20cbd, type: 3}
+  cardSprite: {fileID: 8647823593821616703, guid: 00aef1a31e512dd4cb8695cea4863065, type: 3}
   creaturePrefab: {fileID: 24566656915439686, guid: b74a2fb6d936efd45bd7227769b7da2a, type: 3}
   levelStats:
   - damage: 9

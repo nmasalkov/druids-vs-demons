@@ -48,7 +48,7 @@ public partial class CampaignManager : MonoBehaviour
 
     public void StartNewRun()
     {
-        CampaignStateManager.Instance.ReplaceRunState(new RunState());
+        CampaignStateManager.Instance.ReplaceRunState(CampaignStateManager.CreateFreshRunState());
         CampaignStateManager.Instance.Save();
         LoadCurrentEncounter();
     }

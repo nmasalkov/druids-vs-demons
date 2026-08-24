@@ -151,9 +151,14 @@ namespace _Scripts.Creatures
         private void FinishSequence()
         {
             if (ownerCreature.Health.IsDead())
+            {
                 ownerCreature.Health.ExecutePostponedDeath();
+            }
             else
+            {
+                ownerCreature.Health.PostponeDeath = false;
                 PlayIdle();
+            }
         }
 
         public override float GetAttackDuration()

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 545cc407a1915d44080decac3f66031b, type: 3}
+  m_Name: Fight3 Orks
+  m_EditorClassIdentifier: 
+  fightId: battle_3
+  isTutorial: 0
+  enemyData:
+    enemyAvatarPrefab: {fileID: 7522106083903523178, guid: 28bd83709866df54bb609e7b464b9c65, type: 3}
+    hp: 100
+    creatures: {fileID: 11400000, guid: da737c570fa4b044c86de5b1e5fc906b, type: 2}
+    stupidityChance: 20
+    criticalFailureChance: 15
+    rerollsAmount: 10
+  hasLoadoutPick: 1
+  hasReward: 1
+  rewardAmount: 40

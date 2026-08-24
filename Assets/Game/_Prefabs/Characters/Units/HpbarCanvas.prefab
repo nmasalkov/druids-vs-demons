@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1202014713104477389}
   - component: {fileID: 1473630052944609290}
   - component: {fileID: 4595888395242008937}
+  - component: {fileID: 5868875507700824263}
   m_Layer: 0
   m_Name: HpbarCanvas
   m_TagString: Untagged
@@ -102,6 +103,18 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &5868875507700824263
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6753438332844071829}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3dc8014957aa15a49ae74dbb561c0f06, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &3921283410621354733
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -12,6 +12,7 @@ public struct EnemyData
 {
     public GameObject enemyAvatarPrefab;
     public int hp;
+    public CreaturesSO creatures;
 
     [Tooltip("Weight (0-100) that the AI won't go with its calculated best decision and degrades to " +
              "the next-best one instead (see AIDegrade). Decisions marked NO STUPID ignore this.")]

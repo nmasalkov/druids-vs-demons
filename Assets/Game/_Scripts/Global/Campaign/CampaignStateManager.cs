@@ -21,6 +21,12 @@ public partial class CampaignStateManager : MonoBehaviour
 
     [SerializeField] private GameCatalog catalog;
     [SerializeField] private RewardListSO rewardList;
+    [Tooltip("Reroll energy a brand new run starts with (RunState.currentEnergy). Balancing knob — " +
+             "used by both CreateFreshRunState() call sites (first-ever boot with no save, and " +
+             "CampaignManager.StartNewRun()). RunState's own field initializer is only the fallback " +
+             "for a raw new RunState() built outside those paths (e.g. deserializing a legacy save " +
+             "missing this key).")]
+    [SerializeField] private int startingEnergy = 50;
 
     public RewardListSO RewardList => rewardList;
     public GameCatalog Catalog => catalog;
@@ -105,6 +111,14 @@ public partial class CampaignStateManager : MonoBehaviour
         var fight = CampaignManager.Instance.CurrentFight;
         CurrentFight = fight;
         G.EnemyView.ReplaceHeroAvatar(fight.enemyData.enemyAvatarPrefab);
+        G.ApplyCampaignEnemyCreatures(ResolveEnemyCreatures(fight));
+    }
+
+    private static CreaturesSO ResolveEnemyCreatures(FightSO fight)
+    {
+        if (fight.enemyData.creatures != null) return fight.enemyData.creatures;
+        Debug.LogWarning($"CampaignStateManager: fight \"{fight.fightId}\" has no enemyData.creatures set — falling back to G.DefaultCreatures.");
+        return G.DefaultCreatures;
     }
 
     private void ApplyLoadoutToG()
@@ -161,9 +175,17 @@ public partial class CampaignStateManager : MonoBehaviour
         return run ?? CreateAndPersistFreshRun();
     }
 
+    /// <summary>
+    /// Builds a brand new RunState honoring the Inspector-tunable startingEnergy balancing knob —
+    /// the single shared factory both "new run" paths go through (a first-ever boot with no save,
+    /// via CreateAndPersistFreshRun() below, and CampaignManager.StartNewRun()) so neither can drift
+    /// out of sync with the other by constructing a raw new RunState() independently.
+    /// </summary>
+    public static RunState CreateFreshRunState() => new RunState { currentEnergy = Instance.startingEnergy };
+
     private static RunState CreateAndPersistFreshRun()
     {
-        var run = new RunState();
+        var run = CreateFreshRunState();
         SaveStorage.Backend.Write(JsonUtility.ToJson(run));
         return run;
     }

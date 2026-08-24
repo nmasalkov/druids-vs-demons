@@ -45,8 +45,10 @@ encounter — see "Fight results" below.
   `enemyData` (`EnemyData`), `hasLoadoutPick` (bool), `hasReward` (bool), `rewardAmount` (int — the
   guaranteed energy grant, only meaningful when `hasReward` is true).
 - `EnemyData` (nested `[Serializable] struct` in `FightSO.cs`) — `enemyAvatarPrefab` (`GameObject`),
-  `hp` (int), plus the AI-tuning fields (`stupidityChance`/`criticalFailureChance`/`rerollsAmount` —
-  see `docs/AI.md`). Expandable later without touching `FightSO` itself.
+  `hp` (int), `creatures` (`CreaturesSO` — the enemy's per-fight archer/tank/mage roster, applied to
+  `G.EnemyCreatures` via `G.ApplyCampaignEnemyCreatures` — see `docs/G.md`), plus the AI-tuning fields
+  (`stupidityChance`/`criticalFailureChance`/`rerollsAmount` — see `docs/AI.md`). Expandable later
+  without touching `FightSO` itself.
 - `Global/Campaign/Encounter.cs` — abstract `MonoBehaviour` base for a pick-screen phase played by
   `MapManager` (loadout) or `BattleRewardPresenter` (reward): `event Action OnCompleted` + protected
   `Complete()`, plus `Headless`/`CompletePresentation()` (CLAUDE.md rule 28 — the backend/view split
@@ -274,6 +276,7 @@ public void ApplyEncounterToScene()
     var fight = CampaignManager.Instance.CurrentFight;
     CurrentFight = fight;
     G.EnemyView.ReplaceHeroAvatar(fight.enemyData.enemyAvatarPrefab);
+    G.ApplyCampaignEnemyCreatures(ResolveEnemyCreatures(fight));
 }
 ```
 
@@ -283,6 +286,17 @@ is placed on the same `CampaignProgress.prefab` as `CampaignStateManager` and is
 wherever this runs. Unlike before this refactor, there's no longer any `is not FightSO` check here —
 `CampaignManager.CurrentFight` is unconditionally a `FightSO` now, since it's the only type left in
 `EncounterListSO.fights`.
+
+**Enemy creature roster now varies per fight.** `ResolveEnemyCreatures(fight)` returns
+`fight.enemyData.creatures` if set, otherwise falls back to **`G.DefaultCreatures`** (logging a
+warning) — this is the guard for the "new `FightSO` fields silently default to unset on existing
+assets" Gotcha below, since `creatures` was added after `Fight2`–`Fight5` were authored and they don't
+have it set yet. The fallback deliberately targets `G.DefaultCreatures`, not `G.EnemyCreatures` itself
+— see CLAUDE.md's player/enemy creature pool rule for why (a mutable field with no per-encounter reset
+would silently leak the previous fight's roster forward). The result is pushed into `G.EnemyCreatures`
+via `G.ApplyCampaignEnemyCreatures` (`docs/G.md`), which `SlotMachine`'s enemy-side instance and
+`PreferredCreatureTypeDecision` (`docs/AI.md`) both read live — no caching, so this is a single write
+per encounter, not something every read site needs to know about.
 
 ## Soft reload and scene-aware navigation
 
@@ -707,12 +721,31 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
   correctly resume from that saved index, not restart at encounter 0. Use `CampaignProgressTool`'s
   "Start New Run" or `CampaignDebugTool`'s "Clear Saved Run" button to get back to a genuinely fresh
   state.
-- **New `FightSO` fields silently default to `false`/`0` on existing assets.** Unity backfills
+- **New `FightSO` fields silently default to `false`/`0`/`null` on existing assets.** Unity backfills
   `hasLoadoutPick`/`hasReward`/`rewardAmount` to their C# type defaults on any `FightSO` asset that
   predates those fields — a fight that should have a loadout pick or reward will silently have neither
   until the asset is explicitly authored in the Inspector. No error, no warning — it just quietly
   behaves like a bare fight. Always double-check these three fields on a new or renamed `FightSO`
   asset rather than assuming they carried over from wherever the asset was copied from.
+  `enemyData.creatures` is the same story but with a soft landing: `Fight2`–`Fight5` don't have it set
+  yet (only `Fight1 Tutorial` does, pointing at its own `Creatures.asset`), so until each is authored
+  with its own roster, `ResolveEnemyCreatures` falls back to `G.DefaultCreatures` (logged as a warning)
+  rather than crashing.
+
+- **A leftover `CampaignDebugTool` granular override can make the player's pool match the enemy's,
+  and it'll look exactly like a bug in whichever creature-pool code was touched most recently.** Real,
+  live-caught: `BattleScene.unity`'s `CampaignDebugTool` had `overrideArcher`/`overrideTank`/
+  `overrideMage` left checked (pointing at the same `DemonArcher`/`Cyclop`/`Bat` trio used for
+  `Fight1`'s enemy roster) from earlier ad-hoc testing — harmless while `MapScene`'s clean copy won
+  the cross-scene singleton race in normal play, but the instant `BattleScene` was played directly
+  (a common way to test in isolation), `CampaignDebugTool`'s own copy won instead and silently forced
+  `RunState.archerId`/`tankId`/`mageId` to the demon ids in `Awake()`, before `ApplyLoadoutToG()` ever
+  ran. Combined with the (correct, working-as-designed) new per-fight enemy override, both sides ended
+  up rolling the same demon roster — looked like the new enemy-roster code had leaked into the player
+  side, but the actual cause was this pre-existing, unrelated checked box. Always leave
+  `CampaignDebugTool`'s granular overrides unchecked (bool `0` + referenced asset cleared to
+  `{fileID: 0}`, matching every currently-unused override already sitting that way in the same
+  component) once done testing with them — see CLAUDE.md's player/enemy creature pool rule.
 
 ## `MapScene`
 

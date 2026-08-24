@@ -48,11 +48,11 @@ public class RollState : GameState
         // do-while grants — never go for the same action that just landed 3-of-a-kind (docs/AI.md).
         var justTripledAction = GetJustTripledAction();
 
-        bool summon = AIController.DecideShouldSummonCreatures();
+        var summon = AIController.DecideShouldSummonCreatures();
         SlotMachine.RollType rollType;
-        if (summon)
+        if (summon.ShouldSummon)
         {
-            _desiredAction = AIController.DecidePreferredCreatureType(justTripledAction as CreatureSO);
+            _desiredAction = AIController.DecidePreferredCreatureType(summon.RepairTarget, justTripledAction as CreatureSO);
             rollType = SlotMachine.RollType.Creature;
         }
         else

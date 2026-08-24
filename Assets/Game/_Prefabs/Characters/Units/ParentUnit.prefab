@@ -294,6 +294,7 @@ MonoBehaviour:
   maxHealth: 0
   currentHealth: 0
   healthBar: {fileID: 1820042387585673216}
+  healthText: {fileID: 3627749905557427753}
   healFeedback: {fileID: 0}
 --- !u!114 &6870561863682724144
 MonoBehaviour:
@@ -744,6 +745,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b7c5c23abd374de4b514082c8b417810, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &3627749905557427753 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1232175930135914657, guid: e3c5d72d47cf7204898d0a00f30f55a4, type: 3}
+  m_PrefabInstance: {fileID: 2540533952695549576}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82aa9e2489bc5ee428a972de90fc8795, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!224 &5966096744159500695 stripped

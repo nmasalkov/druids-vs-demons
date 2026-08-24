@@ -12,9 +12,33 @@ PrefabInstance:
       propertyPath: m_PresetInfoIsWorld
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1881192198039712484, guid: e3c5d72d47cf7204898d0a00f30f55a4, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1881192198039712484, guid: e3c5d72d47cf7204898d0a00f30f55a4, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1881192198039712484, guid: e3c5d72d47cf7204898d0a00f30f55a4, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6349021364093568975, guid: e3c5d72d47cf7204898d0a00f30f55a4, type: 3}
+      propertyPath: m_Name
+      value: Expirience
+      objectReference: {fileID: 0}
     - target: {fileID: 6753438332844071829, guid: e3c5d72d47cf7204898d0a00f30f55a4, type: 3}
       propertyPath: m_Name
       value: Hpbarcanvasplayer
+      objectReference: {fileID: 0}
+    - target: {fileID: 7986510606697032117, guid: e3c5d72d47cf7204898d0a00f30f55a4, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7986510606697032117, guid: e3c5d72d47cf7204898d0a00f30f55a4, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8181386077454559007, guid: e3c5d72d47cf7204898d0a00f30f55a4, type: 3}
       propertyPath: m_Pivot.x
@@ -78,11 +102,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8181386077454559007, guid: e3c5d72d47cf7204898d0a00f30f55a4, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8181386077454559007, guid: e3c5d72d47cf7204898d0a00f30f55a4, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 4.08
+      value: 4.079956
       objectReference: {fileID: 0}
     - target: {fileID: 8181386077454559007, guid: e3c5d72d47cf7204898d0a00f30f55a4, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x

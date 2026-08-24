@@ -8,6 +8,8 @@ public class Health : MonoBehaviour
     [SerializeField] private float currentHealth;
     [Tooltip("Optional. Targetables without a bar (e.g. Shield) leave this empty.")]
     public SliderController healthBar;
+    [Tooltip("Optional. Targetables without a bar (e.g. Shield) leave this empty.")]
+    public HealthTextController healthText;
     public event Action onDamageTaken;
     public event Action onDeath;
     public event Action onHealed;
@@ -21,7 +23,13 @@ public class Health : MonoBehaviour
     {
         maxHealth = maxHp;
         currentHealth = maxHp;
+        RefreshDisplays();
+    }
+
+    private void RefreshDisplays()
+    {
         if (healthBar != null) healthBar.SetValue(currentHealth, maxHealth);
+        if (healthText != null) healthText.SetValue(currentHealth, maxHealth);
     }
     void Start()
     {
@@ -42,7 +50,7 @@ public class Health : MonoBehaviour
     {
         currentHealth -= damage;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
-        if (healthBar != null) healthBar.SetValue(currentHealth, maxHealth);
+        RefreshDisplays();
         if (IsDead())
         {
             if (PostponeDeath)
@@ -74,7 +82,7 @@ public class Health : MonoBehaviour
     {
         if (IsDead() || amount <= 0f) return;
         currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
-        if (healthBar != null) healthBar.SetValue(currentHealth, maxHealth);
+        RefreshDisplays();
         onHealed?.Invoke();
         if (healFeedback != null) healFeedback.PlayFeedbacks();
     }

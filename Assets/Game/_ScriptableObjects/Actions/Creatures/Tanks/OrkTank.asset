@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10f79816516741e1932bb7af24ebaa19, type: 3}
+  m_Name: OrkTank
+  m_EditorClassIdentifier: 
+  id: OrkTank
+  actionName: Ork Tank
+  description: A battle-hardened orc brute that batters through the front line with
+    brutal melee strikes.
+  cardSprite: {fileID: -3934286573251214832, guid: c7a12dff2eb4e47469d1f57a35b489a7, type: 3}
+  creaturePrefab: {fileID: 5198412419907215727, guid: c1fe99d406d2c1549a3d63a86ec0d75c, type: 3}
+  levelStats:
+  - damage: 5
+    health: 45
+    numberOfAttacks: 1
+  - damage: 7
+    health: 55
+    numberOfAttacks: 1
+  - damage: 10
+    health: 70
+    numberOfAttacks: 1
+  - damage: 12
+    health: 80
+    numberOfAttacks: 1
+  experienceReward: 1e0000003c00000078000000f0000000
+  xpThresholds: 00000000780000004001000058020000
+  healAmounts:
+  - 3
+  - 7
+  - 10
+  - 24

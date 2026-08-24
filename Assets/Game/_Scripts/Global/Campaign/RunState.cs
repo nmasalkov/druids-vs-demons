@@ -18,7 +18,11 @@ public class RunState
 
     // The only RunState field a battle itself changes (via reroll spend + victory reward) —
     // persists across encounters; every other field only changes through explicit campaign
-    // navigation/debug actions. See docs/Encounters.md.
+    // navigation/debug actions. See docs/Encounters.md. This field's own default (50) is only a
+    // fallback for a raw `new RunState()`/deserialize outside the normal "new run" paths — the
+    // actual balancing knob for what a fresh run starts with is
+    // CampaignStateManager.startingEnergy (Inspector-tunable), applied by
+    // CampaignStateManager.CreateFreshRunState(). See docs/Energy.md.
     public int currentEnergy = 50;
 
     // Defaults mirror today's _DefaultCreatures.asset/DefaultNukes.asset/DefaultSpells.asset

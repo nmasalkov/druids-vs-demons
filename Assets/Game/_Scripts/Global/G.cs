@@ -53,6 +53,17 @@ public class G : MonoBehaviour
         Instance.defaultSpells = spells;
     }
 
+    /// <summary>
+    /// Overrides the enemy's creature pool with the current fight's own roster
+    /// (FightSO.enemyData.creatures) — enemyNukes/enemySpells stay Inspector-wired defaults for now,
+    /// only creatures vary per fight so far. Called by CampaignStateManager.ApplyEncounterToScene()
+    /// whenever BattleScene is entered. See docs/G.md / docs/Encounters.md.
+    /// </summary>
+    public static void ApplyCampaignEnemyCreatures(CreaturesSO creatures)
+    {
+        Instance.enemyCreatures = creatures;
+    }
+
     void Update()
     {
         if (testMode && Keyboard.current != null && Keyboard.current.jKey.wasPressedThisFrame)

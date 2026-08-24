@@ -22,12 +22,10 @@ here" entry point for this codebase.
   `_DefaultCreatures.asset`/`DefaultNukes.asset`/`DefaultSpells.asset` fallback assets), but overridden
   at runtime by a campaign run — see `ApplyCampaignLoadout` below.
 - `enemyCreatures`/`enemyNukes`/`enemySpells` — exposed as `G.EnemyCreatures`/`EnemyNukes`/
-  `EnemySpells`. The **enemy's** pool for real battles — `ApplyCampaignLoadout` never touches these,
-  so the enemy's roster stays fixed regardless of what the player picks in the loadout screen.
-  Inspector-assigned; currently point at the same fallback assets as `defaultCreatures`/`defaultNukes`/
-  `defaultSpells` do, so the enemy's roster is unchanged from pre-campaign behavior — a natural place
-  to later wire a per-`FightSO` enemy loadout once that data model exists (`FightSO`/`EnemyData` today
-  only carries `enemyAvatarPrefab`/`hp`, no loadout).
+  `EnemySpells`. The **enemy's** pool for real battles — `ApplyCampaignLoadout` never touches these.
+  `enemyCreatures` is now overridden per fight by `ApplyCampaignEnemyCreatures` (below), driven by
+  `FightSO.enemyData.creatures` — see `docs/Encounters.md`. `enemyNukes`/`enemySpells` stay
+  Inspector-assigned fixed defaults; no per-fight data exists for those yet.
 - `playerView`/`enemyView` (`HeroView`) — exposed as `G.PlayerView`/`EnemyView`, and further as
   `G.PlayerCreaturesManager`/`EnemyCreaturesManager` (`.CreaturesManager`) and `G.PlayerHero`/
   `EnemyHero` (`.Hero`). Which `HeroView` is "player" vs "enemy" is purely which Inspector slot it's
@@ -60,8 +58,35 @@ dependency in either direction. Full detail on what builds the `CreaturesSO`/`Nu
 passed in here, and why it's safe regardless of component initialization order:
 [`docs/Campaign.md`](Campaign.md).
 
+## `ApplyCampaignEnemyCreatures` — per-fight enemy roster
+
+```csharp
+public static void ApplyCampaignEnemyCreatures(CreaturesSO creatures)
+{
+    Instance.enemyCreatures = creatures;
+}
+```
+
+Sibling to `ApplyCampaignLoadout` but for the enemy side's creature pool only (`enemyNukes`/
+`enemySpells` stay untouched — no per-fight data for those yet). Called from
+`CampaignStateManager.ApplyEncounterToScene()` (`docs/Encounters.md`) with
+`ResolveEnemyCreatures(fight)`'s result: `fight.enemyData.creatures` if set, **else `G.DefaultCreatures`**
+(logged as a warning) — never `G.EnemyCreatures` itself. See the Gotcha below for why the fallback
+target matters.
+
 ## Gotchas
 
+- **The enemy-creatures fallback must target `G.DefaultCreatures`, never `G.EnemyCreatures` itself.**
+  `G.EnemyCreatures` is a plain mutable field with no reset between encounters — if a fight without
+  its own `enemyData.creatures` fell back to "whatever `G.EnemyCreatures` currently holds", it would
+  silently inherit whatever the *previous* fight last wrote there (Fight 2 running right after Fight 1
+  set a demon roster would keep rolling demons forever, with nothing to blame in Fight 2's own data).
+  `G.DefaultCreatures` is safe to fall back to instead specifically because `ApplyLoadoutToG()` always
+  runs first in `EnterBattleScene()` and recomputes it fresh from `RunState` every single encounter —
+  it's never a leftover value. See CLAUDE.md's player/enemy creature pool rule and
+  `docs/Encounters.md`'s Gotchas for the real, live-caught bug this caused (a leftover
+  `CampaignDebugTool` override plus this exact wrong fallback made both sides roll the same demon
+  roster).
 - **`SlotMachine` picks its pool via its own `isPlayerMachine` flag, not by asking `G` which side is
   active.** `SlotMachine.GetActionOptions()` (see `docs/SlotMachine.md`) reads
   `G.DefaultCreatures`/`DefaultNukes`/`DefaultSpells` when `isPlayerMachine` is true, or

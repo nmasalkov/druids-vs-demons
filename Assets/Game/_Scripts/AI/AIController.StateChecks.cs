@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Linq;
+using Game._Scripts.Creatures;
 
 public partial class AIController
 {
@@ -18,4 +20,19 @@ public partial class AIController
 
     public static bool EnemyBoardFull =>
         G.EnemyCreaturesManager.Tank != null && G.EnemyCreaturesManager.Archer != null && G.EnemyCreaturesManager.Mage != null;
+
+    /// <summary>The AI's own native-slot creatures currently stunned by Shock. Charm-slot occupants
+    /// don't count — only a native slot's own roll can repair (heal/promote) it, see SpawningState.</summary>
+    public static IReadOnlyList<Creature> ShockedEnemyCreatures
+    {
+        get
+        {
+            var manager = G.EnemyCreaturesManager;
+            var list = new List<Creature>();
+            if (manager.Tank != null && manager.Tank.StatusesManager.IsShocked) list.Add(manager.Tank);
+            if (manager.Archer != null && manager.Archer.StatusesManager.IsShocked) list.Add(manager.Archer);
+            if (manager.Mage != null && manager.Mage.StatusesManager.IsShocked) list.Add(manager.Mage);
+            return list;
+        }
+    }
 }

@@ -33,6 +33,30 @@ it's genuinely `EnergyController`-owned state with no campaign-persistence conce
   the reroll button when the player can't afford it.
 - `Assets/Game/_Scripts/UI/EnergyDisplay.cs` — shows `EnergyController.CurrentEnergy` on the
   `Canvas/EnergyCount` HUD object in `BattleScene.unity` and plays a feedback whenever it changes.
+  Inherits from `Assets/Game/_Scripts/UI/RerollResourceDisplay.cs`, an abstract base shared with the
+  enemy side's `EnemyRerollDisplay` (`docs/AI.md`'s "Rerolls" section) — the base owns the text/
+  feedback fields and the "update text on every change, play feedback only on an actual spend"
+  wiring; each subclass just points it at its own controller's change/spent events.
+
+## Starting energy
+
+`RunState.currentEnergy`'s own field initializer (`= 50`) is only a fallback for a raw
+`new RunState()`/deserialize built outside the normal "new run" paths (e.g. backfilling a legacy save
+missing this key). The actual balancing knob for what a **brand new run** starts with is
+`CampaignStateManager.startingEnergy` (`[SerializeField] int`, Inspector-tunable on the
+`CampaignProgress` prefab) — **not** `EnergyController`, which never owns a starting value at all (see
+"The energy pool has exactly one source of truth" above; it only computes a live read-through onto
+whatever `RunState.currentEnergy` already holds). `CampaignStateManager.CreateFreshRunState()` (`public
+static`) is the single shared factory both "new run" paths go through, so neither can drift out of
+sync by constructing a raw `new RunState()` independently:
+
+- `CreateAndPersistFreshRun()` — first-ever boot with no save present (`LoadOrCreateRunState()`).
+- `CampaignManager.StartNewRun()` — the explicit "start a new run" action (`CampaignProgressTool`'s
+  button today).
+
+A debug override (`CampaignDebugTool`'s "Current Energy"/"Use Debug Profile"/"Use External Save") is a
+separate, already-tunable path (`CampaignProfileSO.currentEnergy`, or a pasted save JSON) — unrelated
+to this knob, since it replaces `RunState` wholesale rather than going through either factory above.
 
 ## Cost model
 

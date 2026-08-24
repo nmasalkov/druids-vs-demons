@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ec2b78b95354236a2135cf1434f4356, type: 3}
+  m_Name: Demon
+  m_EditorClassIdentifier: 
+  id: demon
+  actionName: Demon
+  description: A nimble archer, picking off enemies from range with quick, repeated
+    shots.
+  cardSprite: {fileID: 6897479667268090689, guid: f2510c14ae49fdf4ea445538361402c9, type: 3}
+  creaturePrefab: {fileID: 4923402170913918486, guid: 0047f0f97949f324e91759772dbc019c, type: 3}
+  levelStats:
+  - damage: 3
+    health: 28
+    numberOfAttacks: 2
+  - damage: 3
+    health: 34
+    numberOfAttacks: 3
+  - damage: 5
+    health: 42
+    numberOfAttacks: 3
+  - damage: 6
+    health: 50
+    numberOfAttacks: 4
+  experienceReward: 1e0000003c00000078000000f0000000
+  xpThresholds: 00000000780000004001000058020000
+  healAmounts:
+  - 3
+  - 7
+  - 10
+  - 24

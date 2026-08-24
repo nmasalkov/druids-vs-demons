@@ -45,16 +45,23 @@ This system's contribution is making that future work purely additive instead of
 - `AI/AIController.cs` — the thin static façade: `RollForProbability`, the `Decide*` methods (each
   just `new XyzDecision().Decide()`), and the fight-wide reroll pool (`RerollsRemaining`/
   `SpendReroll()`) — the one piece of real state this class owns, mirroring how `EnergyController`
-  owns the player's energy (not a `SlotMachine` coupling).
+  owns the player's energy (not a `SlotMachine` coupling). `OnRerollsChanged(int)`/`OnRerollSpent()`
+  (instance events) mirror `EnergyController`'s `OnEnergyChanged`/`OnEnergySpent` split (see
+  `docs/Energy.md`'s "Two energy events"): `OnRerollsChanged` fires on every change to the pool (a
+  spend or a `ResetRerollPool()` reset), `OnRerollSpent` only on an actual spend — so UI feedback
+  plays for real spending only, not for a battle-restart/initial reset.
 - `AI/AIController.StateChecks.cs` — partial class (mirrors the `SlotColumn.cs`/
   `SlotColumn.Mechanics.cs` split): `PlayerHeroBelow`/`EnemyHeroBelow`/`AnyPlayerCreatureBelow`/
   `AnyEnemyCreatureBelow` (float 0..1 thresholds), `PlayerCreatureCount`/`EnemyCreatureCount`,
-  `EnemyBoardFull`. These are the primitives `Decisions/` classes use directly, and that
-  `Scoring/ActionAIScorer` wraps for its own int-percent-based API.
+  `EnemyBoardFull`, `ShockedEnemyCreatures` (the AI's own stunned native creatures). These are the
+  primitives `Decisions/` classes use directly, and that `Scoring/ActionAIScorer` wraps for its own
+  int-percent-based API.
 - `AI/AIDegrade.cs` — the one shared stupidity/critical-failure resolver every stupidity-affected
   decision goes through (see "The degrade algorithm" below).
 - `AI/RerollChoice.cs` — `readonly struct { bool ShouldReroll; int SlotIndex; }`, the reroll
   decision's return type.
+- `AI/SummonChoice.cs` — `readonly struct { bool ShouldSummon; CreatureSO RepairTarget; }`, the
+  summon decision's return type — see "`SummonChoice`: threading the repair target through" below.
 - `AI/Decisions/` — one class per choice: `ShouldSummonCreaturesDecision`,
   `PreferredCreatureTypeDecision`, `PickActionDecision`, `RerollBudgetDecision`,
   `ShouldRerollDecision`.
@@ -118,24 +125,70 @@ certainties, not "desires" stupidity should be able to override.
 
 ### `ShouldSummonCreaturesDecision`
 
-First-turn → true (NO STUPID). Board full → false (NO STUPID). Otherwise, a per-creature-count-bucket
-probability roll (0 creatures → always desired true before degrade; 1 creature and behind the player
-→ 60%; 2 creatures and behind → 40%; otherwise → `DefaultSummonChance` = 15, a placeholder — the
-spec never gave a number for "behind by count but not by the specific 1-or-2 buckets," retune this
-constant freely), then degraded like everything else.
+Returns a `SummonChoice` (`ShouldSummon` + `RepairTarget`), not a bare bool — see "`SummonChoice`:
+threading the repair target through" below for why. `Decide()` itself is kept deliberately narrative:
+a short chain of early returns with no inline comparisons, each branch delegating its actual logic to
+a small helper:
+
+```csharp
+public SummonChoice Decide()
+{
+    if (GameManager.Instance.IsFirstRound) return new SummonChoice(true, null);   // NO STUPID
+    if (TryRepairShockedCreature(out var repair)) return repair;
+    if (AIController.EnemyBoardFull) return new SummonChoice(false, null);        // NO STUPID
+    return new SummonChoice(Degrade(DesiredSummon()), null);
+}
+```
+
+`TryRepairShockedCreature` (the "try" pattern, mirroring `TryGetValue`-style APIs) is how the shocked-
+repair path is threaded in: it's a no-op (`return false`) when nothing's shocked, so the ordinary
+board-full/count-bucket flow below falls through untouched. When the AI's own native creatures are
+shocked (stunned), **this takes priority over everything else, including the board-full check** —
+rolling a creature's own type heals/promotes it (`SpawningState.HandleExistingCreature`) which also
+cures its shock, since both promotion and healing unconditionally clear all statuses
+(`StatusesManager.ClearAllStatuses`, wired to `Experience.OnPromoted` and `Health.onHealed`). So
+whenever `AIController.ShockedEnemyCreatures` is non-empty, board-full is skipped entirely (repairing
+needs no free slot), the repair target is the highest-current-HP shocked creature (`BestToRepair`),
+and desire is a shocked-count/level-keyed probability roll instead of the normal count buckets: 3
+shocked → always desired before degrade; 2 shocked → 80%; exactly 1 shocked → keyed by that
+creature's level (≥4 → 80%, 3 → 50%, 1/2 → never — placeholder, spec gave no number here, retune
+freely). Constants live on `ShouldSummonCreaturesDecision` (`TwoShockedRepairChance`/
+`OneShockedLevel3RepairChance`/`OneShockedLevel4RepairChance`).
+
+Only when nothing is shocked does the normal flow apply: board full → false (NO STUPID), else a
+per-creature-count-bucket probability roll (0 creatures → always desired true before degrade; 1
+creature and behind the player → 60%; 2 creatures and behind → 40%; otherwise →
+`DefaultSummonChance` = 15, a placeholder — the spec never gave a number for "behind by count but not
+by the specific 1-or-2 buckets," retune this constant freely). Either way the result is degraded via
+the shared `Degrade(bool desired)` helper (the `[desired, !desired]`/`AIDegrade.Resolve` binary
+pattern, factored out so both branches — and `TryRepairShockedCreature` — share one copy).
 
 "Board full" (native slots) and "creature count" (native + charm slots) are deliberately different
 checks — `EnemyBoardFull` only cares whether there's a free native slot to summon into; the count
-buckets compare total board strength against the player.
+buckets compare total board strength against the player. The shocked-repair path is a third, higher-
+priority signal layered on top of both.
+
+### `SummonChoice`: threading the repair target through
+
+`AI/SummonChoice.cs` — `readonly struct { bool ShouldSummon; CreatureSO RepairTarget; }`, mirroring
+`RerollChoice`'s shape. `ShouldSummonCreaturesDecision` is the **only** place that picks which shocked
+creature to repair (`BestToRepair` — highest current HP); it hands that choice forward as
+`RepairTarget` rather than `PreferredCreatureTypeDecision` re-deriving it independently. `RollState`
+reads `summon.RepairTarget` and passes it straight into
+`AIController.DecidePreferredCreatureType(repairTarget, excludeCreature)` — one source of truth for
+"which creature," never recomputed a second time.
 
 ### `PreferredCreatureTypeDecision`
 
-Ranked list: Tank (if the AI has 0 creatures) → Archer (if any player creature is below 30% hp) →
-Mage (if the player hero is below 30% hp), each only added if the AI doesn't already own that type;
-then any remaining not-yet-listed, not-owned types as a no-signal fallback, in
-`CreaturesManager.AllSlots()`'s own tank→mage→archer order. Degraded via `AIDegrade`. Only ever
-called when `ShouldSummonCreaturesDecision` returned true, so the ranked list is guaranteed
-non-empty.
+Ranked list, top-priority first: `repairTarget` (as handed in by `ShouldSummonCreaturesDecision` via
+`SummonChoice`, null on an ordinary summon) → Tank (if the AI has 0 creatures) → Archer (if any player
+creature is below 30% hp) → Mage (if the player hero is below 30% hp), each of the latter three only
+added if the AI doesn't already own that type; then any remaining not-yet-listed, not-owned types as a
+no-signal fallback, in `CreaturesManager.AllSlots()`'s own tank→mage→archer order. Degraded via
+`AIDegrade`. Only ever called when `ShouldSummonCreaturesDecision` returned a truthy `SummonChoice`, so
+the ranked list is guaranteed non-empty — see the invariant comment on `BuildRankedList` for why this
+still holds now that `repairTarget` (an *owned* type, unlike every other candidate here) can be the
+only entry.
 
 ### `PickActionDecision`
 
@@ -175,13 +228,24 @@ normally expected), right up until the pool itself runs out: either side below 1
 25% (not also below 15%) → +1; tiers, not additive.
 
 `ShouldRerollDecision` is called once after the initial landing and again after every reroll settles.
-Once budget remains and a non-matching slot exists, it applies the same stupidity/critical-failure
-treatment as everything else — a `[true, false]` binary degrade — so the AI can occasionally finish
-when it should've rerolled, or vice versa on critical failure (a coin-flip).
+**Exactly 1 landed slot matching the desired action is a forced no-reroll (NO STUPID)** — the AI
+already has what it wants and just takes it, no degrade involved. Only the 0-match (nothing desired
+yet) and 2-match (chasing the triple) cases go through the normal stupidity/critical-failure treatment
+— a `[true, false]` binary degrade — so the AI can occasionally finish when it should've rerolled, or
+vice versa on critical failure (a coin-flip), in those two cases only.
 
 `AIController.SpendReroll()` is called exactly once per actual reroll, by `RollState` right at the
 point it commits to triggering one — never inside a `Decide*` method, so decisions themselves stay
 free of side effects.
+
+**UI: `EnemyRerollDisplay`** (`UI/EnemyRerollDisplay.cs`, on `Canvas/EnemyRerollCount` in
+`BattleScene.unity`, a prefab variant of `EnergyCount.prefab`) mirrors the pool onto the HUD, the same
+way `EnergyDisplay` mirrors the player's energy (`docs/Energy.md`). Both now share an abstract base,
+`UI/RerollResourceDisplay.cs` — it owns the text/feedback fields and the "update text on every
+change, play feedback only on an actual spend" `Start()`/`OnDestroy()` wiring; each subclass just
+points `CurrentValue` and `Subscribe()`/`Unsubscribe()` at its own controller's events
+(`EnergyController.OnEnergyChanged`/`OnEnergySpent` vs `AIController.OnRerollsChanged`/
+`OnRerollSpent`).
 
 ## Scoring: `ActionAIScorer` and how to add AI scoring to a new nuke/spell
 
@@ -236,7 +300,8 @@ If you don't override `CreateAIScorer()`, the SO falls back to `NoOpActionAIScor
   pattern. This is the one rule this whole system exists to enforce; breaking it re-couples decision
   logic to the live slot machine and undoes the headless-testability groundwork.
 - **`DefaultSummonChance` (15) is a placeholder**, not a value from the original spec — see
-  `ShouldSummonCreaturesDecision`.
+  `ShouldSummonCreaturesDecision`. Same for the "exactly 1 shocked creature, level 1 or 2" case in the
+  same class, which the spec left unnumbered and currently always resolves to "not desired."
 - **The exclusion fix (see above) only prevents re-selecting the exact same `ActionSO`/`CreatureSO`
   that just tripled — it doesn't prevent a *different* action of the same broad category** (e.g. a
   tripled FireMagic doesn't stop the AI from choosing Starfall on the bonus roll, only FireMagic

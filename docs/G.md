@@ -35,6 +35,10 @@ here" entry point for this codebase.
 - `G.EncounterList` — `CampaignManager.Instance.EncounterList` (`docs/Encounters.md`), not a
   field of `G` itself. Added for consistency with `G`'s "reach other systems through here" role
   rather than routing through `CampaignManager` directly for this one lookup.
+- `G.Rigger` — `SlotMachineRigger.Instance`, same forwarding pattern as `G.EncounterList`/
+  `G.RewardList` (not a field of `G` itself — `SlotMachineRigger` is a sibling component on `Global`,
+  not data `G` owns). `SlotMachine`/`SlotColumn` call this to decide every roll's results — see
+  `docs/SlotMachine.md`.
 
 ## `ApplyCampaignLoadout` — the one mutation point
 

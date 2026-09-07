@@ -21,6 +21,7 @@ MonoBehaviour:
     stupidityChance: 20
     criticalFailureChance: 15
     rerollsAmount: 10
+    lowHpStupidityBypassThreshold: 0.15
   hasLoadoutPick: 1
   hasReward: 1
   rewardAmount: 40

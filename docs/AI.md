@@ -42,8 +42,10 @@ This system's contribution is making that future work purely additive instead of
 
 - `Global/Campaign/FightSO.cs` — `EnemyData.stupidityChance`/`criticalFailureChance` (`[Range(0,100)]`
   ints) and `rerollsAmount` (int, the fight-wide reroll pool — see "Rerolls" below).
-- `AI/AIController.cs` — the thin static façade: `RollForProbability`, the `Decide*` methods (each
-  just `new XyzDecision().Decide()`), and the fight-wide reroll pool (`RerollsRemaining`/
+- `AI/AIController.cs` — the thin static façade: `RollForProbability` (also reused by
+  `SlotMachineRigger` — see `docs/SlotMachine.md` — as the underlying primitive for its dirty-triple
+  chance roll), the `Decide*` methods (each just `new XyzDecision().Decide()`), and the fight-wide
+  reroll pool (`RerollsRemaining`/
   `SpendReroll()`) — the one piece of real state this class owns, mirroring how `EnergyController`
   owns the player's energy (not a `SlotMachine` coupling). `OnRerollsChanged(int)`/`OnRerollSpent()`
   (instance events) mirror `EnergyController`'s `OnEnergyChanged`/`OnEnergySpent` split (see
@@ -58,8 +60,11 @@ This system's contribution is making that future work purely additive instead of
   int-percent-based API.
 - `AI/AIDegrade.cs` — the one shared stupidity/critical-failure resolver every stupidity-affected
   decision goes through (see "The degrade algorithm" below).
-- `AI/RerollChoice.cs` — `readonly struct { bool ShouldReroll; int SlotIndex; }`, the reroll
-  decision's return type.
+- `AI/RerollChoice.cs` — `readonly struct { bool ShouldReroll; int SlotIndex; ShouldRerollDecision.
+  RerollMode NextMode; bool GrantBonusReroll }`, the reroll decision's return type — built via
+  `RerollChoice.Reroll(...)`/`RerollChoice.Finish(...)` factory methods, not a raw constructor.
+  Carries the per-turn state machine's next mode and whether this call grants the one-time bonus
+  reroll (see "Rerolls" below).
 - `AI/SummonChoice.cs` — `readonly struct { bool ShouldSummon; CreatureSO RepairTarget; }`, the
   summon decision's return type — see "`SummonChoice`: threading the repair target through" below.
 - `AI/Decisions/` — one class per choice: `ShouldSummonCreaturesDecision`,
@@ -72,7 +77,8 @@ This system's contribution is making that future work purely additive instead of
   the SO→scorer factory every concrete nuke/spell SO overrides in one line, mirroring the existing
   `CreateResolver()` pattern (`docs/ActionsAndSpells.md`).
 - `Global/GameManager/RollState.cs` — the orchestrator (see above). Owns the AI's per-turn state
-  (`_desiredAction`, `_rerollBudget`, `_rerollsUsed`) as plain fields on the `GameState` instance —
+  (`_desiredAction`, `_rerollBudget`, `_rerollsUsed`, `_rerollMode`, `_bonusGranted`) as plain fields
+  on the `GameState` instance —
   no restart handling needed, since a fresh `RollState` is `new`'d every `TakeTurn()` iteration and
   `GameManager.RestartBattle()` already tears down the current state before firing
   `OnBattleRestart` (`docs/GameLoop.md`).
@@ -81,8 +87,10 @@ This system's contribution is making that future work purely additive instead of
 - `Global/RollStateManager/RollStateManager.cs` — `ActiveMachine` (computed property, tracks
   `GameManager.ActiveSide` live — rule 22, one source of truth) replaces the old
   `AIController.Instance.TakeControl`/`ReleaseControl` coupling entirely.
-- `Units/Health.cs` — `HealthPercent` (0..1 float), the primitive every HP-threshold check in this
-  system is ultimately built on.
+- `Units/Health.cs` — `HealthPercent` (0..1 float) and `CurrentHealth` (raw float points).
+  `HealthPercent` is the primitive every HP-threshold check in this system is ultimately built on;
+  `CurrentHealth` is the one exception — `RerollBudgetDecision`'s formula reads it directly (see
+  "Rerolls" below).
 
 ## Decisions and the degrade algorithm
 
@@ -215,27 +223,139 @@ it's genuinely load-bearing for nukes/spells, which have no "already owned" conc
 
 **The fight-wide pool, not a per-turn cap, is what actually limits the AI.** `EnemyData.rerollsAmount`
 (default 10) is a budget that depletes by 1 every time the AI actually rerolls, persists across all
-of the AI's turns for the whole fight, and only resets when the battle restarts. Once it hits 0, the
-AI simply can't reroll anymore — `RerollBudgetDecision` always returns 0 from that point on, and
-`ShouldRerollDecision` hard-stops (no degrade — nothing left to spend, not a "desire").
+of the AI's turns for the whole fight, and only resets when the battle restarts.
 
-The **per-turn base cap** is a fixed constant, `RerollBudgetDecision.BaseMaxRerollsPerTurn = 2`
-(the spec's literal "2" — no longer a per-fight-tunable field). Computed once, off the *initial*
-landed slots, based on how many of the 3 match the desired action: 0 matches → up to the base cap;
-exactly 1 → 1; a pair (2) → up to the base cap again (aggressively chasing the triple, since it
-grants a bonus turn). A low-hp bonus can push the total **above** the base cap (and even above what's
-normally expected), right up until the pool itself runs out: either side below 15% hp → +2; below
-25% (not also below 15%) → +1; tiers, not additive.
+**The per-turn base budget is a formula, not a fixed constant or a match-count tier.** Design
+deliberately balances each fight's `EnemyData.hp` against `rerollsAmount` at roughly a 10:1 ratio (e.g.
+100 hp / 10 rerolls), so `RerollBudgetDecision.Decide()` reads current HP against that ratio and lets
+the AI conserve its pool near full HP, spiking its per-turn budget the more it's actually been hurt:
 
-`ShouldRerollDecision` is called once after the initial landing and again after every reroll settles.
-**Exactly 1 landed slot matching the desired action is a forced no-reroll (NO STUPID)** — the AI
-already has what it wants and just takes it, no degrade involved. Only the 0-match (nothing desired
-yet) and 2-match (chasing the triple) cases go through the normal stupidity/critical-failure treatment
-— a `[true, false]` binary degrade — so the AI can occasionally finish when it should've rerolled, or
-vice versa on critical failure (a coin-flip), in those two cases only.
+```csharp
+public int Decide()
+{
+    int pool = AIController.RerollsRemaining;
+    int desiredBudget = Mathf.Max(1, pool - HealthReserve());
+    return Mathf.Min(desiredBudget, pool); // "at least 1" must never exceed what's left in the pool
+}
 
-`AIController.SpendReroll()` is called exactly once per actual reroll, by `RollState` right at the
-point it commits to triggering one — never inside a `Decide*` method, so decisions themselves stay
+private static int HealthReserve() => Mathf.FloorToInt(AIController.EnemyHeroCurrentHealth / 10f);
+```
+
+`HealthReserve()` reads **raw current HP points** (`AIController.EnemyHeroCurrentHealth`, backed by
+`Health.CurrentHealth`) rather than a percent — the one HP check in this system that isn't
+percent-based, because the formula is only meaningful against the fight's own hp:rerolls ratio.
+Computed once per turn, at `RollState.HandlePostRollsEnter()`.
+
+**Unlike before, the per-turn budget isn't fixed for the rest of the turn — it can grow by +1 once**,
+a bonus granted the moment the AI observes it's completed the desired action's own pair while chasing
+it (see below). `RollState` owns `_rerollBudget` as a genuinely mutable per-turn field for this reason.
+
+#### The two-state per-turn reroll process
+
+`ShouldRerollDecision` models the whole turn as a small one-way state machine,
+`ShouldRerollDecision.RerollMode` (`Open` → `CommittedToDesired`). `RollState` owns the live value
+(`_rerollMode`) and passes it in on every call — `Decide()` stays a pure function of its arguments,
+same reasoning as `_rerollBudget`/`_rerollsUsed` already required:
+
+```csharp
+public RerollChoice Decide(IReadOnlyList<ActionSO> currentSlots, ActionSO desiredAction,
+    int rerollsUsedSoFar, int rerollBudget, RerollMode mode, bool bonusAlreadyGranted)
+{
+    bool grantBonus = ShouldGrantBonus(currentSlots, desiredAction, mode, bonusAlreadyGranted);
+    int budget = EffectiveBudget(rerollBudget, grantBonus);
+
+    if (OutOfRerolls(rerollsUsedSoFar, budget)) return RerollChoice.Finish(mode, grantBonus);
+    if (IsOpen(mode)) return DecideOpen(currentSlots, desiredAction, budget);
+    return DecideCommitted(currentSlots, desiredAction, grantBonus);
+}
+```
+
+**The bonus-eligibility check runs *before* the exhausted-budget check, not after** — `grantBonus` is
+computed first and folded into `budget` before `OutOfRerolls` ever looks at it. This is deliberate:
+it's what lets the bonus still fire, and its extra reroll still get used, even when the very reroll
+that completes the desired pair is also the one that would otherwise have exhausted the base budget
+(e.g. base budget 2, the 2nd of those 2 rerolls is the one that lands the pair — checking exhaustion
+first would silently end the turn right there and the bonus would never fire).
+
+**`RerollMode.Open`** (the default, reset at the start of every turn) — re-evaluated fresh at every
+decision point:
+
+- If **any** pair exists among the 3 slots (`TryFindPairedOddSlot`, regardless of whether it's the
+  desired action), attempt to chase it once: reroll the odd slot, gated by stupidity. **The instant
+  this chase reroll actually fires, mode transitions to `CommittedToDesired`** — chasing an
+  unrelated pair is a one-shot priority, not a repeatable one. This matters because the chase reroll
+  can fail to complete the triple (the odd slot lands on something else instead) without ending the
+  turn; without this transition, the *next* decision would re-find the same leftover pair and chase
+  it again, potentially rerolling away the AI's own already-obtained desired action sitting as that
+  odd slot (a real, live-caught case: chasing a Tank pair kept rerolling the enemy's own just-landed
+  desired Mage instead of banking it). With the transition, the next decision instead correctly
+  fishes among the *non-desired* slots for a second copy of the desired action, leaving an
+  already-landed one untouched. A declined chase attempt (stupidity blocks it) falls through to the
+  fishing branch below instead, same as before.
+- Otherwise (no pair, or the chase attempt above was declined by stupidity) — the guaranteed base-1
+  minimum is reserved for chasing an existing pair only, never for fishing from scratch, so first check
+  `rerollBudget > 1`. If that fails, finish. If it passes, attempt to fish (reroll a random
+  non-desired-action slot, `NonMatchingIndices`), gated by stupidity — and **transition to
+  `CommittedToDesired` the instant this fishing attempt is made**, whether or not the stupidity roll
+  actually lets it through.
+
+**`RerollMode.CommittedToDesired`** (one-way under normal circumstances — `Open`'s "any pair" priority
+never applies again this turn once entered, *except* the desperate-mode override below) — re-evaluated
+fresh at every decision point:
+
+- If the desired action specifically has a pair (2 of 3 slots), chase it exactly like `Open`'s pair
+  chase (same `TryFindPairedOddSlot` target). **The first time this is observed this turn** (tracked
+  via `RollState`'s `_bonusGranted` flag), this also grants the one-time +1 `_rerollBudget` bonus —
+  regardless of whether this particular chase attempt itself succeeds or is declined by stupidity.
+- Otherwise, **ignore any incidental non-desired pair entirely** ("considers only desired triple") and
+  keep fishing, exactly like `Open`'s fishing (same `NonMatchingIndices` target selection) — this
+  deliberately does not protect an incidental pair formed as a side effect of an earlier fishing
+  reroll from being touched.
+
+**Desperate-mode override — `DesperateOverride()`, checked first, before anything else in `Decide()`.**
+Below `lowHpStupidityBypassThreshold` (see below), the AI stops caring specifically about its desired
+action even after committing to fish for it: `Decide()` overrides `mode` back to `Open` for that
+decision (and therefore for `RollState`'s persisted `_rerollMode` too, since it flows through the
+returned `RerollChoice.NextMode`) whenever `mode == CommittedToDesired` and the enemy is below
+threshold — so a desperate AI reroll-chases *any* pair it finds, including one that isn't its desired
+action, rather than keep fishing specifically. A no-op when already `Open` (which already has this
+priority) or when not desperate. Checked *before* `ShouldGrantBonus`, so a desperate AI chasing an
+unrelated pair never accrues the desired-pair bonus meant for `CommittedToDesired`. Worked example
+(desired = Tank): lands `[Tank, Archer, Mage]` (no pair, fishes, rerolls Archer) → lands
+`[Tank, Mage, Mage]` (a Mage pair, not desired) → while below threshold, this rerolls the *Tank* slot
+chasing the Mage pair instead of continuing to fish for Tank.
+
+The mechanical target-selection (`TryFindPairedOddSlot` for chasing, random `NonMatchingIndices` for
+fishing) is identical in both modes and lives in one shared `Fish()` helper (plus the shared
+`TryFindPairedOddSlot`) — only which mode applies, and the transition/bonus bookkeeping around it,
+differs between `DecideOpen`/`DecideCommitted`.
+
+**HP below `FightSO.enemyData.lowHpStupidityBypassThreshold` (0-1, baseline 0.15 = 15%) bypasses
+stupidity for every individual reroll attempt, in both modes** — "he rolls for his life." Per-fight
+tunable (not a hardcoded constant) so a specific boss can be made more or less reckless near death;
+every existing `FightSO` asset has it explicitly set to 0.15 to preserve the original baseline (see
+the Gotchas entry below about new `EnemyData` fields defaulting to 0 otherwise). Every stupidity roll
+in this class funnels through one helper:
+
+```csharp
+private static bool AttemptReroll()
+{
+    var fight = CampaignStateManager.Instance.CurrentFight.enemyData;
+    if (AIController.EnemyHeroBelow(fight.lowHpStupidityBypassThreshold)) return true;
+    return AIDegrade.Resolve(new[] { true, false }, fight.stupidityChance, fight.criticalFailureChance);
+}
+```
+
+Below that threshold of its own max HP, the AI always proceeds with whatever reroll attempt it's
+making — no `AIDegrade` roll at all. Deliberately a different (percent-based, per-fight-authored)
+threshold from the raw-points budget formula above; the two aren't related and shouldn't be conflated.
+
+**The old "exactly 1 desired match with no pair = forced no-reroll, NO STUPID" special case is gone.**
+Under the new rules, a lone desired match sitting next to 2 different singles, with `rerollBudget > 1`,
+actively fishes instead of banking the single match.
+
+`AIController.SpendReroll()` is still called exactly once per actual reroll, by `RollState` right at
+the point it commits to triggering one — never inside a `Decide*` method, so decisions themselves stay
 free of side effects.
 
 **UI: `EnemyRerollDisplay`** (`UI/EnemyRerollDisplay.cs`, on `Canvas/EnemyRerollCount` in
@@ -292,9 +412,12 @@ If you don't override `CreateAIScorer()`, the SO falls back to `NoOpActionAIScor
 
 - **Existing `FightSO` assets silently default new fields to 0.** Unity backfills a newly-added
   serialized field on an already-serialized asset with the type default — `rerollsAmount = 0` makes
-  the AI never reroll, `stupidityChance = 0` makes it never stupid (perfectly optimal), neither with
-  any compile error or console warning. Always double-check real values are set in the Inspector
-  after adding a new fight asset or a new `EnemyData` field.
+  the AI never reroll, `stupidityChance = 0` makes it never stupid (perfectly optimal),
+  `lowHpStupidityBypassThreshold = 0` silently disables the bypass entirely (an enemy hero's HP can
+  never be below 0%), neither with any compile error or console warning. Always double-check real
+  values are set in the Inspector after adding a new fight asset or a new `EnemyData` field — every
+  existing fight asset already has `lowHpStupidityBypassThreshold` explicitly set to 0.15 for exactly
+  this reason.
 - **`AIController` never calls `SlotMachine`/`SlotColumn` methods — if you're tempted to add one,
   that call belongs in `RollState` instead**, following the existing `EvaluateReroll`/`BeginAITurn`
   pattern. This is the one rule this whole system exists to enforce; breaking it re-couples decision
@@ -306,6 +429,13 @@ If you don't override `CreateAIScorer()`, the SO falls back to `NoOpActionAIScor
   that just tripled — it doesn't prevent a *different* action of the same broad category** (e.g. a
   tripled FireMagic doesn't stop the AI from choosing Starfall on the bonus roll, only FireMagic
   itself).
+- **A granted +1 bonus reroll can still hit the fight-wide pool's real floor mid-turn.**
+  `RerollBudgetDecision` clamps only the *starting* per-turn budget to the live pool; the one-time
+  `CommittedToDesired` bonus can push `_rerollBudget` above what's actually left if earlier rerolls
+  this same turn already spent the pool down close to the budget's edge. `ShouldRerollDecision`'s
+  `OutOfRerolls()` guards this the same way the old hard-stop did — it checks
+  `AIController.RerollsRemaining <= 0` live, not just `rerollsUsedSoFar >= rerollBudget` — so this
+  degrades gracefully to "finish now" instead of ever attempting a reroll the pool can't pay for.
 
 ## Related docs
 

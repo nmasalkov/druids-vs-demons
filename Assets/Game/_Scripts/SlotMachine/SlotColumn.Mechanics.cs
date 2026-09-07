@@ -6,6 +6,13 @@ public partial class SlotColumn
     [SerializeField] private GameObject cardPrefab;
     public ActionSO WinningAction { get; private set; }
 
+    /// <summary>
+    /// Externally assigns this column's result — called by SlotMachine (fresh roll) or by this
+    /// column's own reroll flow, both of which get the decision from SlotMachineRigger. Never called
+    /// by SlotMachineRigger itself, which only decides, never reaches into a column directly.
+    /// </summary>
+    public void AssignWinningAction(ActionSO action) => WinningAction = action;
+
     private const int CardCount = 30;
     private const float CellHeight = 150f;
     [SerializeField] private float spinSpeed = 1500f;

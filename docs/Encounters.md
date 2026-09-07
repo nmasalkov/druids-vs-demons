@@ -43,7 +43,23 @@ encounter — see "Fight results" below.
   `[MovedFrom]`-guarded so the existing asset files kept resolving through the rename). `fightId`
   (string, `[FormerlySerializedAs("battleId")]`), `isTutorial` (bool, still inert — forward-looking),
   `enemyData` (`EnemyData`), `hasLoadoutPick` (bool), `hasReward` (bool), `rewardAmount` (int — the
-  guaranteed energy grant, only meaningful when `hasReward` is true).
+  guaranteed energy grant, only meaningful when `hasReward` is true), `neutralDirtyTripleIndex`
+  (int, default 100 — the HP-formula's starting point before adjustment, applied to
+  `SlotMachineRigger.neutralDirtyTripleIndex`) + `firstRoundDirtyTripleIndex` (int, default 50 —
+  forced Dirty Triple Index for either side's opening turn while `GameManager.IsFirstRound`,
+  skipping the HP-based formula entirely, applied to `SlotMachineRigger.firstRoundDirtyTripleIndex`),
+  `dirtyTripleStabilization`
+  (int, 0 = disabled — subtracted from the acting side's Dirty Triple Index each bonus turn earned
+  from a triple; see `docs/SlotMachine.md`), `playerCleanTripleIndex`/`enemyCleanTripleIndex` (int,
+  default 100 — per-fight base for `SlotMachineRigger`'s Clean Triple Index, applied once at fight
+  start), `playerHpAdjustmentsEnabled`/`playerHpAdjustment` and
+  `enemyHpAdjustmentsEnabled`/`enemyHpAdjustment` (bool + `HpAdjustmentSettings` each — per-side
+  HP-based Dirty Triple Index adjustment, collapsible in the Inspector, toggle off to take the
+  mechanism out of play for that side entirely), `ludoProgressIndex` (int, 0 = disabled — how much a
+  reroll bumps the acting side's Dirty Triple Index during their first roll phase of a turn) +
+  `perRoundLudoProgressOverrides` (addable `List<RoundLudoProgressOverride>`, each a `(round, value)`
+  pair — `GetLudoProgressIndexForRound(round)` returns the first matching round's value, else falls
+  back to `ludoProgressIndex`). See `docs/SlotMachine.md` for all of the above.
 - `EnemyData` (nested `[Serializable] struct` in `FightSO.cs`) — `enemyAvatarPrefab` (`GameObject`),
   `hp` (int), `creatures` (`CreaturesSO` — the enemy's per-fight archer/tank/mage roster, applied to
   `G.EnemyCreatures` via `G.ApplyCampaignEnemyCreatures` — see `docs/G.md`), plus the AI-tuning fields
@@ -727,6 +743,15 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
   until the asset is explicitly authored in the Inspector. No error, no warning — it just quietly
   behaves like a bare fight. Always double-check these three fields on a new or renamed `FightSO`
   asset rather than assuming they carried over from wherever the asset was copied from.
+  `dirtyTripleStabilization`/`ludoProgressIndex` backfill to `0` the same way, but that's the
+  intended "disabled" default for every existing fight, so no action is needed unless a specific
+  fight should use it. `playerCleanTripleIndex`/`enemyCleanTripleIndex` backfill to `100` (neutral)
+  and `playerHpAdjustmentsEnabled`/`enemyHpAdjustmentsEnabled` + the `HpAdjustmentSettings` blocks
+  backfill to the same values `SlotMachineRigger` used before these fields existed — both match
+  current global behavior exactly, so again no action needed unless a fight should diverge.
+  `neutralDirtyTripleIndex`/`firstRoundDirtyTripleIndex` backfill to `100`/`50` the same way
+  (matching `SlotMachineRigger`'s own prior hardcoded defaults exactly), so an existing fight's
+  round-1/base Dirty Triple Index math is unchanged unless explicitly re-authored.
   `enemyData.creatures` is the same story but with a soft landing: `Fight2`–`Fight5` don't have it set
   yet (only `Fight1 Tutorial` does, pointing at its own `Creatures.asset`), so until each is authored
   with its own roster, `ResolveEnemyCreatures` falls back to `G.DefaultCreatures` (logged as a warning)

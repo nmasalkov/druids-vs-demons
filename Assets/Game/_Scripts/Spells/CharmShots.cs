@@ -11,7 +11,10 @@ namespace Game._Scripts.Spells
     /// The charmed status is a toggle: a creature only ever changes sides via Charm, so charming
     /// a normal creature marks it charmed, and charming an already-charmed one (stealing it back)
     /// clears the mark. Either way the destination is a charm slot — a creature never returns to
-    /// a native slot once it has left it.
+    /// a native slot once it has left it. Also clears any BattleCry buff/debuff on every side
+    /// change — that multiplier was computed relative to whichever side the creature occupied at
+    /// cast time (BattleCryResolver targets purely by CreaturesManager membership), so it's stale
+    /// the instant Charm moves the creature elsewhere.
     /// </summary>
     public class CharmShot : SpellShot
     {
@@ -37,6 +40,7 @@ namespace Game._Scripts.Spells
             DestinationSlot.Unit = creature;
 
             var statuses = creature.StatusesManager;
+            statuses.ClearBattleCry();
             if (statuses.IsCharmed) statuses.ClearCharmed();
             else statuses.ApplyCharmed();
         }

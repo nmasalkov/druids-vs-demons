@@ -6,6 +6,7 @@ public partial class AIController
 {
     public static float PlayerHeroHealthPercent => G.PlayerHero.Health.HealthPercent;
     public static float EnemyHeroHealthPercent => G.EnemyHero.Health.HealthPercent;
+    public static float EnemyHeroCurrentHealth => G.EnemyHero.Health.CurrentHealth;
 
     public static bool PlayerHeroBelow(float thresholdPercent01) => PlayerHeroHealthPercent < thresholdPercent01;
     public static bool EnemyHeroBelow(float thresholdPercent01) => EnemyHeroHealthPercent < thresholdPercent01;

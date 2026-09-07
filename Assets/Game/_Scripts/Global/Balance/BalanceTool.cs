@@ -10,8 +10,19 @@ public class BalanceTool : MonoBehaviour
     [Header("Debug HUD")]
     [Tooltip("When checked, the current game phase name is shown in the child TMP_Text label.")]
     public bool ShowPhaseName;
+    [Tooltip("When checked, a live 'player : enemy' compared-firepower readout is shown in the " +
+             "child TMP_Text label, updated every frame.")]
+    public bool ShowFirepowers;
+    [Tooltip("When checked, elapsed time since the player's first roll is shown in the child " +
+             "TMP_Text label, updated every frame.")]
+    public bool ShowTimer;
 
     private TMP_Text _phaseLabel;
+    [SerializeField] private TMP_Text _firepowerLabel;
+    [SerializeField] private TMP_Text _timerLabel;
+
+    private bool _timerStarted;
+    private float _timerStartTime;
 
     private void Awake()
     {
@@ -23,27 +34,62 @@ public class BalanceTool : MonoBehaviour
     private void Start()
     {
         _phaseLabel.gameObject.SetActive(ShowPhaseName);
+        _firepowerLabel.gameObject.SetActive(ShowFirepowers);
+        _timerLabel.gameObject.SetActive(ShowTimer);
         GameState.OnAnyStateStarted += HandleStateStarted;
         GameState.OnAnyStateEnded += HandleStateEnded;
+        GameManager.OnBattleRestart += ResetTimer;
     }
 
     private void OnDestroy()
     {
         GameState.OnAnyStateStarted -= HandleStateStarted;
         GameState.OnAnyStateEnded -= HandleStateEnded;
+        GameManager.OnBattleRestart -= ResetTimer;
+    }
+
+    private void Update()
+    {
+        if (ShowFirepowers)
+            _firepowerLabel.text = $"{AttacksResolver.EstimateFirepower(true):0} : {AttacksResolver.EstimateFirepower(false):0}";
+        if (ShowTimer)
+            _timerLabel.text = FormatElapsed();
+    }
+
+    private string FormatElapsed()
+    {
+        float elapsed = _timerStarted ? Time.time - _timerStartTime : 0f;
+        var span = System.TimeSpan.FromSeconds(elapsed);
+        return $"{(int)span.TotalMinutes:00}:{span.Seconds:00}";
+    }
+
+    private void ResetTimer()
+    {
+        _timerStarted = false;
+        _timerStartTime = 0f;
     }
 
     private void OnValidate()
     {
         if (!Application.isPlaying) return;
-        if (_phaseLabel == null) return;
-        _phaseLabel.gameObject.SetActive(ShowPhaseName);
+        if (_phaseLabel != null) _phaseLabel.gameObject.SetActive(ShowPhaseName);
+        if (_firepowerLabel != null) _firepowerLabel.gameObject.SetActive(ShowFirepowers);
+        if (_timerLabel != null) _timerLabel.gameObject.SetActive(ShowTimer);
     }
 
     private void HandleStateStarted(GameState state)
     {
-        if (!ShowPhaseName) return;
-        _phaseLabel.text = $"{state.GetType().Name} Start:";
+        if (ShowPhaseName) _phaseLabel.text = $"{state.GetType().Name} Start:";
+        TryStartTimer(state);
+    }
+
+    private void TryStartTimer(GameState state)
+    {
+        if (_timerStarted) return;
+        if (state is not RollState) return;
+        if (GameManager.Instance.ActiveSide != ActiveSide.Player) return;
+        _timerStarted = true;
+        _timerStartTime = Time.time;
     }
 
     private void HandleStateEnded(GameState state)

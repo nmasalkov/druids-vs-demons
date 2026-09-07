@@ -329,6 +329,41 @@ applies equally to list-shaped fields (see `docs/Rewards.md`'s `statusRewardIds`
 via `SerializedProperty` (`DrawToggleAndList` in `CampaignDebugToolEditor`) since the existing
 `ref`-based scalar helpers don't fit a list.
 
+### Exporting a run to a profile — the reverse direction
+
+`CampaignDebugToolEditor`'s **"Export to Debug Profile"** button (in the "Saved Run" section)
+captures a whole `RunState` as a brand new `CampaignProfileSO` asset — the reverse of "Use Debug
+Profile"/"Generate Save JSON from Profile" above, for the opposite workflow: you're mid-testing a
+specific scenario (a specific encounter, loadout, energy level) reached by actually playing, and
+want to snapshot it once so you can jump straight back into it later instead of re-creating it by
+hand or replaying up to that point again.
+
+- **Source**: prefers the live `CurrentRun` while in Play mode (`CampaignStateManager.Instance`
+  non-null) — the exact state currently being tested, including any in-memory-only changes (reroll
+  spend, granular/profile/external-save overrides) not yet written to storage. Outside Play mode
+  (or if no campaign singleton is alive), falls back to whatever's actually on disk via
+  `SaveStorage.Backend.Read()` — the same JSON the "Saved Run" section above it displays. Either
+  way this reads real state; it never depends on any of `CampaignDebugTool`'s own override fields.
+- **Id resolution**: `CampaignDebugTool.BuildProfileFromRunState(run, catalog, rewardList)` is the
+  mirror of `BuildRunStateFromProfile` — same field list, opposite direction, resolving each
+  `RunState` id string back to a direct SO reference via `GameCatalog`/`RewardListSO`. In Play mode
+  those come from `CampaignStateManager.Instance.Catalog`/`RewardList` (guaranteed present, rule 5);
+  in Edit mode the Editor locates the project's `GameCatalog`/`RewardListSO` assets via
+  `AssetDatabase.FindAssets` instead (there's no live singleton to ask). Unlike
+  `BuildRunStateFromProfile` (which treats every profile field as mandatory and throws if unset —
+  it's authored Editor content), this direction runs against real save data that can legitimately
+  reference removed/renamed content, so an id that fails to resolve is left `null` with a logged
+  warning rather than throwing — the same "don't crash on stale save data" posture
+  `GameCatalog.Find*`'s own callers already take (see Gotchas below).
+- **Destination**: `EditorUtility.SaveFilePanelInProject` defaults to
+  `Assets/Game/_ScriptableObjects/Campaign/Profiles` (created if missing) with a default filename
+  of `RunState_Encounter<N+1>`; picking a location writes the asset via `AssetDatabase.CreateAsset`
+  and selects/pings it. Cancelling the dialog discards the in-memory profile instance instead of
+  leaving an orphaned unsaved object around.
+- The resulting asset is a completely ordinary `CampaignProfileSO` — drag it into `debugProfile`
+  and check "Use Debug Profile" like any other, or hand-edit its fields afterward the same as a
+  profile built from scratch.
+
 ## Gotchas
 
 - **If you change `CampaignDebugTool`'s field layout (add/remove/retype fields), remove and re-add

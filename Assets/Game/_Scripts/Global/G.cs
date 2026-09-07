@@ -32,6 +32,7 @@ public class G : MonoBehaviour
     public static Hero EnemyHero => Instance.enemyView.Hero;
     public static bool TestMode => Instance.testMode;
     public static EncounterListSO EncounterList => CampaignManager.Instance.EncounterList;
+    public static SlotMachineRigger Rigger => SlotMachineRigger.Instance;
 
     void Awake()
     {

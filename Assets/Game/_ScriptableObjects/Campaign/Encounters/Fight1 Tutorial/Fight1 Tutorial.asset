@@ -16,11 +16,45 @@ MonoBehaviour:
   isTutorial: 0
   enemyData:
     enemyAvatarPrefab: {fileID: 626341824372909126, guid: 76339be8f9e2ccb4ea41ee8c5a5345d7, type: 3}
-    hp: 60
+    hp: 45
     creatures: {fileID: 11400000, guid: 34ebc2889d76b5e4ea96e6a3118852ca, type: 2}
     stupidityChance: 50
     criticalFailureChance: 20
     rerollsAmount: 6
+    lowHpStupidityBypassThreshold: 0.15
   hasLoadoutPick: 0
   hasReward: 1
-  rewardAmount: 20
+  rewardAmount: 10
+  neutralDirtyTripleIndex: 100
+  firstRoundDirtyTripleIndex: 100
+  dirtyTripleStabilization: 0
+  playerCleanTripleIndex: 100
+  enemyCleanTripleIndex: 50
+  playerHpAdjustmentsEnabled: 1
+  playerHpAdjustment:
+    highHpThreshold: 0.6
+    highHpAdjustment: -20
+    lowHpThreshold: 0.25
+    lowHpAdjustment: 30
+    criticalHpThreshold: 0.15
+    criticalHpAdjustment: 70
+    nearDeathHpThreshold: 0.1
+    nearDeathHpAdjustment: 80
+  enemyHpAdjustmentsEnabled: 1
+  enemyHpAdjustment:
+    highHpThreshold: 0.6
+    highHpAdjustment: -20
+    lowHpThreshold: 0.25
+    lowHpAdjustment: 30
+    criticalHpThreshold: 0.15
+    criticalHpAdjustment: 50
+    nearDeathHpThreshold: 0.1
+    nearDeathHpAdjustment: 65
+  ludoProgressIndex: 0
+  perRoundLudoProgressOverrides:
+  - round: 1
+    ludoProgressIndex: 50
+  - round: 2
+    ludoProgressIndex: 50
+  - round: 3
+    ludoProgressIndex: 50

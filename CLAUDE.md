@@ -496,6 +496,20 @@ them for any new/modified game code under `Assets/Game`:
     `SummonChoice`) rather than a bare `bool` plus a second, independent piece of code re-deriving the
     same choice from live state elsewhere — one call site should own picking *which* thing, not two
     call sites separately agreeing on it by coincidence.
+31. **Every field on a `ScriptableObject` — and any complex/non-obvious tunable field on a
+    `MonoBehaviour` controller — must carry a `[Tooltip(...)]`.** Say what it *does* (effect, valid
+    range/units, how it interacts with other systems), not the name restated, and cross-reference the
+    relevant `docs/*.md` file when one exists. This is strict and applies to every individual leaf
+    field, including ones inside a nested `[Serializable]` struct (`HpAdjustmentSettings`,
+    `EnemyData`, `FightSO.RoundLudoProgressOverride`, ...) — a C# attribute binds only to the single
+    field directly below it, so two fields sharing one conceptual purpose (e.g.
+    `playerCleanTripleIndex`/`enemyCleanTripleIndex`) each need their **own** `[Tooltip]`, never one
+    shared comment written above just the first of the pair (a real gap found live: `enemyCleanTripleIndex`
+    had silently had no tooltip at all since the tooltip above it only ever bound to
+    `playerCleanTripleIndex`). Skip only a truly self-explanatory identity field with no behavior of
+    its own (a plain display `name` string, an `id`). Retrofit any pre-existing field you touch that's
+    still missing one — don't just add tooltips to the new fields in your own change and leave
+    untouched neighbors bare.
 
 ## Editor / IDE MCP integrations
 

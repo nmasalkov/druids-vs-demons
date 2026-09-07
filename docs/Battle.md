@@ -143,7 +143,12 @@ paths that must always agree on outcome (rule 7):
 
 Split across `AttacksResolver.cs` (public API: `AttackAssignment` struct, `Resolve`, `ExecuteAttacks`,
 `ApplyAttacksInstant`) and `AttacksResolver.Mechanics.cs` (targeting/priority/animation-grouping
-internals) as one `partial class`.
+internals) as one `partial class`. `AttacksResolver.Debug.cs` (rule 20 — debug-only surface split out
+of the main class) adds `public static float EstimateFirepower(bool isPlayerSide)`, a pre-battle
+total-damage-output estimate for `BalanceTool`'s "compared firepower" HUD toggle — mirrors
+`ResolveTeam`'s exact per-attacker formula below (`stats.damage * AttackDamageMultiplier`,
+`numberOfAttacks` hits, shocked creatures contribute 0) without the target/simulated-HP bookkeeping,
+since it's a total-output estimate rather than a resolved attack plan.
 
 1. **`Resolve(playerCreatures, enemyCreatures, playerHero, enemyHero, playerShield, enemyShield)`**:
    builds a simulated-HP dictionary per side (`BuildSimulatedHP` — snapshots current HP for every

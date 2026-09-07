@@ -40,9 +40,11 @@ namespace Game._Scripts.Units
 
         /// <summary>
         /// 1 = no BattleCry effect. Set by <see cref="ApplyBattleCryBuff"/>/<see cref="ApplyBattleCryDebuff"/>,
-        /// cleared only by <see cref="ClearBattleCry"/> (called explicitly from PostBattleState) — NOT by
-        /// <see cref="ClearAllStatuses"/>, since the effect must last the whole battle regardless of
-        /// heals/promotions.
+        /// cleared only by <see cref="ClearBattleCry"/> — called explicitly from PostBattleState at the
+        /// end of a battle, and also from CharmShot.Apply() whenever Charm moves a creature to a
+        /// different side (a multiplier computed relative to the old side is stale on the new one) —
+        /// NOT by <see cref="ClearAllStatuses"/>, since the effect must otherwise last the whole battle
+        /// regardless of heals/promotions.
         /// </summary>
         public float AttackDamageMultiplier { get; private set; } = 1f;
 

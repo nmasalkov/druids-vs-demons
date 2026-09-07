@@ -159,6 +159,58 @@ public class CampaignDebugTool : MonoBehaviour
     }
 
     /// <summary>
+    /// Builds a CampaignProfileSO snapshot from a RunState — the reverse of
+    /// BuildRunStateFromProfile, used by CampaignDebugToolEditor's "Export to Debug Profile"
+    /// button to capture a real (saved or live) run as a reusable test scenario asset. Resolves
+    /// each id back into a direct SO reference via the given GameCatalog/RewardListSO; an id that
+    /// doesn't resolve (stale/removed content) is left null with a logged warning instead of
+    /// throwing — this runs against real save data, not authored Editor content, so it can't
+    /// assume every id is still valid the way BuildRunStateFromProfile assumes a profile's direct
+    /// references are (rule 5 doesn't apply here for the same reason GameCatalog.Find* itself
+    /// doesn't throw on a missing id — see docs/Campaign.md Gotchas).
+    /// </summary>
+    public static CampaignProfileSO BuildProfileFromRunState(RunState run, GameCatalog catalog, RewardListSO rewardList)
+    {
+        var profile = ScriptableObject.CreateInstance<CampaignProfileSO>();
+        profile.maxHp = run.maxHp;
+        profile.energyCapacity = run.energyCapacity;
+        profile.currentEnergy = run.currentEnergy;
+        profile.archer = ResolveOrWarn(catalog.FindArcher(run.archerId), run.archerId, "archer");
+        profile.tank = ResolveOrWarn(catalog.FindTank(run.tankId), run.tankId, "tank");
+        profile.mage = ResolveOrWarn(catalog.FindMage(run.mageId), run.mageId, "mage");
+        profile.nukeA = ResolveOrWarn(catalog.FindNuke(run.nukeAId), run.nukeAId, "nukeA");
+        profile.nukeB = ResolveOrWarn(catalog.FindNuke(run.nukeBId), run.nukeBId, "nukeB");
+        profile.nukeC = ResolveOrWarn(catalog.FindNuke(run.nukeCId), run.nukeCId, "nukeC");
+        profile.spellA = ResolveOrWarn(catalog.FindSpell(run.spellAId), run.spellAId, "spellA");
+        profile.spellB = ResolveOrWarn(catalog.FindSpell(run.spellBId), run.spellBId, "spellB");
+        profile.spellC = ResolveOrWarn(catalog.FindSpell(run.spellCId), run.spellCId, "spellC");
+        profile.currentEncounterIndex = run.currentEncounterIndex;
+        profile.statusRewards = run.statusRewardIds
+            .Select(id => ResolveOrWarn(rewardList.Find(id) as StatusRewardSO, id, "status reward"))
+            .Where(r => r != null).ToList();
+        profile.boostRewards = run.boostRewardIds
+            .Select(id => ResolveOrWarn(rewardList.Find(id) as BoostSO, id, "boost reward"))
+            .Where(r => r != null).ToList();
+        profile.gatheredCreatures = run.gatheredCreatureIds
+            .Select(id => ResolveOrWarn(catalog.allCreatures.FirstOrDefault(c => c.id == id), id, "gathered creature"))
+            .Where(c => c != null).ToList();
+        profile.gatheredNukes = run.gatheredNukeIds
+            .Select(id => ResolveOrWarn(catalog.FindNuke(id), id, "gathered nuke"))
+            .Where(n => n != null).ToList();
+        profile.gatheredSpells = run.gatheredSpellIds
+            .Select(id => ResolveOrWarn(catalog.FindSpell(id), id, "gathered spell"))
+            .Where(s => s != null).ToList();
+        return profile;
+    }
+
+    private static T ResolveOrWarn<T>(T resolved, string id, string slotName) where T : class
+    {
+        if (resolved == null)
+            Debug.LogWarning($"CampaignDebugTool: no {slotName} found for id \"{id}\" while exporting to profile — leaving unset.");
+        return resolved;
+    }
+
+    /// <summary>
     /// Shared tail end of both "Use External Save" and "Use Debug Profile": replaces CurrentRun
     /// wholesale and relocates CampaignManager's independently-bootstrapped encounter index to
     /// match (see SetSessionEncounterIndexOverride's doc comment for why that's needed — mutating

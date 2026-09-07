@@ -17,6 +17,11 @@ namespace Game._Scripts.Global
         /// first-turn rule (see docs/AI.md).</summary>
         public bool IsFirstRound { get; private set; } = true;
 
+        /// <summary>1-indexed round counter — one round is the player's turn AND the enemy's turn.
+        /// A triple's bonus-turn re-entry (TakeTurn()'s do-while) does not advance it. Read by
+        /// FightSO's per-round LudoProgressIndex override table (see docs/SlotMachine.md).</summary>
+        public int CurrentRound { get; private set; } = 1;
+
         public int Generation { get; private set; }
         public static bool IsStale(int capturedGeneration) => capturedGeneration != Instance.Generation;
 
@@ -69,6 +74,7 @@ namespace Game._Scripts.Global
 
                 yield return Run(new EndOfRoundState());
                 IsFirstRound = false;
+                CurrentRound++;
             }
         }
 
@@ -184,6 +190,7 @@ namespace Game._Scripts.Global
             _gameOver = false;
             SetActiveSide(ActiveSide.Player);
             IsFirstRound = true;
+            CurrentRound = 1;
 
             OnBattleRestart?.Invoke();
 

@@ -115,6 +115,78 @@ public class CampaignDebugToolEditor : Editor
         }
         EditorGUI.EndDisabledGroup();
         EditorGUILayout.EndHorizontal();
+
+        bool canExport = hasSave || (Application.isPlaying && CampaignStateManager.Instance != null);
+        EditorGUI.BeginDisabledGroup(!canExport);
+        if (GUILayout.Button("Export to Debug Profile")) ExportCurrentRunToProfile();
+        EditorGUI.EndDisabledGroup();
+        if (!canExport)
+            EditorGUILayout.HelpBox("Nothing to export yet — no saved run and not currently in Play mode.", MessageType.None);
+    }
+
+    private const string ProfileExportFolder = "Assets/Game/_ScriptableObjects/Campaign/Profiles";
+
+    /// <summary>
+    /// Captures a whole RunState as a new CampaignProfileSO asset — the reverse of "Use Debug
+    /// Profile"/"Generate Save JSON from Profile" above. Prefers the live CurrentRun while in Play
+    /// mode (the exact state currently being tested, ahead of whatever the next real Save() trigger
+    /// would persist); otherwise falls back to whatever's actually on disk via SaveStorage. Either
+    /// way the result lands in the "Use Debug Profile" slot's Create menu location
+    /// (Game/Campaign/Campaign Profile) so it can be dragged straight back in later. See
+    /// docs/Campaign.md.
+    /// </summary>
+    private void ExportCurrentRunToProfile()
+    {
+        RunState run;
+        GameCatalog catalog;
+        RewardListSO rewardList;
+
+        if (Application.isPlaying && CampaignStateManager.Instance != null)
+        {
+            run = CampaignStateManager.Instance.CurrentRun;
+            catalog = CampaignStateManager.Instance.Catalog;
+            rewardList = CampaignStateManager.Instance.RewardList;
+        }
+        else
+        {
+            run = JsonUtility.FromJson<RunState>(SaveStorage.Backend.Read());
+            catalog = FindProjectAsset<GameCatalog>();
+            rewardList = FindProjectAsset<RewardListSO>();
+        }
+
+        if (catalog == null || rewardList == null)
+        {
+            Debug.LogError("CampaignDebugTool: couldn't find a GameCatalog/RewardListSO asset in the project to resolve ids against — export aborted.");
+            return;
+        }
+
+        var profile = CampaignDebugTool.BuildProfileFromRunState(run, catalog, rewardList);
+
+        if (!AssetDatabase.IsValidFolder(ProfileExportFolder))
+            AssetDatabase.CreateFolder("Assets/Game/_ScriptableObjects/Campaign", "Profiles");
+
+        string path = EditorUtility.SaveFilePanelInProject(
+            "Export to Debug Profile",
+            $"RunState_Encounter{run.currentEncounterIndex + 1}",
+            "asset",
+            "Choose where to save the exported Campaign Profile.",
+            ProfileExportFolder);
+        if (string.IsNullOrEmpty(path))
+        {
+            DestroyImmediate(profile);
+            return;
+        }
+
+        AssetDatabase.CreateAsset(profile, path);
+        AssetDatabase.SaveAssets();
+        EditorGUIUtility.PingObject(profile);
+        Selection.activeObject = profile;
+    }
+
+    private static T FindProjectAsset<T>() where T : Object
+    {
+        var guids = AssetDatabase.FindAssets($"t:{typeof(T).Name}");
+        return guids.Length > 0 ? AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(guids[0])) : null;
     }
 
     private static void DrawToggleAndInt(Object dirty, string label, ref bool overrideFlag, ref int value)

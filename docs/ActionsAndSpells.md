@@ -133,6 +133,17 @@ it; charming an already-charmed one clears the mark — a creature only ever cha
 and once it leaves its native slot it never returns to one). If `Success` is false, `Apply()` is a
 no-op — a failed charm attempt still consumes the roll but changes nothing.
 
+**`Apply()` also clears any BattleCry status (`StatusesManager.ClearBattleCry()`) on every successful
+side change, in both directions.** BattleCry's buff/debuff (see §3d) is computed relative to whichever
+side a creature currently occupies — it's stale the instant Charm moves the creature elsewhere. This
+fixes a real, live-caught bug: while a player creature sat charmed onto the enemy's side, the player's
+own triple-BattleCry cast treated it as a genuine enemy creature (§3d's targeting is correct — a
+charmed creature really is on that side for every other purpose too) and applied the "Energy Drain"
+debuff (`AttackDamageMultiplier = 0`). Re-charming the creature back to the player's side used to leave
+that debuff in place — `ClearBattleCry()` was previously only called from `PostBattleState`, i.e. after
+the very battle phase where the creature dealt 0 damage from `AttacksResolver`'s `dmgPerHit <= 0f`
+skip-turn check. Charm resetting it immediately closes the gap.
+
 **Restart coverage**: a charmed creature just lives in a charm slot on some `CreaturesManager`,
 which `CreaturesManager.ResetAll()` already destroys unconditionally (native + charm slots alike) on
 `OnBattleRestart`. `StatusesManager.IsCharmed` dies with the GameObject. No gap found.

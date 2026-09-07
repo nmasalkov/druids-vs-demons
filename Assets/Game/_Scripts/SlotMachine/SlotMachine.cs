@@ -36,6 +36,7 @@ public class SlotMachine : MonoBehaviour
     public event Action<List<ActionSO>, RollType> OnFinishRollCompleted;
 
     public IReadOnlyList<SlotColumn> Columns => columns;
+    public bool IsPlayerMachine => isPlayerMachine;
 
     void Awake()
     {
@@ -166,7 +167,26 @@ public class SlotMachine : MonoBehaviour
         _columnsStopped = 0;
         _spinningCount = columns.Count;
         HideTypeButtons();
+
+        var decided = G.Rigger.DecideFullRoll(GetActionOptions(), isPlayerMachine);
+        for (int i = 0; i < columns.Count; i++)
+            columns[i].AssignWinningAction(decided[i]);
+
         OnSlotMachineStart?.Invoke();
+    }
+
+    /// <summary>Every other column's current result, excluding the given one — used by a rerolling
+    /// column to check whether it's in a dirty-triple situation. See SlotMachineRigger.</summary>
+    public ActionSO[] OtherWinningActions(SlotColumn excluding)
+    {
+        var result = new ActionSO[columns.Count - 1];
+        int i = 0;
+        foreach (var col in columns)
+        {
+            if (col == excluding) continue;
+            result[i++] = col.WinningAction;
+        }
+        return result;
     }
 
     public void StopAll()

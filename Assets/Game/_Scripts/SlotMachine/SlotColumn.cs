@@ -107,8 +107,17 @@ public partial class SlotColumn : MonoBehaviour
     {
         _isReroll = true;
         OnRerollStarted?.Invoke();
+        DecideRerollResult();
         StartSpin();
         Utils.DoAfterDelay.Execute(StopSpin, 0.44f);
+    }
+
+    private void DecideRerollResult()
+    {
+        var options = _slotMachine.GetActionOptions();
+        var others = _slotMachine.OtherWinningActions(this);
+        var decided = G.Rigger.DecideRerollSlot(options, others[0], others[1], _slotMachine.IsPlayerMachine);
+        AssignWinningAction(decided);
     }
 
     /// <summary>
@@ -128,16 +137,9 @@ public partial class SlotColumn : MonoBehaviour
     public void StartSpin()
     {
         if (_state != State.Idle) return;
-        PickRandomWinningAction();
         _state = State.Spinning;
         _currentSpeed = spinSpeed;
         _distanceSinceLastRecycle = 0f;
-    }
-
-    private void PickRandomWinningAction()
-    {
-        var options = _slotMachine.GetActionOptions();
-        WinningAction = options[UnityEngine.Random.Range(0, options.Length)];
     }
 
     public void StopSpin()

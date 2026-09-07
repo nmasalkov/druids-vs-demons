@@ -20,7 +20,38 @@ MonoBehaviour:
     creatures: {fileID: 11400000, guid: 6d0bb39257ea72549b66ae92ea1d9f23, type: 2}
     stupidityChance: 35
     criticalFailureChance: 15
-    rerollsAmount: 10
+    rerollsAmount: 7
+    lowHpStupidityBypassThreshold: 0.397
   hasLoadoutPick: 1
   hasReward: 1
-  rewardAmount: 20
+  rewardAmount: 15
+  neutralDirtyTripleIndex: 100
+  firstRoundDirtyTripleIndex: 60
+  dirtyTripleStabilization: 0
+  playerCleanTripleIndex: 100
+  enemyCleanTripleIndex: 100
+  firstRoundCleanTripleIndex: 50
+  playerCleanTripleStabilization: 0
+  enemyCleanTripleStabilization: -25
+  playerHpAdjustmentsEnabled: 1
+  playerHpAdjustment:
+    highHpThreshold: 0.6
+    highHpAdjustment: -20
+    lowHpThreshold: 0.25
+    lowHpAdjustment: 30
+    criticalHpThreshold: 0.15
+    criticalHpAdjustment: 50
+    nearDeathHpThreshold: 0.1
+    nearDeathHpAdjustment: 65
+  enemyHpAdjustmentsEnabled: 1
+  enemyHpAdjustment:
+    highHpThreshold: 0.6
+    highHpAdjustment: -20
+    lowHpThreshold: 0.25
+    lowHpAdjustment: 30
+    criticalHpThreshold: 0.15
+    criticalHpAdjustment: 60
+    nearDeathHpThreshold: 0.1
+    nearDeathHpAdjustment: 70
+  ludoProgressIndex: 0
+  perRoundLudoProgressOverrides: []

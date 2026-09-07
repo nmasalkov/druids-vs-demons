@@ -16,6 +16,8 @@ public class RollState : GameState
     private ActionSO _desiredAction;
     private int _rerollBudget;
     private int _rerollsUsed;
+    private ShouldRerollDecision.RerollMode _rerollMode;
+    private bool _bonusGranted;
 
     protected override void OnEnter()
     {
@@ -43,6 +45,8 @@ public class RollState : GameState
 
         _machine = RollStateManager.Instance.ActiveMachine;
         _rerollsUsed = 0;
+        _rerollMode = ShouldRerollDecision.RerollMode.Open;
+        _bonusGranted = false;
 
         // If the AI's own previous roll this turn tripled, this is the bonus roll TakeTurn()'s
         // do-while grants — never go for the same action that just landed 3-of-a-kind (docs/AI.md).
@@ -73,7 +77,7 @@ public class RollState : GameState
     {
         if (IsStale) return;
         var landedSlots = ReadCurrentSlots();
-        _rerollBudget = AIController.DecideRerollBudget(landedSlots, _desiredAction);
+        _rerollBudget = AIController.DecideRerollBudget();
         EvaluateReroll(landedSlots);
     }
 
@@ -85,7 +89,15 @@ public class RollState : GameState
 
     private void EvaluateReroll(List<ActionSO> currentSlots)
     {
-        var choice = AIController.DecideReroll(currentSlots, _desiredAction, _rerollsUsed, _rerollBudget);
+        var choice = AIController.DecideReroll(currentSlots, _desiredAction, _rerollsUsed, _rerollBudget,
+            _rerollMode, _bonusGranted);
+        _rerollMode = choice.NextMode;
+        if (choice.GrantBonusReroll)
+        {
+            _rerollBudget++;
+            _bonusGranted = true;
+        }
+
         if (!choice.ShouldReroll)
         {
             _machine.FinishRoll();

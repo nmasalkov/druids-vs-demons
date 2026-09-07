@@ -62,10 +62,9 @@ public partial class AIController : MonoBehaviour
     public static ActionSO DecidePreferredNukeOrSpell(ActionSO excludeAction = null) =>
         new PickActionDecision().Decide(excludeAction);
 
-    public static int DecideRerollBudget(IReadOnlyList<ActionSO> initialLandedSlots, ActionSO desiredAction) =>
-        new RerollBudgetDecision().Decide(initialLandedSlots, desiredAction);
+    public static int DecideRerollBudget() => new RerollBudgetDecision().Decide();
 
     public static RerollChoice DecideReroll(IReadOnlyList<ActionSO> currentSlots, ActionSO desiredAction,
-        int rerollsUsedSoFar, int rerollBudget) =>
-        new ShouldRerollDecision().Decide(currentSlots, desiredAction, rerollsUsedSoFar, rerollBudget);
+        int rerollsUsedSoFar, int rerollBudget, ShouldRerollDecision.RerollMode mode, bool bonusAlreadyGranted) =>
+        new ShouldRerollDecision().Decide(currentSlots, desiredAction, rerollsUsedSoFar, rerollBudget, mode, bonusAlreadyGranted);
 }

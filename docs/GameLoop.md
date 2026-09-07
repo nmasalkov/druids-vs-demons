@@ -76,8 +76,10 @@ while (!gameOver):
 ## GameState / ActionState contract
 
 - `OnStateStart()` fires the static `GameState.OnAnyStateStarted` event then calls the virtual
-  `OnEnter()`. `OnStateEnd()` calls `OnExit()` then fires `OnAnyStateEnded`. Both static events are
-  hooks for debug HUDs/tooling — no gameplay code depends on them today.
+  `OnEnter()`. `OnStateEnd()` calls `OnExit()` then fires `OnAnyStateEnded`. Originally added as
+  hooks for debug HUDs/tooling only — `SlotMachineRigger` (`docs/SlotMachine.md`) is now the first
+  real gameplay consumer, filtering to `SwitchSideState`/`RollState` to recompute its per-side Dirty
+  Triple Index at each turn boundary.
 - A state signals it's done by calling its own `CompleteState()`, which invokes the instance
   `OnStateCompleted` event.
 - `GameManager.Run(GameState state)` is the driver: sets `_currentState`, subscribes a local
@@ -244,3 +246,10 @@ freeze correctly under `timeScale = 0`. `PauseMenuController.OnDestroy()` also r
   runs battle after, including on round 1. `IsFirstRound` (public property, reset to `true` in
   `RestartBattle()`) is also what `docs/AI.md`'s `ShouldSummonCreaturesDecision` reads for its
   NO-STUPID first-turn rule.
+- **`GameManager.CurrentRound`** (public int property, 1-indexed) is a real round counter alongside
+  `IsFirstRound` — incremented once per full round, right where `IsFirstRound` flips to `false`
+  (after `EndOfRoundState`), and reset to `1` alongside `IsFirstRound = true` in `RestartBattle()`.
+  One round is the player's turn *and* the enemy's turn; a triple's bonus-turn re-entry inside
+  `TakeTurn()`'s do-while does **not** advance it. Added for `FightSO`'s per-round Ludo Progress Index
+  override table (see `docs/SlotMachine.md`) — the first piece of gameplay code to need a real round
+  number rather than just the round-1 bool.

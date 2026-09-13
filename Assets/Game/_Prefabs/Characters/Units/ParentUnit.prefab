@@ -215,6 +215,7 @@ GameObject:
   - component: {fileID: 1643649320577833555}
   - component: {fileID: 6870561863682724144}
   - component: {fileID: 2064706631245493724}
+  - component: {fileID: 6135122791318769764}
   m_Layer: 0
   m_Name: ParentUnit
   m_TagString: Untagged
@@ -329,6 +330,21 @@ MonoBehaviour:
   charmedFeedback: {fileID: 583145473826925762}
   charmSuccessFeedback: {fileID: 2996275237166923506}
   charmFailFeedback: {fileID: 6560770064357369872}
+--- !u!114 &6135122791318769764
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5356506428025112429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29f85ebf14c9e424f830ee35157e87c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  precision: 150
+  depthSource: {fileID: 0}
+  mainRendererOverride: {fileID: 0}
 --- !u!1 &5370801705219709040
 GameObject:
   m_ObjectHideFlags: 0

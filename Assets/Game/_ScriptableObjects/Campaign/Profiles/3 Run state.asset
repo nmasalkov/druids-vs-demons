@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53d805f650b993e4897ffa6c3fe75e22, type: 3}
+  m_Name: 3 Run state
+  m_EditorClassIdentifier: 
+  maxHp: 100
+  energyCapacity: 50
+  currentEnergy: 20
+  archer: {fileID: 11400000, guid: 7f42a857e4e2a3140bde869c0f7659c6, type: 2}
+  tank: {fileID: 11400000, guid: 3cb6685293d849949aac28de6c62237e, type: 2}
+  mage: {fileID: 11400000, guid: 7d91ea82ce928ac41ae9d0a743a516aa, type: 2}
+  nukeA: {fileID: 11400000, guid: b030e4480e6e47dca5737f8f0acb0801, type: 2}
+  nukeB: {fileID: 11400000, guid: 988e3335e256a5e499c8cf3688afcf9e, type: 2}
+  nukeC: {fileID: 11400000, guid: 8dea2a21e4a3fc2418c591e85da1005b, type: 2}
+  spellA: {fileID: 11400000, guid: 9aefa2fb5a71dea44916beba67ae8a45, type: 2}
+  spellB: {fileID: 11400000, guid: 42203bd9865269b40b0911f6362fb650, type: 2}
+  spellC: {fileID: 11400000, guid: e5c16b4cdb8f87148a98bdb8f707e0c3, type: 2}
+  currentEncounterIndex: 2
+  statusRewards:
+  - {fileID: 11400000, guid: e12ef25ec5803e041944cf8cdee294e9, type: 2}
+  - {fileID: 11400000, guid: e12ef25ec5803e041944cf8cdee294e9, type: 2}
+  boostRewards: []
+  gatheredCreatures:
+  - {fileID: 11400000, guid: 7f42a857e4e2a3140bde869c0f7659c6, type: 2}
+  - {fileID: 11400000, guid: 3cb6685293d849949aac28de6c62237e, type: 2}
+  - {fileID: 11400000, guid: 7d91ea82ce928ac41ae9d0a743a516aa, type: 2}
+  gatheredNukes:
+  - {fileID: 11400000, guid: b030e4480e6e47dca5737f8f0acb0801, type: 2}
+  - {fileID: 11400000, guid: 988e3335e256a5e499c8cf3688afcf9e, type: 2}
+  - {fileID: 11400000, guid: 8dea2a21e4a3fc2418c591e85da1005b, type: 2}
+  gatheredSpells:
+  - {fileID: 11400000, guid: 9aefa2fb5a71dea44916beba67ae8a45, type: 2}
+  - {fileID: 11400000, guid: 42203bd9865269b40b0911f6362fb650, type: 2}
+  - {fileID: 11400000, guid: e5c16b4cdb8f87148a98bdb8f707e0c3, type: 2}

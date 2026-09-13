@@ -44,18 +44,21 @@ encounter — see "Fight results" below.
   (string, `[FormerlySerializedAs("battleId")]`), `isTutorial` (bool, still inert — forward-looking),
   `enemyData` (`EnemyData`), `hasLoadoutPick` (bool), `hasReward` (bool), `rewardAmount` (int — the
   guaranteed energy grant, only meaningful when `hasReward` is true), `neutralDirtyTripleIndex`
-  (int, default 100 — the HP-formula's starting point before adjustment, applied to
+  (int, default 100 — the starting point the Comeback Adjustment is added to, applied to
   `SlotMachineRigger.neutralDirtyTripleIndex`) + `firstRoundDirtyTripleIndex` (int, default 50 —
   forced Dirty Triple Index for either side's opening turn while `GameManager.IsFirstRound`,
-  skipping the HP-based formula entirely, applied to `SlotMachineRigger.firstRoundDirtyTripleIndex`),
+  skipping Comeback Settings entirely, applied to `SlotMachineRigger.firstRoundDirtyTripleIndex`),
   `dirtyTripleStabilization`
   (int, 0 = disabled — subtracted from the acting side's Dirty Triple Index each bonus turn earned
   from a triple; see `docs/SlotMachine.md`), `playerCleanTripleIndex`/`enemyCleanTripleIndex` (int,
   default 100 — per-fight base for `SlotMachineRigger`'s Clean Triple Index, applied once at fight
-  start), `playerHpAdjustmentsEnabled`/`playerHpAdjustment` and
-  `enemyHpAdjustmentsEnabled`/`enemyHpAdjustment` (bool + `HpAdjustmentSettings` each — per-side
-  HP-based Dirty Triple Index adjustment, collapsible in the Inspector, toggle off to take the
-  mechanism out of play for that side entirely), `ludoProgressIndex` (int, 0 = disabled — how much a
+  start), `playerComebackSettings`/`enemyComebackSettings` (addable `List<ComebackSetting>` each,
+  where `ComebackSetting` is `(hpPercent 0-100 slider, opponentAdvantage, tripleAdjustment)` — the
+  per-side comeback ladder, matched on HP-at-or-below **or** opponent firepower lead, biggest
+  matching `tripleAdjustment` wins and is added to **both** that side's Dirty and Clean Triple Index;
+  an empty list disables the mechanism for that side. `GetComebackAdjustment(isPlayer, hpPercent,
+  opponentAdvantage)` is the lookup. Replaced the old `HpAdjustmentSettings` blocks and their
+  enable toggles), `ludoProgressIndex` (int, 0 = disabled — how much a
   reroll bumps the acting side's Dirty Triple Index during their first roll phase of a turn) +
   `perRoundLudoProgressOverrides` (addable `List<RoundLudoProgressOverride>`, each a `(round, value)`
   pair — `GetLudoProgressIndexForRound(round)` returns the first matching round's value, else falls
@@ -745,10 +748,13 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
   asset rather than assuming they carried over from wherever the asset was copied from.
   `dirtyTripleStabilization`/`ludoProgressIndex` backfill to `0` the same way, but that's the
   intended "disabled" default for every existing fight, so no action is needed unless a specific
-  fight should use it. `playerCleanTripleIndex`/`enemyCleanTripleIndex` backfill to `100` (neutral)
-  and `playerHpAdjustmentsEnabled`/`enemyHpAdjustmentsEnabled` + the `HpAdjustmentSettings` blocks
-  backfill to the same values `SlotMachineRigger` used before these fields existed — both match
-  current global behavior exactly, so again no action needed unless a fight should diverge.
+  fight should use it. `playerCleanTripleIndex`/`enemyCleanTripleIndex` backfill to `100` (neutral),
+  which matches current global behavior exactly, so no action is needed unless a fight should
+  diverge. `playerComebackSettings`/`enemyComebackSettings` are the dangerous ones: they backfill to
+  an **empty list**, which silently means "no comeback assistance at all for that side" — no error,
+  no warning, the fight just plays without the mechanism. All five existing fights are authored with
+  the standard 5-row ladder (`100 → -20`, `60 → 0`, then `25`/`15`/`10` carrying advantage
+  thresholds `30`/`40`/`50`); a new fight asset must be given one explicitly.
   `neutralDirtyTripleIndex`/`firstRoundDirtyTripleIndex` backfill to `100`/`50` the same way
   (matching `SlotMachineRigger`'s own prior hardcoded defaults exactly), so an existing fight's
   round-1/base Dirty Triple Index math is unchanged unless explicitly re-authored.

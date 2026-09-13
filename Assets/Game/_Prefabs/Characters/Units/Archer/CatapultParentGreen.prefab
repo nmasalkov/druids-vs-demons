@@ -327,6 +327,8 @@ MonoBehaviour:
   attack: Attack
   CurrentAnimation: 
   walk: Walk
+  runSpeed: 7
+  minRunDuration: 0.35
   missileAnimator: {fileID: 6997451703810949427}
   shotCount: 3
   totalDuration: 2

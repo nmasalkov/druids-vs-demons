@@ -48,5 +48,5 @@ MonoBehaviour:
   muzzleParticle: {fileID: 152130, guid: ffcb31dd577743d4d8ba70ea52fed5e6, type: 3}
   impactParticle: {fileID: 1887159375177322, guid: 06d176d350bc79645a4cf4d474e5c4d2, type: 3}
   trailParticles: []
-  trajectoryType: 0
+  trajectoryType: 1
   arcHeight: 10

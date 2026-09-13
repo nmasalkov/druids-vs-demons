@@ -77,14 +77,18 @@ public partial class AttacksResolver
             if (attacker.StatusesManager.IsShocked) continue;
 
             var stats = attacker.Data.Stats(attacker.Experience.Level);
-            float dmgPerHit = stats.damage * attacker.StatusesManager.AttackDamageMultiplier;
-            if (dmgPerHit <= 0f) continue; // BattleCry Energy Drain reduced damage to 0 — skip turn
+            float buffedDamage = stats.damage * attacker.StatusesManager.AttackDamageMultiplier;
+            if (buffedDamage <= 0f) continue; // BattleCry Energy Drain reduced damage to 0 — skip turn
             int hitCount = stats.numberOfAttacks;
 
             for (int i = 0; i < hitCount; i++)
             {
                 var target = GetHighestPriorityAliveTarget(enemies, enemyHero, enemyShield, enemySimHP);
                 if (target == null) break;
+
+                // Per hit, not per attacker: a multi-hit archer can hit a Shield on hit 1 and a
+                // Creature on hit 2, and target-dependent modifiers must see each target.
+                float dmgPerHit = ApplySpecialModifiers(attacker, target, buffedDamage);
 
                 float hpBefore = enemySimHP[target];
                 float hpAfter = Mathf.Max(0f, hpBefore - dmgPerHit);
@@ -104,6 +108,21 @@ public partial class AttacksResolver
         }
 
         return assignments;
+    }
+
+    /// <summary>
+    /// Runs the attacker's <see cref="CreatureSO.specialDamageModifiers"/> over
+    /// <paramref name="damage"/> in array order, each one taking the running value and returning
+    /// the next (so several stack multiplicatively). Applied after the BattleCry multiplier, once
+    /// the target is known — the single hook for per-creature damage rules like ShieldBreaker, so
+    /// adding one never touches this class. See docs/Battle.md.
+    /// </summary>
+    private float ApplySpecialModifiers(Creature attacker, Targetable target, float damage)
+    {
+        var context = new DamageContext(attacker, target);
+        foreach (var modifier in attacker.Data.specialDamageModifiers)
+            damage = modifier.ModifyDamage(in context, damage);
+        return damage;
     }
 
     private float ExecuteAnimations(List<AttackAssignment> allAttacks)
@@ -283,5 +302,66 @@ public partial class AttacksResolver
         }
         return hits;
     }
-}
 
+    // ============================================================
+    //  Firepower estimation — consumed by FightSO's Comeback Settings (docs/SlotMachine.md) and
+    //  BalanceTool's firepower HUD. Not debug-only: OpponentFirepowerAdvantage is a real gameplay
+    //  input to the slot machine's rigging.
+    // ============================================================
+
+    /// <summary>
+    /// Pre-battle estimate of one side's total damage output — mirrors ResolveTeam's per-attacker
+    /// formula above (damage x AttackDamageMultiplier, numberOfAttacks hits, shocked creatures
+    /// contribute nothing) without any target/simulated-HP bookkeeping, since nothing has been
+    /// targeted yet.
+    ///
+    /// Deliberately does NOT apply <see cref="CreatureSO.specialDamageModifiers"/> (e.g.
+    /// ShieldBreaker): those are target-dependent and this estimate has no targets, so a
+    /// shield-breaking roster reads its plain firepower here and hits harder than this says once a
+    /// Shield is actually up. See docs/Battle.md.
+    /// </summary>
+    public static float EstimateFirepower(bool isPlayerSide)
+    {
+        var creatures = isPlayerSide ? G.PlayerCreaturesManager.GetAllCreatures() : G.EnemyCreaturesManager.GetAllCreatures();
+        float total = 0f;
+        foreach (var creature in creatures)
+        {
+            if (creature.StatusesManager.IsShocked) continue;
+
+            var stats = creature.Data.Stats(creature.Experience.Level);
+            // No ApplySpecialModifiers here — see the summary above.
+            float dmgPerHit = stats.damage * creature.StatusesManager.AttackDamageMultiplier;
+            if (dmgPerHit <= 0f) continue;
+
+            total += dmgPerHit * stats.numberOfAttacks;
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// Firepower minus the barrier standing in this side's way — what it can actually land on the
+    /// opposing hero/creatures. Floored at 0: "can't get through the barrier at all" is as bad as it
+    /// gets, so an oversized Shield can never push the opposing side's advantage past its own
+    /// firepower.
+    /// </summary>
+    public static float EstimateEffectiveFirepower(bool isPlayerSide)
+        => Mathf.Max(0f, EstimateFirepower(isPlayerSide) - OpposingShieldHp(isPlayerSide));
+
+    /// <summary>
+    /// How far the OPPONENT of <paramref name="isPlayerSide"/> leads on effective firepower —
+    /// positive means this side is the one falling behind. The firepower-advantage input to
+    /// FightSO.ComebackSetting.opponentAdvantage; see docs/SlotMachine.md.
+    /// </summary>
+    public static float OpponentFirepowerAdvantage(bool isPlayerSide)
+        => EstimateEffectiveFirepower(!isPlayerSide) - EstimateEffectiveFirepower(isPlayerSide);
+
+    /// <summary>
+    /// HP of the Shield facing this side, or 0 when the opposing hero has none up. HeroView.Shield
+    /// is genuinely optional (an empty shield slot reads null), which is why this one is guarded.
+    /// </summary>
+    private static float OpposingShieldHp(bool isPlayerSide)
+    {
+        var shield = (isPlayerSide ? G.EnemyView : G.PlayerView).Shield;
+        return shield == null ? 0f : shield.Health.CurrentHealth;
+    }
+}

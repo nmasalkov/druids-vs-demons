@@ -16,21 +16,23 @@ MonoBehaviour:
   actionName: Kodo
   description: A nimble archer, picking off enemies from range with quick, repeated
     shots.
-  cardSprite: {fileID: 6897479667268090689, guid: f2510c14ae49fdf4ea445538361402c9, type: 3}
+  cardSprite: {fileID: -3970029055113475635, guid: 0fcf6d9619035f6488672ac040328cce, type: 3}
   creaturePrefab: {fileID: 4295532141589283847, guid: a00e9bdb58c8ebf47a1909958b131b8c, type: 3}
   levelStats:
-  - damage: 4
-    health: 28
-    numberOfAttacks: 2
-  - damage: 4
+  - damage: 3
     health: 34
+    numberOfAttacks: 2
+  - damage: 3
+    health: 39
     numberOfAttacks: 3
-  - damage: 4
-    health: 42
-    numberOfAttacks: 4
   - damage: 5
     health: 50
-    numberOfAttacks: 5
+    numberOfAttacks: 3
+  - damage: 6
+    health: 60
+    numberOfAttacks: 4
+  specialDamageModifiers:
+  - {fileID: 11400000, guid: 53cfe550b5b844844956368d7234866b, type: 2}
   experienceReward: 1e0000003c00000078000000f0000000
   xpThresholds: 00000000780000004001000058020000
   healAmounts:

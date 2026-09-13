@@ -33,25 +33,37 @@ MonoBehaviour:
   firstRoundCleanTripleIndex: 50
   playerCleanTripleStabilization: 0
   enemyCleanTripleStabilization: -25
-  playerHpAdjustmentsEnabled: 1
-  playerHpAdjustment:
-    highHpThreshold: 0.6
-    highHpAdjustment: -20
-    lowHpThreshold: 0.25
-    lowHpAdjustment: 30
-    criticalHpThreshold: 0.15
-    criticalHpAdjustment: 50
-    nearDeathHpThreshold: 0.1
-    nearDeathHpAdjustment: 65
-  enemyHpAdjustmentsEnabled: 1
-  enemyHpAdjustment:
-    highHpThreshold: 0.6
-    highHpAdjustment: -20
-    lowHpThreshold: 0.25
-    lowHpAdjustment: 30
-    criticalHpThreshold: 0.15
-    criticalHpAdjustment: 60
-    nearDeathHpThreshold: 0.1
-    nearDeathHpAdjustment: 70
+  playerComebackSettings:
+  - hpPercent: 100
+    opponentAdvantage: 0
+    tripleAdjustment: -20
+  - hpPercent: 60
+    opponentAdvantage: 0
+    tripleAdjustment: 0
+  - hpPercent: 25
+    opponentAdvantage: 30
+    tripleAdjustment: 30
+  - hpPercent: 15
+    opponentAdvantage: 40
+    tripleAdjustment: 50
+  - hpPercent: 10
+    opponentAdvantage: 50
+    tripleAdjustment: 65
+  enemyComebackSettings:
+  - hpPercent: 100
+    opponentAdvantage: 0
+    tripleAdjustment: -20
+  - hpPercent: 60
+    opponentAdvantage: 0
+    tripleAdjustment: 0
+  - hpPercent: 25
+    opponentAdvantage: 30
+    tripleAdjustment: 30
+  - hpPercent: 15
+    opponentAdvantage: 40
+    tripleAdjustment: 60
+  - hpPercent: 10
+    opponentAdvantage: 50
+    tripleAdjustment: 70
   ludoProgressIndex: 0
   perRoundLudoProgressOverrides: []

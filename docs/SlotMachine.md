@@ -28,9 +28,9 @@ match counts) that `GameManager`'s `RollState`/`ActionState` machinery consumes 
 - `Assets/Game/_Scripts/SlotMachine/SlotMachineRigger.cs` — the pure-data "backend" that decides
   every roll result, before any spin animation starts. See "Dirty triple terminology" and
   "SlotMachineRigger — deciding roll results" below.
-- `Assets/Game/_Scripts/SlotMachine/HpAdjustmentSettings.cs` — the shared `[Serializable] struct`
-  (4 threshold/adjustment pairs) for one side's HP-based Dirty Triple Index adjustment curve; used by
-  both `SlotMachineRigger` (author-time defaults) and `FightSO` (per-fight override).
+- `Assets/Game/_Scripts/Global/Campaign/FightSO.cs` — home of `ComebackSetting` (the nested
+  `[Serializable] struct` behind Comeback Settings) and `GetComebackAdjustment`, the per-fight
+  comeback ladder. Replaced the old fixed-size `HpAdjustmentSettings.cs` struct, which is deleted.
 
 ## Dirty triple terminology
 
@@ -47,14 +47,40 @@ match counts) that `GameManager`'s `RollState`/`ActionState` machinery consumes 
   short-circuits straight into an instant, all-3-matching triple. Failure forces the fresh roll's
   2nd decided slot to differ from the 1st, so a full triple can never happen "by accident" on a fresh
   roll — every triple is now attributable either to this index (fresh rolls) or the Dirty Triple
-  Index (rerolls). Flat per-fight base, overridden once at fight start from `FightSO`
-  (`playerCleanTripleIndex`/`enemyCleanTripleIndex`) — unlike Dirty, it has no HP-based scaling, but
-  it DOES have a first-round override: `FightSO.firstRoundCleanTripleIndex` (default 50, mirroring
-  `firstRoundDirtyTripleIndex`) forces both sides' opening turns, same as Dirty's own override.
+  Index (rerolls). Per-fight base, overridden once at fight start from `FightSO`
+  (`playerCleanTripleIndex`/`enemyCleanTripleIndex`), and — unlike the old HP-only curve, which was
+  Dirty-only — the turn's **Comeback Adjustment is added to this index too**, at full strength, so
+  both halves of the triple pipeline react to a comeback. It also has a first-round override:
+  `FightSO.firstRoundCleanTripleIndex` (default 50, mirroring `firstRoundDirtyTripleIndex`) forces
+  both sides' opening turns, same as Dirty's own override.
+- **Comeback Settings** (`FightSO.playerComebackSettings`/`enemyComebackSettings`, a `+`/`-`
+  expandable `List<ComebackSetting>` per side; an empty list disables the mechanism for that side):
+  the authored ladder that biases triples toward whoever is losing. Each entry is
+  `(hpPercent, opponentAdvantage, tripleAdjustment)` and **matches on either condition** — this
+  side's hero HP is at or below `hpPercent` (0-100, slider), **OR** the opponent's effective
+  firepower lead is at least `opponentAdvantage` (raw damage points; `0` = this entry ignores
+  firepower and is HP-only). The **biggest `tripleAdjustment` among all matching entries wins** —
+  negatives included, which is how a high-HP punish is expressed — and the winner is added to
+  **both** that side's Dirty and Clean Triple Index. Evaluated once per genuinely new turn, from live
+  board state; round 1 skips it entirely (the `firstRound*` overrides win). Because "biggest wins"
+  with adjustments that decrease as `hpPercent` rises behaves exactly like a most-severe-tier-wins
+  curve, the shipped ladders reproduce the old HP curve exactly — `100 → -20`, `60 → 0`, then the
+  three comeback tiers at `25`/`15`/`10` carrying advantage thresholds `30`/`40`/`50`. Replaced the
+  old `HpAdjustmentSettings` struct and its `playerHpAdjustmentsEnabled`/`enemyHpAdjustmentsEnabled`
+  toggles (an empty list is the "off" switch now).
+- **Comeback halving**: a **positive** comeback adjustment is halved — and both the Dirty and Clean
+  Triple Index lowered by that same delta — each time the acting side re-enters a bonus turn, i.e.
+  every time it lands another triple (`70 → 35 → 17 → 8 → …`). So a big comeback boost helps land a
+  turn's *first* triple without fuelling an endless streak, decaying smoothly instead of vanishing in
+  one step (which is what the earlier `RevertPendingHpBoostForActiveSide` did). A **negative**
+  adjustment (the high-HP punish) is never halved and stays applied for the whole turn — halving it
+  would mean landing a triple rewards you by softening your own punish. Reset from scratch on the
+  side's next genuinely new turn.
 - **Dirty Triple Stabilization** (`FightSO.dirtyTripleStabilization`, 0 = disabled): subtracted from
   the acting side's current Dirty Triple Index each time they earn and re-enter a bonus turn from a
-  triple, so a lucky streak can't snowball indefinitely. Reset to a freshly computed HP-adjusted base
-  the next time that side starts a genuinely new (non-bonus) turn.
+  triple, so a lucky streak can't snowball indefinitely. Applied *after* comeback halving on the same
+  bonus-turn re-entry. Reset to a freshly computed comeback-adjusted base the next time that side
+  starts a genuinely new (non-bonus) turn.
 - **Clean Triple Stabilization** (`FightSO.playerCleanTripleStabilization`/
   `enemyCleanTripleStabilization` — separate per-side fields, unlike Dirty Triple Stabilization's
   single shared one; 0 = disabled): a **signed** delta **added** to the acting side's own current
@@ -62,8 +88,8 @@ match counts) that `GameManager`'s `RollState`/`ActionState` machinery consumes 
   note the different convention from Dirty: Dirty's field is always a positive magnitude that gets
   *subtracted*, Clean's field is a signed value that gets *added*, so a negative value (the intended
   "stabilizing" usage) decreases the index and a positive value would increase it. An independent
-  lever on its own track, reset back to the fight's flat `playerCleanTripleIndex`/`enemyCleanTripleIndex`
-  base (no HP formula, see below) on that side's next genuinely new turn. Triggered by the exact same
+  lever on its own track, reset back to the fight's `playerCleanTripleIndex`/`enemyCleanTripleIndex`
+  base plus that turn's fresh Comeback Adjustment on that side's next genuinely new turn. Triggered by the exact same
   bonus-turn re-entry event as Dirty Triple Stabilization — either kind of triple (clean short-circuit
   or dirty completion) grants the bonus turn that both stabilizations react to, and both apply
   independently to that same re-entry.
@@ -167,31 +193,35 @@ path that replaces that:
 - **Turn-boundary bookkeeping** — `SlotMachineRigger` subscribes to `GameState.OnAnyStateEnded`
   (`SwitchSideState` → recompute that side's base index: `GameManager.IsFirstRound` forces it to a
   configurable `firstRoundDirtyTripleIndex` (default 50, authored per-fight via
-  `FightSO.firstRoundDirtyTripleIndex`), covering both sides' opening turns; otherwise an HP-based
-  formula starting from `neutralDirtyTripleIndex` (default 100, authored per-fight via
-  `FightSO.neutralDirtyTripleIndex`) — most-severe-tier-wins, not cumulative, per-side
-  `HpAdjustmentSettings` (`playerHpAdjustment`/`enemyHpAdjustment`), each independently toggleable via
-  `playerHpAdjustmentsEnabled`/`enemyHpAdjustmentsEnabled` — adjusts that neutral baseline up or down;
-  disabling a side's toggle just returns the neutral baseline unadjusted; **HP-based adjustment only
-  ever touches the Dirty Triple Index** — the Clean Triple Index has no HP formula at all, see below.
-  **A POSITIVE HP adjustment is a one-time boost, not a whole-turn one** — `RecomputeBaseForActiveSide`
-  earmarks it (`_playerPendingHpBoost`/`_enemyPendingHpBoost`, only for a positive value; a negative
-  adjustment/penalty is never earmarked) and `RevertPendingHpBoostForActiveSide` strips it back out the
-  instant that side re-enters its first bonus turn, before `dirtyTripleStabilization` is even applied —
-  so a large near-death boost helps land the turn's *first* triple, then the index drops back to
-  `neutralDirtyTripleIndex` (further eroded by stabilization as normal) for any further chasing within
-  that same turn, instead of staying boosted across a whole lucky streak. Caught live: a
-  `nearDeathHpAdjustment` of +75 with `dirtyTripleStabilization` at 0 produced 3 triples in a row, since
-  nothing ever brought the boosted index back down between bonus turns.)
+  `FightSO.firstRoundDirtyTripleIndex`), covering both sides' opening turns; otherwise
+  `neutralDirtyTripleIndex` (default 100, authored per-fight via `FightSO.neutralDirtyTripleIndex`)
+  **plus that turn's Comeback Adjustment** — `ComputeComebackAdjustment` reads the side's own hero
+  HP% and `AttacksResolver.OpponentFirepowerAdvantage` live, then hands both to
+  `FightSO.GetComebackAdjustment`, which returns the biggest `tripleAdjustment` among matching
+  ladder entries (see "Comeback Settings" in the terminology section above). The result is stored on
+  the Rigger (`_playerComebackAdjustment`/`_enemyComebackAdjustment`, `[SerializeField] private` so
+  it's visible in the Inspector at runtime per rule 19) because two later steps reuse that exact
+  number: `ResetCleanBaseForActiveSide`, which runs immediately after in the same handler and adds it
+  to the **Clean** Triple Index too, and the per-bonus-turn halving below. **Unlike the old HP-only
+  curve, the adjustment is not Dirty-only** — both indices carry it.
+  **A POSITIVE adjustment halves on each bonus turn rather than being stripped whole** —
+  `HalveComebackForActiveSide` runs on every bonus-turn `RollState` re-entry, before
+  `dirtyTripleStabilization` is applied, halving the stored value and lowering both indices by that
+  same delta (`70 → 35 → 17 → 8 → …`). A NEGATIVE adjustment (the high-HP punish) is left alone and
+  stays applied for the whole turn — halving it would make landing a triple soften your own punish.
+  Caught live under the previous design: a `+75` near-death boost with `dirtyTripleStabilization` at
+  0 produced 3 triples in a row, since nothing brought the boosted index back down between bonus
+  turns; the halving is the replacement answer to that, and it now applies to clean triples too.)
   and `GameState.OnAnyStateStarted` (`RollState` re-entries that *aren't* a fresh `SwitchSideState`
-  turn, i.e. a bonus turn from `GameManager.TakeTurn()`'s triple-driven do-while loop, first revert any
-  pending HP boost as above, then apply both `FightSO.dirtyTripleStabilization` to the Dirty Triple
+  turn, i.e. a bonus turn from `GameManager.TakeTurn()`'s triple-driven do-while loop, first halve the
+  comeback adjustment as above, then apply both `FightSO.dirtyTripleStabilization` to the Dirty Triple
   Index *and* `FightSO.playerCleanTripleStabilization`/`enemyCleanTripleStabilization` (per-side fields,
   unlike the single shared `dirtyTripleStabilization`) to the Clean Triple Index, independently; a
-  genuinely fresh entry instead resets the Clean Triple Index back to its flat
-  `FightSO.playerCleanTripleIndex`/`enemyCleanTripleIndex` base — or `firstRoundCleanTripleIndex`
-  during round 1, mirroring the Dirty base's own first-round override — and marks the turn's first
-  roll phase eligible for Ludo Progress). Resets both Dirty indices to neutral (and clears any pending HP boost) on
+  genuinely fresh entry instead resets the Clean Triple Index to its
+  `FightSO.playerCleanTripleIndex`/`enemyCleanTripleIndex` base plus the fresh comeback adjustment —
+  or `firstRoundCleanTripleIndex` during round 1, mirroring the Dirty base's own first-round override
+  — and marks the turn's first
+  roll phase eligible for Ludo Progress). Resets both Dirty indices to neutral (and zeroes both comeback adjustments) on
   `GameManager.OnBattleRestart` (rule 16 — this is battle-scoped state, not `DontDestroyOnLoad`),
   which also re-applies `FightSO`'s overrides (see below) — including the Clean Triple Index base —
   since a restart doesn't change the fight.
@@ -209,17 +239,20 @@ path that replaces that:
   a triple or a normal Finish.
 - `SlotMachineRigger.Start()` also calls a private `ApplyFightOverrides()` (and `ResetForRestart()`
   re-calls it) that copies `FightSO.neutralDirtyTripleIndex`, `firstRoundDirtyTripleIndex`,
-  `playerCleanTripleIndex`/`enemyCleanTripleIndex`, `firstRoundCleanTripleIndex`, and the per-side
-  HP-adjustment blocks/toggles
+  `playerCleanTripleIndex`/`enemyCleanTripleIndex`, and `firstRoundCleanTripleIndex`
   onto the Rigger's own live fields (which stay public and Inspector-visible as author-time/fallback
   defaults for testing outside a real fight) — same "read `CampaignStateManager.Instance.CurrentFight`
   once at scene start, no null-check" pattern `AIController.ResetRerollPool()` already used first.
   `FightSO.dirtyTripleStabilization`, `playerCleanTripleStabilization`/`enemyCleanTripleStabilization`,
-  and `GetLudoProgressIndexForRound` are instead read live off `CampaignStateManager.Instance.
-  CurrentFight` at the point they're needed, never cached onto the Rigger — see rule 22 (one source
-  of truth). The pending-HP-boost fields (`_playerPendingHpBoost`/`_enemyPendingHpBoost`) are the one
-  exception that *is* Rigger-local, battle-scoped runtime state (not authored on `FightSO`) — same
-  category as `_ludoBumpApplied`.
+  `GetLudoProgressIndexForRound`, and **the two Comeback Settings lists** are instead read live off
+  `CampaignStateManager.Instance.CurrentFight` at the point they're needed, never cached onto the
+  Rigger — see rule 22 (one source of truth). The comeback ladders deliberately have no mirrored copy
+  on the Rigger at all: a `List<>` copied from the SO would be the *same instance*, so editing it at
+  runtime would silently rewrite the asset. Tune them on the `FightSO` asset instead, which works in
+  Play mode and persists. The comeback-adjustment fields
+  (`_playerComebackAdjustment`/`_enemyComebackAdjustment`) are Rigger-local, battle-scoped runtime
+  state (not authored on `FightSO`) — same category as `_ludoBumpApplied`, and `[SerializeField]
+  private` for the same Inspector-visibility reason (rule 19).
 - All of the above is pure C#/no `MonoBehaviour` visual coupling — trivially unit-testable headlessly
   (rule 7), same as the rest of this system's AI decision logic.
 
@@ -320,10 +353,11 @@ its own reset method. In this system:
   already tears down the current state (`OnStateEnd()` → `RollState.OnExit()`, unsubscribing from
   whichever machine it was driving) before firing `OnBattleRestart`.
 - `SlotMachineRigger` subscribes its private `ResetForRestart` — resets both `PlayerDirtyTripleIndex`/
-  `EnemyDirtyTripleIndex` back to the neutral baseline and clears Ludo Progress bookkeeping
-  (battle-scoped state, same as the above), then re-calls `ApplyFightOverrides()` so Clean Triple
-  Index and the HP-adjustment blocks/toggles come back from `FightSO` rather than whatever they last
-  happened to be.
+  `EnemyDirtyTripleIndex` back to the neutral baseline and clears Ludo Progress bookkeeping plus both
+  sides' comeback adjustments (battle-scoped state, same as the above), then re-calls
+  `ApplyFightOverrides()` so the Clean Triple Index base and the first-round/neutral values come back
+  from `FightSO` rather than whatever they last happened to be. The comeback ladders themselves need
+  no re-copying — they're read live off `CurrentFight` every turn.
 
 Separately (not a `OnBattleRestart` subscription, but relevant to this system's timing): all of this
 system's delays go through `Utils.DoAfterDelay`, which was changed from `WaitForSecondsRealtime` to

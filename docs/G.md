@@ -17,15 +17,16 @@ here" entry point for this codebase.
 
 - `defaultCreatures` (`CreaturesSO`), `defaultNukes` (`NukesSO`), `defaultSpells` (`SpellsSO`) —
   exposed as `G.DefaultCreatures`/`DefaultNukes`/`DefaultSpells`. This is the **player's** pool for
-  real battles (`SlotMachine`'s player instance reads it — see `docs/SlotMachine.md`) and is also what
-  `BalanceTool` spawns test units from for both sides. Inspector-assigned by default (pointing at the
-  `_DefaultCreatures.asset`/`DefaultNukes.asset`/`DefaultSpells.asset` fallback assets), but overridden
-  at runtime by a campaign run — see `ApplyCampaignLoadout` below.
+  real battles (`SlotMachine`'s player instance reads it — see `docs/SlotMachine.md`), and what
+  `BalanceTool`'s **Player** spawn buttons spawn test units from. Inspector-assigned by default
+  (pointing at the `_DefaultCreatures.asset`/`DefaultNukes.asset`/`DefaultSpells.asset` fallback
+  assets), but overridden at runtime by a campaign run — see `ApplyCampaignLoadout` below.
 - `enemyCreatures`/`enemyNukes`/`enemySpells` — exposed as `G.EnemyCreatures`/`EnemyNukes`/
   `EnemySpells`. The **enemy's** pool for real battles — `ApplyCampaignLoadout` never touches these.
   `enemyCreatures` is now overridden per fight by `ApplyCampaignEnemyCreatures` (below), driven by
-  `FightSO.enemyData.creatures` — see `docs/Encounters.md`. `enemyNukes`/`enemySpells` stay
-  Inspector-assigned fixed defaults; no per-fight data exists for those yet.
+  `FightSO.enemyData.creatures` — see `docs/Encounters.md`. `BalanceTool`'s **Enemy** spawn buttons
+  read this pool too, not `DefaultCreatures`. `enemyNukes`/`enemySpells` stay Inspector-assigned
+  fixed defaults; no per-fight data exists for those yet.
 - `playerView`/`enemyView` (`HeroView`) — exposed as `G.PlayerView`/`EnemyView`, and further as
   `G.PlayerCreaturesManager`/`EnemyCreaturesManager` (`.CreaturesManager`) and `G.PlayerHero`/
   `EnemyHero` (`.Hero`). Which `HeroView` is "player" vs "enemy" is purely which Inspector slot it's

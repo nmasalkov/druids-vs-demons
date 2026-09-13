@@ -7,15 +7,19 @@ public class ShouldRerollDecision
     /// actual field (_rerollMode) and passes it in every call — Decide() itself stays pure.</summary>
     public enum RerollMode
     {
-        /// <summary>Default at the start of every turn. Chases any existing pair (regardless of
-        /// action) first — but only ONCE: the instant a chase reroll actually fires, the next
-        /// decision moves to CommittedToDesired regardless of whether the chase completed a triple
-        /// (see TryChasePair). Falls back to fishing for the desired action from scratch immediately
-        /// if no pair exists or the chase attempt is declined by stupidity.</summary>
+        /// <summary>Default at the start of every turn, and the ONLY mode that can ever branch into
+        /// fishing for the desired action. Chases any existing pair (regardless of action) first;
+        /// falls back to fishing only if no pair exists, or if the chase attempt is declined by
+        /// stupidity — i.e. only ever on the turn's very first decision.</summary>
         Open,
-        /// <summary>One-way — entered the instant a fishing attempt is made from Open, never
-        /// reverts. Only the desired action's own pair is ever chased from here on; any other
-        /// incidental pair is ignored.</summary>
+        /// <summary>Entered the instant a pair chase actually fires from Open, one-way: the AI keeps
+        /// rerolling that pair's odd slot for the rest of the turn while budget lasts, and never
+        /// derails into fishing for the desired action. A triple is worth more than a single desired
+        /// slot, so even the desired action landing in the odd slot gets rerolled away.</summary>
+        CommittedToPair,
+        /// <summary>Entered the instant a fishing attempt is made from Open, one-way. Only the
+        /// desired action's own pair is ever chased from here on; any other incidental pair is
+        /// ignored.</summary>
         CommittedToDesired,
     }
 
@@ -28,6 +32,7 @@ public class ShouldRerollDecision
 
         if (OutOfRerolls(rerollsUsedSoFar, budget)) return RerollChoice.Finish(mode, grantBonus);
         if (IsOpen(mode)) return DecideOpen(currentSlots, desiredAction, budget);
+        if (IsChasingPair(mode)) return DecideChasingPair(currentSlots, grantBonus);
         return DecideCommitted(currentSlots, desiredAction, grantBonus);
     }
 
@@ -36,9 +41,9 @@ public class ShouldRerollDecision
     // Below the fight's low-HP threshold, the AI stops caring specifically about its desired action
     // and falls back to "any triple will do" — re-entering Open's any-pair priority even if it had
     // already committed to fishing for something specific. A no-op when already Open (which already
-    // has this priority) or when the enemy isn't desperate. Checked before ShouldGrantBonus below, so
-    // a desperate AI chasing an unrelated pair never accrues the desired-pair bonus meant for
-    // CommittedToDesired.
+    // has this priority), when already chasing a pair (that IS what desperation wants), or when the
+    // enemy isn't desperate. Checked before ShouldGrantBonus below, so a desperate AI chasing an
+    // unrelated pair never accrues the desired-pair bonus.
     private static RerollMode DesperateOverride(RerollMode mode)
     {
         if (mode != RerollMode.CommittedToDesired) return mode;
@@ -49,11 +54,13 @@ public class ShouldRerollDecision
     // Detected purely from "is the desired pair present right now," checked BEFORE the
     // exhausted-budget gate below — this is what lets the bonus still fire (and its extra reroll
     // still get used) even on what would otherwise be the very last reroll of an exhausted base
-    // budget. See docs/AI.md's worked example.
+    // budget. See docs/AI.md's worked example. Fires in either committed mode: a chased pair that
+    // happens to BE the desired action earns the bonus exactly like a fished-up one does.
     private static bool ShouldGrantBonus(IReadOnlyList<ActionSO> currentSlots, ActionSO desiredAction,
         RerollMode mode, bool bonusAlreadyGranted)
     {
-        if (mode != RerollMode.CommittedToDesired || bonusAlreadyGranted) return false;
+        if (bonusAlreadyGranted) return false;
+        if (IsOpen(mode)) return false; // nothing committed to yet — a desperate AI lands here too
         return DesiredPairExists(currentSlots, desiredAction, out _);
     }
 
@@ -64,6 +71,8 @@ public class ShouldRerollDecision
         AIController.RerollsRemaining <= 0 || rerollsUsedSoFar >= rerollBudget;
 
     private static bool IsOpen(RerollMode mode) => mode == RerollMode.Open;
+
+    private static bool IsChasingPair(RerollMode mode) => mode == RerollMode.CommittedToPair;
 
     // ---- RerollMode.Open: chase any pair first, else fish for the desired action ----
 
@@ -80,12 +89,10 @@ public class ShouldRerollDecision
         choice = default;
         if (!TryFindPairedOddSlot(currentSlots, out int oddSlot)) return false;
         if (!AttemptReroll()) return false; // declined — falls through to the fishing gate above
-        // One-shot: chasing a pair is only ever attempted once per turn. Committing here — even
-        // though the chase might not land the triple — prevents next decision from re-chasing the
-        // SAME pair again, which would otherwise keep rerolling away an already-obtained desired
-        // action sitting as the odd slot out (a real, live-caught case: chasing a Tank pair kept
-        // rerolling the enemy's own just-landed desired Mage instead of banking it).
-        choice = RerollChoice.Reroll(oddSlot, RerollMode.CommittedToDesired);
+        // Committing here locks the whole rest of the turn into chasing THIS pair
+        // (DecideChasingPair): once the AI has visibly started going for a triple, switching to
+        // fishing for its desired action mid-turn reads as giving up and then wasting rerolls.
+        choice = RerollChoice.Reroll(oddSlot, RerollMode.CommittedToPair);
         return true;
     }
 
@@ -93,21 +100,33 @@ public class ShouldRerollDecision
     // fishing from scratch, whether that's a fresh no-pair landing or a declined pair-chase.
     private static bool CanFishFromScratch(int rerollBudget) => rerollBudget > 1;
 
+    // ---- RerollMode.CommittedToPair: keep chasing the committed pair, nothing else ----
+
+    private static RerollChoice DecideChasingPair(IReadOnlyList<ActionSO> currentSlots, bool grantBonus)
+    {
+        // Rerolling the odd slot can never break the pair, so one is always still here — except on
+        // the triple itself, which SlotMachine auto-finishes upstream before this runs again.
+        if (!TryFindPairedOddSlot(currentSlots, out int oddSlot))
+            return RerollChoice.Finish(RerollMode.CommittedToPair, grantBonus);
+
+        return ChasePair(oddSlot, RerollMode.CommittedToPair, grantBonus);
+    }
+
     // ---- RerollMode.CommittedToDesired: only the desired action's own pair matters from here on ----
 
     private static RerollChoice DecideCommitted(IReadOnlyList<ActionSO> currentSlots, ActionSO desiredAction,
         bool grantBonus)
     {
         if (DesiredPairExists(currentSlots, desiredAction, out int oddSlot))
-            return ChaseDesiredPair(oddSlot, grantBonus);
+            return ChasePair(oddSlot, RerollMode.CommittedToDesired, grantBonus);
 
         return Fish(currentSlots, desiredAction, RerollMode.CommittedToDesired); // ignores any incidental non-desired pair
     }
 
-    private static RerollChoice ChaseDesiredPair(int oddSlot, bool grantBonus) =>
+    private static RerollChoice ChasePair(int oddSlot, RerollMode nextMode, bool grantBonus) =>
         AttemptReroll()
-            ? RerollChoice.Reroll(oddSlot, RerollMode.CommittedToDesired, grantBonus)
-            : RerollChoice.Finish(RerollMode.CommittedToDesired, grantBonus);
+            ? RerollChoice.Reroll(oddSlot, nextMode, grantBonus)
+            : RerollChoice.Finish(nextMode, grantBonus);
 
     private static bool DesiredPairExists(IReadOnlyList<ActionSO> currentSlots, ActionSO desiredAction,
         out int oddSlotIndex)
@@ -117,7 +136,7 @@ public class ShouldRerollDecision
         return currentSlots[pairedSlot] == desiredAction;
     }
 
-    // ---- shared fishing target-selection + stupidity gating (both modes) ----
+    // ---- shared fishing target-selection + stupidity gating ----
 
     private static RerollChoice Fish(IReadOnlyList<ActionSO> currentSlots, ActionSO desiredAction, RerollMode nextMode)
     {

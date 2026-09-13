@@ -12,6 +12,8 @@ side's turn (after round 1).
 - `Assets/Game/_Scripts/Units/Shield.cs` — the Shield-spell construct (Targetable, not a Unit).
 - `Assets/Game/_Scripts/Units/Hero.cs`, `Assets/Game/_Scripts/Units/Creature.cs` — the two `Unit`s.
 - `Assets/Game/_Scripts/Units/StatusesManager.cs` — per-unit status flags (shocked, charmed, BattleCry).
+- `Assets/Game/_Scripts/ScriptableObjects/Modifiers/SpecialDamageModifierSO.cs` +
+  `DamageContext.cs` + `ShieldBreakerModifierSO.cs` — per-creature custom damage rules (below).
 - `Assets/Game/_Scripts/Global/GameManager/BattleState.cs` — the `GameState` that runs one battle.
 - `Assets/Game/_Scripts/Global/GameManager/AttacksResolver.cs` + `AttacksResolver.Mechanics.cs` —
   pure-data attack planner (partial class split: public API / internal mechanics).
@@ -143,12 +145,28 @@ paths that must always agree on outcome (rule 7):
 
 Split across `AttacksResolver.cs` (public API: `AttackAssignment` struct, `Resolve`, `ExecuteAttacks`,
 `ApplyAttacksInstant`) and `AttacksResolver.Mechanics.cs` (targeting/priority/animation-grouping
-internals) as one `partial class`. `AttacksResolver.Debug.cs` (rule 20 — debug-only surface split out
-of the main class) adds `public static float EstimateFirepower(bool isPlayerSide)`, a pre-battle
-total-damage-output estimate for `BalanceTool`'s "compared firepower" HUD toggle — mirrors
-`ResolveTeam`'s exact per-attacker formula below (`stats.damage * AttackDamageMultiplier`,
-`numberOfAttacks` hits, shocked creatures contribute 0) without the target/simulated-HP bookkeeping,
-since it's a total-output estimate rather than a resolved attack plan.
+internals) as one `partial class`. `AttacksResolver.Mechanics.cs` also carries the **firepower
+estimation** trio, in its own section at the bottom of the file:
+
+- `public static float EstimateFirepower(bool isPlayerSide)` — pre-battle total-damage-output
+  estimate, mirroring `ResolveTeam`'s exact per-attacker formula below (`stats.damage *
+  AttackDamageMultiplier`, `numberOfAttacks` hits, shocked creatures contribute 0) without the
+  target/simulated-HP bookkeeping, since it's a total-output estimate rather than a resolved plan.
+- `public static float EstimateEffectiveFirepower(bool isPlayerSide)` — the above **minus the
+  opposing barrier**: the HP of the `Shield` in the *other* side's `HeroView.ShieldSlot`, i.e. the
+  one standing in this side's way. Floored at 0 via `Mathf.Max` — "can't get through the barrier at
+  all" is as bad as it gets, so an oversized Shield can never inflate the opposing side's advantage
+  past its own firepower. `HeroView.Shield` is genuinely optional (empty slot reads null), so the
+  private `OpposingShieldHp` helper null-checks it — allowed under rule 5, same as
+  `HeroView.ClearShield` already does.
+- `public static float OpponentFirepowerAdvantage(bool isPlayerSide)` — how far the **opponent** of
+  the given side leads on effective firepower; positive means that side is falling behind.
+
+This was previously an `AttacksResolver.Debug.cs` (rule 20) file, marked debug-only. It isn't
+anymore: `OpponentFirepowerAdvantage` is a real gameplay input, read every turn by
+`SlotMachineRigger` to evaluate `FightSO`'s Comeback Settings (see `docs/SlotMachine.md`).
+`BalanceTool`'s "compared firepower" HUD toggle reads `EstimateEffectiveFirepower` too, so the HUD
+and the rigging can never disagree.
 
 1. **`Resolve(playerCreatures, enemyCreatures, playerHero, enemyHero, playerShield, enemyShield)`**:
    builds a simulated-HP dictionary per side (`BuildSimulatedHP` — snapshots current HP for every
@@ -166,7 +184,8 @@ since it's a total-output estimate rather than a resolved attack plan.
    (BattleCry buff/debuff) — if that multiplier reduces damage to `≤ 0` (BattleCry "Energy Drain"),
    the attacker skips its turn too. Each attacker fires `stats.numberOfAttacks` hits, re-picking a
    target each hit against the live simulated HP (so multi-hit archers can finish off a target and
-   move to the next).
+   move to the next). Once each hit's target is known, `ApplySpecialModifiers` runs the attacker's
+   own `CreatureSO.specialDamageModifiers` over that value — see "Special damage modifiers" below.
 4. **XP registration** (`RegisterExperienceRewards`, called inside `Resolve` — i.e. XP is registered
    before any animation plays): Shield targets never grant XP. Hero hits grant `damage * 10` XP per
    shot regardless of death. Creature targets grant `CreatureSO.GetExperienceReward(level)` XP once
@@ -183,6 +202,72 @@ since it's a total-output estimate rather than a resolved attack plan.
    Each `HitInfo.OnHit` callback is what actually calls `target.Health.TakeDamage(damage)` and —if
    `shouldSpawnGem`— `ExperienceManager.Instance.SpawnGem(...)`, i.e. real damage/XP only lands when
    the animation's hit callback fires, not when `Resolve()` planned it.
+
+## Special damage modifiers
+
+A per-creature hook for custom damage rules ("this creature hits shields harder", "…deals less to
+tanks", …) that would otherwise have to be special-cased inside `AttacksResolver`. Three files, all
+under `Assets/Game/_Scripts/ScriptableObjects/Modifiers/`:
+
+- **`SpecialDamageModifierSO`** — abstract `ScriptableObject` with one method,
+  `float ModifyDamage(in DamageContext context, float damage)`. The logic lives on the SO itself,
+  the same shape as `RewardSO.Claim`/`IsOwned` (`docs/Rewards.md`) and `ActionSO.CreateAndResolve`.
+- **`DamageContext`** — `readonly struct { Creature Attacker; Targetable Target; }`, mirroring
+  `ActionContext`. Passed by `in`, so the chain allocates nothing; new fields can be added later
+  without touching existing modifier subclasses.
+- **`ShieldBreakerModifierSO`** — the first concrete rule:
+  `context.Target is Shield ? damage * shieldDamageMultiplier : damage`, with
+  `shieldDamageMultiplier = 1.5` on the `ShieldBreaker.asset`. Carried by the ork roster
+  (`OrkMage`/`OrkTank`/`Kodo`), matching their shield-breaking `OrkBreaker` hero avatar.
+
+`CreatureSO.specialDamageModifiers` is a plain `SpecialDamageModifierSO[]`, empty for most creatures.
+Assets live in `Assets/Game/_ScriptableObjects/Modifiers/`.
+
+**Where it runs.** `AttacksResolver.ApplySpecialModifiers` (`AttacksResolver.Mechanics.cs`), called
+from `ResolveTeam` **inside the per-hit loop**, after the BattleCry multiplier and after the target
+for that hit has been picked:
+
+```csharp
+float buffedDamage = stats.damage * attacker.StatusesManager.AttackDamageMultiplier;
+if (buffedDamage <= 0f) continue;          // BattleCry Energy Drain — skip turn
+...
+var target = GetHighestPriorityAliveTarget(...);
+float dmgPerHit = ApplySpecialModifiers(attacker, target, buffedDamage);
+```
+
+Three things about that placement are load-bearing:
+
+- **Per hit, not per attacker.** A multi-hit archer re-picks its target every hit, so it can hit a
+  Shield on hit 1 and a Creature on hit 2. Hoisting the call out of the loop (where the old
+  per-attacker `dmgPerHit` used to be computed) would silently apply hit 1's modifier to every
+  later hit.
+- **After the Energy Drain guard, never before.** The skip-turn check stays on `buffedDamage`, so a
+  modifier can't resurrect a turn BattleCry zeroed out.
+- **Inside `Resolve()`, so both resolve paths get it for free.** `ResolveTeam` is the single producer
+  of `AttackAssignment.Damage`, and that one value feeds the animated path (`BuildHitInfos` →
+  `HitInfo.OnHit` → `TakeDamage`) and the instant path (`ApplyAttacksInstant`) alike. There is no
+  second copy of the formula to keep in sync — rule 7 parity holds by construction.
+
+**Chained, multiplicative stacking.** Each modifier takes the running value and returns the next, in
+array order, so several compound. The bonus multiplies the already-BattleCry-adjusted damage: Kodo at
+level 1 (3 dmg) under a ×2 BattleCry buff hits a shield for `3 × 2 × 1.5 = 9`.
+
+**Not persisted, so no `id` and no catalog entry** — unlike `ActionSO`/`RewardSO` (rule 23), these are
+referenced directly from `CreatureSO` assets as real Unity asset references, never stored in
+`RunState`, so they never make a `JsonUtility` round-trip.
+
+**`EstimateFirepower` deliberately excludes them** (`AttacksResolver.Mechanics.cs`). It's a pre-battle
+total-output estimate with no targets picked yet, so a target-dependent modifier structurally can't
+apply — a shield-breaking roster reads its plain firepower in BalanceTool's HUD and then hits harder
+than the HUD says once a Shield is actually up. Worth knowing that this understatement now also
+reaches gameplay, not just the HUD: a ShieldBreaker roster's `OpponentFirepowerAdvantage` reads lower
+than its real threat, so it earns its opponent slightly less comeback assistance than it should
+(see `docs/SlotMachine.md`).
+
+**Adding a new rule:** subclass `SpecialDamageModifierSO`, implement `ModifyDamage`, add a
+`[CreateAssetMenu(... menuName = "Game/Modifiers/…")]`, create the asset under
+`_ScriptableObjects/Modifiers/`, and drop it into the relevant creatures' `specialDamageModifiers`.
+`AttacksResolver` never changes.
 
 ## StatusesManager
 

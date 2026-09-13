@@ -106,23 +106,19 @@ public class FightSO : ScriptableObject
     [Tooltip("Same as playerCleanTripleStabilization, but for the enemy side and enemyCleanTripleIndex.")]
     public int enemyCleanTripleStabilization;
 
-    [Header("HP-Based Adjustment — Player")]
-    [Tooltip("Turns the whole HP-based adjustment mechanism off for the player side's Dirty Triple " +
-             "Index — base index just stays at neutralDirtyTripleIndex on any non-first-round turn. " +
-             "Clean Triple Index has no HP-based adjustment at all (see playerCleanTripleIndex).")]
-    public bool playerHpAdjustmentsEnabled = true;
-    [Tooltip("Player-side HP thresholds/adjustments applied to the Dirty Triple Index only — see " +
-             "each field's own tooltip inside this foldout.")]
-    public HpAdjustmentSettings playerHpAdjustment = HpAdjustmentSettings.Default;
+    [Header("Comeback Settings — Player (biggest matching entry wins, not cumulative)")]
+    [Tooltip("Player-side comeback ladder, replacing the old fixed 4-tier HP curve. Each entry " +
+             "matches when the player's hero HP is at or below its HP Percent OR the enemy's " +
+             "firepower advantage reaches its Opponent Advantage; the BIGGEST Triple Adjustment " +
+             "among all matching entries is added to both the player's Dirty AND Clean Triple " +
+             "Index for the turn. An empty list disables the mechanism for this side entirely. " +
+             "See docs/SlotMachine.md.")]
+    public List<ComebackSetting> playerComebackSettings = new();
 
-    [Header("HP-Based Adjustment — Enemy")]
-    [Tooltip("Turns the whole HP-based adjustment mechanism off for the enemy side's Dirty Triple " +
-             "Index — base index just stays at neutralDirtyTripleIndex on any non-first-round turn. " +
-             "Clean Triple Index has no HP-based adjustment at all (see enemyCleanTripleIndex).")]
-    public bool enemyHpAdjustmentsEnabled = true;
-    [Tooltip("Enemy-side HP thresholds/adjustments applied to the Dirty Triple Index only — see " +
-             "each field's own tooltip inside this foldout.")]
-    public HpAdjustmentSettings enemyHpAdjustment = HpAdjustmentSettings.Default;
+    [Header("Comeback Settings — Enemy (biggest matching entry wins, not cumulative)")]
+    [Tooltip("Same as playerComebackSettings, but for the enemy side — matched against the enemy " +
+             "hero's HP and the PLAYER's firepower advantage over the enemy.")]
+    public List<ComebackSetting> enemyComebackSettings = new();
 
     [Header("Ludo Progress Index")]
     [Tooltip("Amount PlayerDirtyTripleIndex/EnemyDirtyTripleIndex increases after each reroll, " +
@@ -144,6 +140,28 @@ public class FightSO : ScriptableObject
         return ludoProgressIndex;
     }
 
+    /// <summary>Biggest tripleAdjustment among the entries matching this side's HP% or the
+    /// opponent's firepower advantage; 0 if no entry matches at all (or the list is empty).</summary>
+    public int GetComebackAdjustment(bool isPlayer, int hpPercent, int opponentAdvantage)
+    {
+        var settings = isPlayer ? playerComebackSettings : enemyComebackSettings;
+        // Seeded from the first match rather than from 0 — an all-negative ladder (the high-HP
+        // punish at full health) must be able to win, and a 0 seed would silently swallow it.
+        bool matched = false;
+        int best = 0;
+        foreach (var entry in settings)
+        {
+            if (!Matches(entry, hpPercent, opponentAdvantage)) continue;
+            if (!matched || entry.tripleAdjustment > best) best = entry.tripleAdjustment;
+            matched = true;
+        }
+        return matched ? best : 0;
+    }
+
+    private static bool Matches(ComebackSetting entry, int hpPercent, int opponentAdvantage)
+        => hpPercent <= entry.hpPercent
+           || (entry.opponentAdvantage > 0 && opponentAdvantage >= entry.opponentAdvantage);
+
     [Serializable]
     public struct RoundLudoProgressOverride
     {
@@ -151,5 +169,33 @@ public class FightSO : ScriptableObject
         public int round;
         [Tooltip("LudoProgressIndex to use during this specific round, instead of the common value above.")]
         public int ludoProgressIndex;
+    }
+
+    /// <summary>
+    /// One rung of a side's comeback ladder — see <see cref="GetComebackAdjustment"/> and
+    /// docs/SlotMachine.md. Matching is an OR of the two thresholds, and the biggest
+    /// tripleAdjustment among matching entries wins — so a ladder authored with adjustments that
+    /// decrease as hpPercent rises behaves exactly like the old "most severe tier wins" curve,
+    /// while the advantage column can additionally fire a lower rung at any HP.
+    /// </summary>
+    [Serializable]
+    public struct ComebackSetting
+    {
+        [Tooltip("Matches when this side's hero HP is AT OR BELOW this percentage (0-100). A row at " +
+                 "100 always matches on HP, which is how a flat high-HP punish is authored; a row " +
+                 "at 0 only matches at death, i.e. it is effectively advantage-only.")]
+        [Range(0, 100)] public int hpPercent;
+        [Tooltip("Matches when the OPPONENT of this side (the enemy on the player's list, the " +
+                 "player on the enemy's list) leads on effective firepower by at least this much — " +
+                 "AttacksResolver.OpponentFirepowerAdvantage: each side's total creature damage " +
+                 "output minus the barrier standing in its way, floored at 0. Raw damage points, " +
+                 "not a percentage. 0 = this entry ignores firepower entirely and matches on HP " +
+                 "alone. See docs/Battle.md.")]
+        public int opponentAdvantage;
+        [Tooltip("Added to BOTH this side's Dirty and Clean Triple Index (0-200 scale, 100 = " +
+                 "neutral 1-in-3 odds) when this entry wins. Positive = easier triples (a comeback " +
+                 "boost, halved each time this side lands a triple and re-enters a bonus turn); " +
+                 "negative = harder triples (a punish, which stays applied for the whole turn).")]
+        public int tripleAdjustment;
     }
 }

@@ -97,9 +97,13 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 533815846449086359, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
+      propertyPath: m_SortingOrder
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1872679886176264211, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
       propertyPath: m_Name
-      value: ShieldBreaker
+      value: OrkBreaker
       objectReference: {fileID: 0}
     - target: {fileID: 1948511561845306517, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
       propertyPath: m_LocalScale.x

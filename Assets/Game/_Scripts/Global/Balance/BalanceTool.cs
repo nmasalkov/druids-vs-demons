@@ -11,7 +11,10 @@ public class BalanceTool : MonoBehaviour
     [Tooltip("When checked, the current game phase name is shown in the child TMP_Text label.")]
     public bool ShowPhaseName;
     [Tooltip("When checked, a live 'player : enemy' compared-firepower readout is shown in the " +
-             "child TMP_Text label, updated every frame.")]
+             "child TMP_Text label, updated every frame. Each side's number is its total creature " +
+             "damage output MINUS the opposing barrier (Shield) HP standing in its way, floored at " +
+             "0 — the same effective-firepower value FightSO's Comeback Settings read, so the HUD " +
+             "and the rigging never disagree. See docs/Battle.md.")]
     public bool ShowFirepowers;
     [Tooltip("When checked, elapsed time since the player's first roll is shown in the child " +
              "TMP_Text label, updated every frame.")]
@@ -51,7 +54,7 @@ public class BalanceTool : MonoBehaviour
     private void Update()
     {
         if (ShowFirepowers)
-            _firepowerLabel.text = $"{AttacksResolver.EstimateFirepower(true):0} : {AttacksResolver.EstimateFirepower(false):0}";
+            _firepowerLabel.text = $"{AttacksResolver.EstimateEffectiveFirepower(true):0} : {AttacksResolver.EstimateEffectiveFirepower(false):0}";
         if (ShowTimer)
             _timerLabel.text = FormatElapsed();
     }
@@ -142,9 +145,12 @@ public class BalanceTool : MonoBehaviour
     public void SpawnPlayerArcher() => SpawnPlayer(G.DefaultCreatures.archer);
     public void SpawnPlayerTank() => SpawnPlayer(G.DefaultCreatures.tank);
 
-    public void SpawnEnemyMage() => SpawnEnemy(G.DefaultCreatures.mage);
-    public void SpawnEnemyArcher() => SpawnEnemy(G.DefaultCreatures.archer);
-    public void SpawnEnemyTank() => SpawnEnemy(G.DefaultCreatures.tank);
+    // Enemy buttons read the enemy pool (this fight's own roster, or its resolved fallback),
+    // never G.DefaultCreatures — that's the player's campaign-resolved pool. Crossing the two
+    // chains is the exact bug CLAUDE.md rule 29 documents.
+    public void SpawnEnemyMage() => SpawnEnemy(G.EnemyCreatures.mage);
+    public void SpawnEnemyArcher() => SpawnEnemy(G.EnemyCreatures.archer);
+    public void SpawnEnemyTank() => SpawnEnemy(G.EnemyCreatures.tank);
 
     public bool IsBattleInProgress { get; private set; }
 

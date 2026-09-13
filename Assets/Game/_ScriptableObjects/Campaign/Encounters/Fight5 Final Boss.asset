@@ -17,6 +17,7 @@ MonoBehaviour:
   enemyData:
     enemyAvatarPrefab: {fileID: 1872679886176264211, guid: 862b8254ef1ec5b4fb20c9a9ac3e8b61, type: 3}
     hp: 1
+    creatures: {fileID: 0}
     stupidityChance: 20
     criticalFailureChance: 15
     rerollsAmount: 10
@@ -24,3 +25,45 @@ MonoBehaviour:
   hasLoadoutPick: 1
   hasReward: 0
   rewardAmount: 0
+  neutralDirtyTripleIndex: 100
+  firstRoundDirtyTripleIndex: 50
+  dirtyTripleStabilization: 0
+  playerCleanTripleIndex: 100
+  enemyCleanTripleIndex: 100
+  firstRoundCleanTripleIndex: 50
+  playerCleanTripleStabilization: 0
+  enemyCleanTripleStabilization: 0
+  playerComebackSettings:
+  - hpPercent: 100
+    opponentAdvantage: 0
+    tripleAdjustment: -20
+  - hpPercent: 60
+    opponentAdvantage: 0
+    tripleAdjustment: 0
+  - hpPercent: 25
+    opponentAdvantage: 30
+    tripleAdjustment: 30
+  - hpPercent: 15
+    opponentAdvantage: 40
+    tripleAdjustment: 50
+  - hpPercent: 10
+    opponentAdvantage: 50
+    tripleAdjustment: 65
+  enemyComebackSettings:
+  - hpPercent: 100
+    opponentAdvantage: 0
+    tripleAdjustment: -20
+  - hpPercent: 60
+    opponentAdvantage: 0
+    tripleAdjustment: 0
+  - hpPercent: 25
+    opponentAdvantage: 30
+    tripleAdjustment: 30
+  - hpPercent: 15
+    opponentAdvantage: 40
+    tripleAdjustment: 50
+  - hpPercent: 10
+    opponentAdvantage: 50
+    tripleAdjustment: 65
+  ludoProgressIndex: 0
+  perRoundLudoProgressOverrides: []

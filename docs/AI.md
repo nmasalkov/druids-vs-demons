@@ -250,25 +250,36 @@ Computed once per turn, at `RollState.HandlePostRollsEnter()`.
 a bonus granted the moment the AI observes it's completed the desired action's own pair while chasing
 it (see below). `RollState` owns `_rerollBudget` as a genuinely mutable per-turn field for this reason.
 
-#### The two-state per-turn reroll process
+#### The three-state per-turn reroll process
 
 `ShouldRerollDecision` models the whole turn as a small one-way state machine,
-`ShouldRerollDecision.RerollMode` (`Open` → `CommittedToDesired`). `RollState` owns the live value
-(`_rerollMode`) and passes it in on every call — `Decide()` stays a pure function of its arguments,
-same reasoning as `_rerollBudget`/`_rerollsUsed` already required:
+`ShouldRerollDecision.RerollMode` (`Open` → `CommittedToPair` **or** `CommittedToDesired`, never
+between the two committed modes). `RollState` owns the live value (`_rerollMode`) and passes it in on
+every call — `Decide()` stays a pure function of its arguments, same reasoning as
+`_rerollBudget`/`_rerollsUsed` already required:
 
 ```csharp
 public RerollChoice Decide(IReadOnlyList<ActionSO> currentSlots, ActionSO desiredAction,
     int rerollsUsedSoFar, int rerollBudget, RerollMode mode, bool bonusAlreadyGranted)
 {
+    mode = DesperateOverride(mode);
     bool grantBonus = ShouldGrantBonus(currentSlots, desiredAction, mode, bonusAlreadyGranted);
     int budget = EffectiveBudget(rerollBudget, grantBonus);
 
     if (OutOfRerolls(rerollsUsedSoFar, budget)) return RerollChoice.Finish(mode, grantBonus);
     if (IsOpen(mode)) return DecideOpen(currentSlots, desiredAction, budget);
+    if (IsChasingPair(mode)) return DecideChasingPair(currentSlots, grantBonus);
     return DecideCommitted(currentSlots, desiredAction, grantBonus);
 }
 ```
+
+**Which of the two committed modes the turn ends up in is decided once, on the turn's very first
+decision, and never revisited.** `Open` is the only mode that can branch into fishing for the desired
+action at all — so the desired-fishing branch is entered only when (1) stupidity declined the pair
+chase before any chase reroll had fired, or (2) the initial landing had no pair to chase in the first
+place. Once a chase reroll has actually fired, the turn is locked into chasing that pair. Giving up on
+a triple the AI had visibly started going for, and spending the remaining budget fishing instead, is
+exactly what reads as stupid to a watching player.
 
 **The bonus-eligibility check runs *before* the exhausted-budget check, not after** — `grantBonus` is
 computed first and folded into `budget` before `OutOfRerolls` ever looks at it. This is deliberate:
@@ -281,23 +292,33 @@ first would silently end the turn right there and the bonus would never fire).
 decision point:
 
 - If **any** pair exists among the 3 slots (`TryFindPairedOddSlot`, regardless of whether it's the
-  desired action), attempt to chase it once: reroll the odd slot, gated by stupidity. **The instant
-  this chase reroll actually fires, mode transitions to `CommittedToDesired`** — chasing an
-  unrelated pair is a one-shot priority, not a repeatable one. This matters because the chase reroll
-  can fail to complete the triple (the odd slot lands on something else instead) without ending the
-  turn; without this transition, the *next* decision would re-find the same leftover pair and chase
-  it again, potentially rerolling away the AI's own already-obtained desired action sitting as that
-  odd slot (a real, live-caught case: chasing a Tank pair kept rerolling the enemy's own just-landed
-  desired Mage instead of banking it). With the transition, the next decision instead correctly
-  fishes among the *non-desired* slots for a second copy of the desired action, leaving an
-  already-landed one untouched. A declined chase attempt (stupidity blocks it) falls through to the
-  fishing branch below instead, same as before.
+  desired action), chase it: reroll the odd slot, gated by stupidity. **The instant this chase reroll
+  actually fires, mode transitions to `CommittedToPair`** and the turn keeps chasing that same pair
+  from then on. A declined chase attempt (stupidity blocks it) falls through to the fishing branch
+  below instead.
 - Otherwise (no pair, or the chase attempt above was declined by stupidity) — the guaranteed base-1
   minimum is reserved for chasing an existing pair only, never for fishing from scratch, so first check
   `rerollBudget > 1`. If that fails, finish. If it passes, attempt to fish (reroll a random
   non-desired-action slot, `NonMatchingIndices`), gated by stupidity — and **transition to
   `CommittedToDesired` the instant this fishing attempt is made**, whether or not the stupidity roll
   actually lets it through.
+
+**`RerollMode.CommittedToPair`** (one-way, and the only mode entered by an actual pair chase) —
+re-evaluated fresh at every decision point, but there is only one thing to evaluate: find the pair
+again and reroll its odd slot, gated by stupidity as always, until the triple lands or the budget runs
+out. It never fishes.
+
+- Rerolling the odd slot can't break the pair, so the pair is always still there next decision — the
+  "no pair found" branch only exists for the triple itself, which `SlotMachine` auto-finishes
+  upstream before this class runs again.
+- **The odd slot landing on the desired action does not stop the chase** — it gets rerolled away like
+  anything else. A triple is worth more than a single desired slot while budget remains, and this is
+  the deliberate resolution of a case that has been caught live from both directions (an earlier
+  version transitioned to `CommittedToDesired` after a chase instead, which produced the opposite
+  and worse artifact: with `[Tank, Tank, Archer]` and Archer desired, it fished by rerolling one of
+  its own **Tanks**, visibly abandoning the triple it had just spent a reroll on).
+- If the pair being chased happens to *be* the desired action's pair, the one-time bonus reroll below
+  still fires, exactly as it does in `CommittedToDesired`.
 
 **`RerollMode.CommittedToDesired`** (one-way under normal circumstances — `Open`'s "any pair" priority
 never applies again this turn once entered, *except* the desperate-mode override below) — re-evaluated
@@ -319,16 +340,19 @@ decision (and therefore for `RollState`'s persisted `_rerollMode` too, since it 
 returned `RerollChoice.NextMode`) whenever `mode == CommittedToDesired` and the enemy is below
 threshold — so a desperate AI reroll-chases *any* pair it finds, including one that isn't its desired
 action, rather than keep fishing specifically. A no-op when already `Open` (which already has this
-priority) or when not desperate. Checked *before* `ShouldGrantBonus`, so a desperate AI chasing an
+priority), when already `CommittedToPair` (chasing a pair is what desperation wants anyway — and once
+the override drops a desperate AI back into `Open`, chasing a pair from there commits it to
+`CommittedToPair` for the rest of the turn like any other chase), or when not desperate. Checked
+*before* `ShouldGrantBonus`, so a desperate AI chasing an
 unrelated pair never accrues the desired-pair bonus meant for `CommittedToDesired`. Worked example
 (desired = Tank): lands `[Tank, Archer, Mage]` (no pair, fishes, rerolls Archer) → lands
 `[Tank, Mage, Mage]` (a Mage pair, not desired) → while below threshold, this rerolls the *Tank* slot
 chasing the Mage pair instead of continuing to fish for Tank.
 
 The mechanical target-selection (`TryFindPairedOddSlot` for chasing, random `NonMatchingIndices` for
-fishing) is identical in both modes and lives in one shared `Fish()` helper (plus the shared
-`TryFindPairedOddSlot`) — only which mode applies, and the transition/bonus bookkeeping around it,
-differs between `DecideOpen`/`DecideCommitted`.
+fishing) is identical in every mode and lives in two shared helpers, `ChasePair()` and `Fish()` (plus
+the shared `TryFindPairedOddSlot`) — only which mode applies, and the transition/bonus bookkeeping
+around it, differs between `DecideOpen`/`DecideChasingPair`/`DecideCommitted`.
 
 **HP below `FightSO.enemyData.lowHpStupidityBypassThreshold` (0-1, baseline 0.15 = 15%) bypasses
 stupidity for every individual reroll attempt, in both modes** — "he rolls for his life." Per-fight

@@ -19,25 +19,28 @@ using UnityEngine;
 ///   failure, the fresh roll's first two decided slots are forced to differ from each other, so a
 ///   full triple can never happen "by accident" on a fresh roll — only via this deliberate check.
 ///   Forced to firstRoundCleanTripleIndex (mirroring firstRoundDirtyTripleIndex) during round 1.
-/// - HP-Based Adjustment one-time boost: a POSITIVE HP-based adjustment baked into the acting side's
-///   Dirty Triple Index at turn start (see HpAdjustment below) only helps land that turn's FIRST
-///   triple — it's stripped back out (RevertPendingHpBoostForActiveSide) the instant that side
-///   re-enters its first bonus turn, before Dirty Triple Stabilization is even applied. A NEGATIVE
-///   adjustment (a penalty) is never tracked for removal and stays applied the whole turn. Prevents
-///   a large comeback boost from fueling a snowballing streak of repeated triples with no
-///   stabilization configured to bring it back down.
+/// - Comeback Adjustment: FightSO.playerComebackSettings/enemyComebackSettings, an authored ladder
+///   of (HP%, opponent firepower advantage, triple adjustment) entries. At the start of every
+///   genuinely new turn the acting side's ladder is evaluated — an entry matches on HP at-or-below
+///   OR on the opponent's effective firepower lead, and the biggest adjustment among matching
+///   entries wins — and the result is added to BOTH that side's Dirty and Clean Triple Index. Unlike
+///   the HP-only curve this replaced, it is not a Dirty-only lever.
+/// - Comeback halving: a POSITIVE comeback adjustment is halved (and both indices lowered by the
+///   same delta) each time the acting side re-enters a bonus turn, i.e. every time it lands another
+///   triple — so a large comeback boost helps land a turn's first triple without fuelling an endless
+///   streak. A NEGATIVE adjustment (the high-HP punish) is never halved and stays applied for the
+///   whole turn: halving it would mean landing a triple rewards you by softening your own punish.
 /// - Dirty Triple Stabilization: FightSO.dirtyTripleStabilization, subtracted from the acting side's
 ///   Dirty Triple Index each time they re-enter a bonus turn from a triple; reset to a fresh
-///   HP-adjusted base on their next genuinely new turn.
+///   comeback-adjusted base on their next genuinely new turn.
 /// - Clean Triple Stabilization: FightSO.playerCleanTripleStabilization/enemyCleanTripleStabilization
 ///   (per-side fields, unlike the single shared dirtyTripleStabilization), a SIGNED delta ADDED to
 ///   the acting side's Clean Triple Index each time they re-enter a bonus turn from a triple (dirty
 ///   or clean — either kind grants the bonus turn) — a negative value (the intended usage) decreases
 ///   it, unlike Dirty Triple Stabilization above which is always a positive magnitude subtracted.
-///   Reset back to FightSO.playerCleanTripleIndex/enemyCleanTripleIndex on their next genuinely new
-///   turn. Independent lever from Dirty Triple Stabilization — the two indices stabilize on their
-///   own separate tracks, and only the Dirty index gets HP-based adjustment (see HpAdjustment
-///   below) — Clean Triple Index is a flat per-fight base otherwise.
+///   Reset back to FightSO.playerCleanTripleIndex/enemyCleanTripleIndex (plus the fresh comeback
+///   adjustment) on their next genuinely new turn. Independent lever from Dirty Triple
+///   Stabilization — the two indices stabilize on their own separate tracks.
 /// - Ludo Progress Index: FightSO.ludoProgressIndex (+ per-round overrides), added to the acting
 ///   side's Dirty Triple Index after each reroll during that side's first (non-bonus) roll phase of
 ///   a turn — undone the moment that roll phase ends, and disabled for the rest of the turn once
@@ -61,37 +64,34 @@ public class SlotMachineRigger : MonoBehaviour
 
     [Header("First-Round Override")]
     [Tooltip("Forced value for whichever side starts a turn while GameManager.IsFirstRound is still " +
-             "true (covers both sides' opening turns) — skips the HP-based formula entirely. " +
+             "true (covers both sides' opening turns) — skips Comeback Settings entirely. " +
              "Overridden per-fight via FightSO.firstRoundDirtyTripleIndex at fight start.")]
     public int firstRoundDirtyTripleIndex = 50;
     [Tooltip("Clean Triple Index counterpart to firstRoundDirtyTripleIndex above — forced value for " +
              "whichever side starts a turn while GameManager.IsFirstRound is still true, skipping " +
-             "playerCleanTripleIndex/enemyCleanTripleIndex entirely for round 1. Overridden per-fight " +
-             "via FightSO.firstRoundCleanTripleIndex at fight start.")]
+             "playerCleanTripleIndex/enemyCleanTripleIndex (and Comeback Settings) entirely for " +
+             "round 1. Overridden per-fight via FightSO.firstRoundCleanTripleIndex at fight start.")]
     public int firstRoundCleanTripleIndex = 50;
 
     [Header("Neutral Baseline")]
-    [Tooltip("The HP-formula's starting point before adjustments. 100 = genuine unbiased 1-in-3 " +
-             "odds. Overridden per-fight via FightSO.neutralDirtyTripleIndex at fight start.")]
+    [Tooltip("The Dirty Triple Index's starting point before the comeback adjustment is added. " +
+             "100 = genuine unbiased 1-in-3 odds. Overridden per-fight via " +
+             "FightSO.neutralDirtyTripleIndex at fight start.")]
     public int neutralDirtyTripleIndex = 100;
-
-    [Header("HP-Based Adjustment — Player (most-severe-tier-wins, not cumulative)")]
-    [Tooltip("Turns the whole HP-based adjustment mechanism off for this side — base index just " +
-             "stays at the neutral baseline on any non-first-round turn. Overridden per-fight via " +
-             "FightSO at fight start.")]
-    public bool playerHpAdjustmentsEnabled = true;
-    public HpAdjustmentSettings playerHpAdjustment = HpAdjustmentSettings.Default;
-
-    [Header("HP-Based Adjustment — Enemy (most-severe-tier-wins, not cumulative)")]
-    [Tooltip("Turns the whole HP-based adjustment mechanism off for this side — base index just " +
-             "stays at the neutral baseline on any non-first-round turn. Overridden per-fight via " +
-             "FightSO at fight start.")]
-    public bool enemyHpAdjustmentsEnabled = true;
-    public HpAdjustmentSettings enemyHpAdjustment = HpAdjustmentSettings.Default;
 
     [Header("Clamp")]
     [SerializeField] private int minDirtyTripleIndex = 0;
     [SerializeField] private int maxDirtyTripleIndex = 200;
+
+    [Header("Live Comeback Adjustment (debug view only, authored on FightSO)")]
+    [Tooltip("The comeback adjustment currently baked into the player's Dirty AND Clean Triple " +
+             "Index — recomputed from FightSO.playerComebackSettings at the start of every genuinely " +
+             "new player turn, then halved on each bonus turn. Negative = the high-HP punish. " +
+             "Runtime-only, never authored here.")]
+    [SerializeField] private int _playerComebackAdjustment;
+    [Tooltip("Enemy-side counterpart to the player's comeback adjustment above, computed from " +
+             "FightSO.enemyComebackSettings. Runtime-only, never authored here.")]
+    [SerializeField] private int _enemyComebackAdjustment;
 
     [Header("Ludo Progress (reroll pity — debug view only, authored on FightSO)")]
     [Tooltip("How much of the active side's Dirty Triple Index has been added by Ludo Progress so " +
@@ -101,8 +101,6 @@ public class SlotMachineRigger : MonoBehaviour
 
     private bool _justSwitchedSide;
     private bool _ludoProgressEligible;
-    private int _playerPendingHpBoost;
-    private int _enemyPendingHpBoost;
     private readonly List<(SlotColumn column, Action handler)> _rerollSubscriptions = new();
 
     void Awake()
@@ -140,10 +138,6 @@ public class SlotMachineRigger : MonoBehaviour
         firstRoundCleanTripleIndex = fight.firstRoundCleanTripleIndex;
         PlayerCleanTripleIndex = fight.playerCleanTripleIndex;
         EnemyCleanTripleIndex = fight.enemyCleanTripleIndex;
-        playerHpAdjustmentsEnabled = fight.playerHpAdjustmentsEnabled;
-        playerHpAdjustment = fight.playerHpAdjustment;
-        enemyHpAdjustmentsEnabled = fight.enemyHpAdjustmentsEnabled;
-        enemyHpAdjustment = fight.enemyHpAdjustment;
     }
 
     // ============================================================
@@ -173,47 +167,85 @@ public class SlotMachineRigger : MonoBehaviour
             return;
         }
         _ludoProgressEligible = false;
-        RevertPendingHpBoostForActiveSide();
+        HalveComebackForActiveSide();
         ApplyStabilizationForActiveSide();
         ApplyCleanStabilizationForActiveSide();
     }
 
+    /// <summary>
+    /// Recomputes the acting side's Dirty Triple Index base at the start of a genuinely new turn, and
+    /// stores the comeback adjustment that went into it — ResetCleanBaseForActiveSide (which runs
+    /// immediately after) and the per-bonus-turn halving both reuse that same stored number.
+    /// </summary>
     private void RecomputeBaseForActiveSide()
     {
         bool isPlayer = GameManager.Instance.ActiveSide == ActiveSide.Player;
-        int adjustment = 0;
-        int value = GameManager.Instance.IsFirstRound
-            ? firstRoundDirtyTripleIndex
-            : ComputeHpAdjustedBase(isPlayer, out adjustment);
-        SetIndex(isPlayer, value);
-        // Only a POSITIVE adjustment (a comeback boost) is earmarked for one-time removal on this
-        // side's first bonus turn — see RevertPendingHpBoostForActiveSide. A negative adjustment (a
-        // penalty, e.g. high-HP sides) is never tracked here, so it stays applied for the whole turn.
-        SetPendingHpBoost(isPlayer, Mathf.Max(adjustment, 0));
-    }
-
-    private int ComputeHpAdjustedBase(bool isPlayer, out int adjustment)
-    {
-        bool enabled = isPlayer ? playerHpAdjustmentsEnabled : enemyHpAdjustmentsEnabled;
-        if (!enabled)
+        if (GameManager.Instance.IsFirstRound)
         {
-            adjustment = 0;
-            return neutralDirtyTripleIndex;
+            SetComebackAdjustment(isPlayer, 0);
+            SetIndex(isPlayer, firstRoundDirtyTripleIndex);
+            return;
         }
 
-        var settings = isPlayer ? playerHpAdjustment : enemyHpAdjustment;
-        float hp = (isPlayer ? G.PlayerHero : G.EnemyHero).Health.HealthPercent;
-        adjustment = HpAdjustment(settings, hp);
-        return Clamp(neutralDirtyTripleIndex + adjustment);
+        int adjustment = ComputeComebackAdjustment(isPlayer);
+        SetComebackAdjustment(isPlayer, adjustment);
+        SetIndex(isPlayer, Clamp(neutralDirtyTripleIndex + adjustment));
     }
 
-    private int HpAdjustment(HpAdjustmentSettings s, float hp)
+    /// <summary>
+    /// Evaluates the acting side's authored comeback ladder against its own hero HP% and the
+    /// opponent's effective firepower lead. Both inputs are live board state, read fresh here —
+    /// neither is cached between turns.
+    /// </summary>
+    private int ComputeComebackAdjustment(bool isPlayer)
     {
-        if (hp < s.nearDeathHpThreshold) return s.nearDeathHpAdjustment;
-        if (hp < s.criticalHpThreshold) return s.criticalHpAdjustment;
-        if (hp < s.lowHpThreshold) return s.lowHpAdjustment;
-        if (hp > s.highHpThreshold) return s.highHpAdjustment;
-        return 0;
+        var hero = isPlayer ? G.PlayerHero : G.EnemyHero;
+        int hpPercent = Mathf.RoundToInt(hero.Health.HealthPercent * 100f);
+        int advantage = Mathf.RoundToInt(AttacksResolver.OpponentFirepowerAdvantage(isPlayer));
+        return CampaignStateManager.Instance.CurrentFight
+            .GetComebackAdjustment(isPlayer, hpPercent, advantage);
+    }
+
+    /// <summary>
+    /// Resets the acting side's Clean Triple Index at the start of a genuinely new turn: the fight's
+    /// flat authored base (FightSO.playerCleanTripleIndex/enemyCleanTripleIndex) plus this turn's
+    /// comeback adjustment, undoing any Clean Triple Stabilization applied during the previous turn's
+    /// bonus-turn streak. Round 1 uses firstRoundCleanTripleIndex instead, mirroring the Dirty base.
+    /// Must run after RecomputeBaseForActiveSide — that's what stores the adjustment.
+    /// </summary>
+    private void ResetCleanBaseForActiveSide()
+    {
+        bool isPlayer = GameManager.Instance.ActiveSide == ActiveSide.Player;
+        if (GameManager.Instance.IsFirstRound)
+        {
+            SetCleanIndex(isPlayer, Clamp(firstRoundCleanTripleIndex));
+            return;
+        }
+
+        var fight = CampaignStateManager.Instance.CurrentFight;
+        int authored = isPlayer ? fight.playerCleanTripleIndex : fight.enemyCleanTripleIndex;
+        SetCleanIndex(isPlayer, Clamp(authored + ComebackAdjustment(isPlayer)));
+    }
+
+    /// <summary>
+    /// Halves a POSITIVE comeback adjustment the moment the acting side re-enters a bonus turn (i.e.
+    /// right after landing another triple), lowering both the Dirty and Clean Triple Index by the
+    /// same delta — so a comeback boost decays across a streak (70 -> 35 -> 17 -> ...) instead of
+    /// staying at full strength for every triple in it. A NEGATIVE adjustment (the high-HP punish) is
+    /// left alone and stays applied for the whole turn; halving it would turn landing a triple into
+    /// its own reward. See docs/SlotMachine.md.
+    /// </summary>
+    private void HalveComebackForActiveSide()
+    {
+        bool isPlayer = GameManager.Instance.ActiveSide == ActiveSide.Player;
+        int current = ComebackAdjustment(isPlayer);
+        if (current <= 0) return;
+
+        int halved = current / 2;
+        int delta = current - halved;
+        SetIndex(isPlayer, Clamp(DirtyIndex(isPlayer) - delta));
+        SetCleanIndex(isPlayer, Clamp(CleanIndex(isPlayer) - delta));
+        SetComebackAdjustment(isPlayer, halved);
     }
 
     private void ApplyStabilizationForActiveSide()
@@ -222,58 +254,7 @@ public class SlotMachineRigger : MonoBehaviour
         if (fight.dirtyTripleStabilization == 0) return;
 
         bool isPlayer = GameManager.Instance.ActiveSide == ActiveSide.Player;
-        int current = isPlayer ? PlayerDirtyTripleIndex : EnemyDirtyTripleIndex;
-        SetIndex(isPlayer, Clamp(current - fight.dirtyTripleStabilization));
-    }
-
-    private void SetIndex(bool isPlayer, int value)
-    {
-        if (isPlayer) PlayerDirtyTripleIndex = value;
-        else EnemyDirtyTripleIndex = value;
-    }
-
-    private void SetPendingHpBoost(bool isPlayer, int value)
-    {
-        if (isPlayer) _playerPendingHpBoost = value;
-        else _enemyPendingHpBoost = value;
-    }
-
-    /// <summary>
-    /// One-time removal of a POSITIVE HP-based boost baked into the acting side's Dirty Triple Index at
-    /// this turn's start, the moment that side re-enters its first bonus turn (i.e. right after landing
-    /// its first triple this turn). A negative adjustment (a penalty, e.g. high-HP sides) is never
-    /// tracked here and stays applied for the whole turn — only a positive "comeback" boost gets
-    /// stripped back out, so it can help land the FIRST triple of a turn without also fueling a
-    /// snowballing streak of further ones. See docs/SlotMachine.md.
-    /// </summary>
-    private void RevertPendingHpBoostForActiveSide()
-    {
-        bool isPlayer = GameManager.Instance.ActiveSide == ActiveSide.Player;
-        int pending = isPlayer ? _playerPendingHpBoost : _enemyPendingHpBoost;
-        if (pending == 0) return;
-
-        int current = isPlayer ? PlayerDirtyTripleIndex : EnemyDirtyTripleIndex;
-        SetIndex(isPlayer, Clamp(current - pending));
-        SetPendingHpBoost(isPlayer, 0);
-    }
-
-    /// <summary>
-    /// Resets the acting side's Clean Triple Index back to the fight's flat authored base
-    /// (FightSO.playerCleanTripleIndex/enemyCleanTripleIndex) at the start of a genuinely new turn —
-    /// the Clean-index counterpart to RecomputeBaseForActiveSide, undoing any Clean Triple
-    /// Stabilization applied during the previous turn's bonus-turn streak. Unlike the Dirty base,
-    /// this has no HP-based formula to compute — it's always the same flat per-fight number, except
-    /// during round 1, where firstRoundCleanTripleIndex takes over instead (mirroring
-    /// firstRoundDirtyTripleIndex).
-    /// </summary>
-    private void ResetCleanBaseForActiveSide()
-    {
-        var fight = CampaignStateManager.Instance.CurrentFight;
-        bool isPlayer = GameManager.Instance.ActiveSide == ActiveSide.Player;
-        int value = GameManager.Instance.IsFirstRound
-            ? firstRoundCleanTripleIndex
-            : (isPlayer ? fight.playerCleanTripleIndex : fight.enemyCleanTripleIndex);
-        SetCleanIndex(isPlayer, Clamp(value));
+        SetIndex(isPlayer, Clamp(DirtyIndex(isPlayer) - fight.dirtyTripleStabilization));
     }
 
     /// <summary>
@@ -293,14 +274,31 @@ public class SlotMachineRigger : MonoBehaviour
         int stabilization = isPlayer ? fight.playerCleanTripleStabilization : fight.enemyCleanTripleStabilization;
         if (stabilization == 0) return;
 
-        int current = isPlayer ? PlayerCleanTripleIndex : EnemyCleanTripleIndex;
-        SetCleanIndex(isPlayer, Clamp(current + stabilization));
+        SetCleanIndex(isPlayer, Clamp(CleanIndex(isPlayer) + stabilization));
     }
+
+    private int DirtyIndex(bool isPlayer) => isPlayer ? PlayerDirtyTripleIndex : EnemyDirtyTripleIndex;
+
+    private void SetIndex(bool isPlayer, int value)
+    {
+        if (isPlayer) PlayerDirtyTripleIndex = value;
+        else EnemyDirtyTripleIndex = value;
+    }
+
+    private int CleanIndex(bool isPlayer) => isPlayer ? PlayerCleanTripleIndex : EnemyCleanTripleIndex;
 
     private void SetCleanIndex(bool isPlayer, int value)
     {
         if (isPlayer) PlayerCleanTripleIndex = value;
         else EnemyCleanTripleIndex = value;
+    }
+
+    private int ComebackAdjustment(bool isPlayer) => isPlayer ? _playerComebackAdjustment : _enemyComebackAdjustment;
+
+    private void SetComebackAdjustment(bool isPlayer, int value)
+    {
+        if (isPlayer) _playerComebackAdjustment = value;
+        else _enemyComebackAdjustment = value;
     }
 
     private int Clamp(int value) => Mathf.Clamp(value, minDirtyTripleIndex, maxDirtyTripleIndex);
@@ -312,8 +310,8 @@ public class SlotMachineRigger : MonoBehaviour
         _justSwitchedSide = false;
         _ludoProgressEligible = false;
         _ludoBumpApplied = 0;
-        _playerPendingHpBoost = 0;
-        _enemyPendingHpBoost = 0;
+        _playerComebackAdjustment = 0;
+        _enemyComebackAdjustment = 0;
         ApplyFightOverrides();
     }
 
@@ -346,7 +344,7 @@ public class SlotMachineRigger : MonoBehaviour
             .GetLudoProgressIndexForRound(GameManager.Instance.CurrentRound);
         if (ludoProgress == 0) return;
 
-        SetIndex(isPlayer, Clamp((isPlayer ? PlayerDirtyTripleIndex : EnemyDirtyTripleIndex) + ludoProgress));
+        SetIndex(isPlayer, Clamp(DirtyIndex(isPlayer) + ludoProgress));
         _ludoBumpApplied += ludoProgress;
     }
 
@@ -354,7 +352,7 @@ public class SlotMachineRigger : MonoBehaviour
     {
         if (_ludoBumpApplied == 0) return;
         bool isPlayer = GameManager.Instance.ActiveSide == ActiveSide.Player;
-        SetIndex(isPlayer, Clamp((isPlayer ? PlayerDirtyTripleIndex : EnemyDirtyTripleIndex) - _ludoBumpApplied));
+        SetIndex(isPlayer, Clamp(DirtyIndex(isPlayer) - _ludoBumpApplied));
         _ludoBumpApplied = 0;
     }
 
@@ -386,10 +384,7 @@ public class SlotMachineRigger : MonoBehaviour
         => DecideConditional(options, otherA, otherB, isPlayerSide);
 
     private bool RollForCleanTriple(bool isPlayerSide)
-    {
-        int index = isPlayerSide ? PlayerCleanTripleIndex : EnemyCleanTripleIndex;
-        return AIController.RollForProbability(Mathf.RoundToInt(TripleChancePercent(index)));
-    }
+        => AIController.RollForProbability(Mathf.RoundToInt(TripleChancePercent(CleanIndex(isPlayerSide))));
 
     private static ActionSO[] FullTripleOf(ActionSO action) => new[] { action, action, action };
 
@@ -397,8 +392,7 @@ public class SlotMachineRigger : MonoBehaviour
     {
         if (otherA != otherB) return PickRandom(options);
 
-        int index = isPlayerSide ? PlayerDirtyTripleIndex : EnemyDirtyTripleIndex;
-        bool triple = AIController.RollForProbability(Mathf.RoundToInt(TripleChancePercent(index)));
+        bool triple = AIController.RollForProbability(Mathf.RoundToInt(TripleChancePercent(DirtyIndex(isPlayerSide))));
         return triple ? otherA : PickOtherThan(options, otherA);
     }
 

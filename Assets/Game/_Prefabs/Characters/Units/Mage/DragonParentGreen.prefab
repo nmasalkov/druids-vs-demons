@@ -193,6 +193,8 @@ MonoBehaviour:
   attack: Attack
   CurrentAnimation: Idle
   walk: Walk
+  runSpeed: 7
+  minRunDuration: 0.35
   freezeAfter: 0.6
   freezeDuration: 1
   beamAnimator: {fileID: 6732630189540977280}

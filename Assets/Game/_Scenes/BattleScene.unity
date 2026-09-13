@@ -610,7 +610,7 @@ MonoBehaviour:
     \"gatheredSpellIds\": [\n        \"battlecry\",\n        \"charm\",\n       
     \"shield\"\n    ]\n}"
   useDebugProfile: 1
-  debugProfile: {fileID: 11400000, guid: 2e899d1a87437cc4da6a9d9bd21ffa10, type: 2}
+  debugProfile: {fileID: 11400000, guid: 819378188b7cfdc46b763d995188e367, type: 2}
   overrideMaxHp: 0
   maxHp: 100
   overrideEnergyCapacity: 0
@@ -1222,7 +1222,7 @@ MonoBehaviour:
   m_Intensity: 1
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 00000000d9873578fd945b3a
+  m_ApplyToSortingLayers: 00000000d9873578fd945b3a772f66c5
   m_LightCookieSprite: {fileID: 0}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0
@@ -1436,29 +1436,12 @@ MonoBehaviour:
   PlayerCleanTripleIndex: 100
   EnemyCleanTripleIndex: 100
   firstRoundDirtyTripleIndex: 50
+  firstRoundCleanTripleIndex: 50
   neutralDirtyTripleIndex: 100
-  playerHpAdjustmentsEnabled: 1
-  playerHpAdjustment:
-    highHpThreshold: 0.6
-    highHpAdjustment: -20
-    lowHpThreshold: 0.25
-    lowHpAdjustment: 30
-    criticalHpThreshold: 0.15
-    criticalHpAdjustment: 50
-    nearDeathHpThreshold: 0.1
-    nearDeathHpAdjustment: 65
-  enemyHpAdjustmentsEnabled: 1
-  enemyHpAdjustment:
-    highHpThreshold: 0.6
-    highHpAdjustment: -20
-    lowHpThreshold: 0.25
-    lowHpAdjustment: 30
-    criticalHpThreshold: 0.15
-    criticalHpAdjustment: 50
-    nearDeathHpThreshold: 0.1
-    nearDeathHpAdjustment: 65
   minDirtyTripleIndex: 0
   maxDirtyTripleIndex: 200
+  _playerComebackAdjustment: 0
+  _enemyComebackAdjustment: 0
   _ludoBumpApplied: 0
 --- !u!1 &776952872
 GameObject:
@@ -2139,8 +2122,8 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
+  m_SortingLayerID: -983158921
+  m_SortingLayer: -1
   m_SortingOrder: 0
   m_Sprite: {fileID: -1174600388420134457, guid: d2b794fa7f9b77c439fb90b2701f7522, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}

@@ -90,7 +90,7 @@ here — this list is added to over time and can lag behind the actual `docs/` f
 | System | Doc | Read it when touching... |
 | ------ | --- | ------------------------- |
 | Round/turn state machine, restart, pause | [`docs/GameLoop.md`](docs/GameLoop.md) | `GameManager`, `GameState`/`ActionState`, the restart/pause feature, the `Generation`/`IsStale` staleness guard |
-| Combat resolution, units, health/shield | [`docs/Battle.md`](docs/Battle.md) | `BattleState`, `Health`, `Shield`, `Targetable`/`Unit`/`Creature`/`Hero`, `StatusesManager` |
+| Combat resolution, units, health/shield | [`docs/Battle.md`](docs/Battle.md) | `BattleState`, `Health`, `Shield`, `Targetable`/`Unit`/`Creature`/`Hero`, `StatusesManager`, `SpecialDamageModifierSO`/`DamageContext` (per-creature damage rules, e.g. ShieldBreaker) |
 | Nuke/Spell action pattern | [`docs/ActionsAndSpells.md`](docs/ActionsAndSpells.md) | adding/changing a nuke or spell, `ActionSO`/`ActionResolver`/`ActionAnimation`/`ActionState` |
 | Slot machine + AI roller | [`docs/SlotMachine.md`](docs/SlotMachine.md) | `SlotMachine`/`SlotColumn`, `RollStateManager`, `AIController` |
 | XP/leveling, gem pickups | [`docs/Experience.md`](docs/Experience.md) | `ExperienceManager`, `Experience`, `ExpirienceGem` |
@@ -241,6 +241,49 @@ them for any new/modified game code under `Assets/Game`:
     on any future world-space UI nested under a unit; if a future mechanic ever reparents a unit
     across sides through some *other* path, wire that path's own settle point into `Correct()` too
     rather than falling back to polling.
+
+    A sibling gotcha with the same shape, for **projectiles**: `ProjectileAnimatorBase.FireProjectile`
+    and `SimpleProjectile.Update` both aim via `Quaternion.LookRotation(direction)`, which points
+    local **+Z** along travel. That is load-bearing for the particle-based projectiles — the Epic Toon
+    FX missiles are authored the 3D way, so their cone `ShapeModule`s, local-space
+    `VelocityModule`/`ForceModule`s and local simulation space all expect +Z to be "forward"; remove
+    the yaw and their trails collapse. But a `SpriteRenderer`'s quad lives in its local **XY** plane,
+    so that same yaw lands it in the world YZ plane — edge-on to the orthographic camera, zero
+    projected width, invisible while everything else about it (sorting layer, material, lighting,
+    alpha) checks out fine. Fix it on the **visual**, never in `SimpleProjectile`: put
+    `BillboardCorrector` (`Assets/Game/_Scripts/Units/BillboardCorrector.cs`) on any sprite-based
+    projectile visual, so particle projectiles stay untouched and only prefabs that need it opt in.
+    Its `alignToTravelDirection` toggle adds a Z-roll along flight for directional art (an arrow),
+    off for art with no inherent facing (a rock). This was a real, live-caught bug: `RockProjectile`
+    (Kodo's `RockFist`) is the project's first sprite-based projectile and so the first to expose a
+    `LookRotation` that had been silently yawing every projectile 90° since forever.
+
+    **Depth sorting between units** is handled by `DepthSortingOrder`
+    (`Assets/Game/_Scripts/Utils/DepthSortingOrder.cs`) on the prefab ROOT: it sets sorting order
+    from world Y (`order = -y * precision`), so a unit standing lower on screen draws in front. It
+    resolves its own target in `Awake()` — a Spine `SkeletonAnimation`'s renderer, else a
+    `SpriteRenderer`, else any `Renderer` — so it needs no wiring and works for both mesh-based and
+    sprite-based visuals. Crucially it drives the **whole visual group**: every `Renderer` under the
+    main renderer's own parent that shares its sorting layer, each keeping its authored offset. That
+    is not a nicety — a unit's `Shadow` is a sibling `SpriteRenderer` with its own static order, so
+    moving only the body would leave every shadow drawing on top of every creature. Those two
+    filters (same parent + same sorting layer) are also what keep the ~22 status/hit
+    `ParticleSystemRenderer`s out of it: they live outside the `Visual`/`Character` container, on the
+    `Shield`/`UI` layers, and are ordered deliberately by `StatusesManager`. Note the hero avatars
+    deliberately do **not** carry this — they're one per side at fixed positions, never race
+    anything, and their authored order (177, "always on top") would be replaced by a y-derived value
+    that puts the mage row in front of them.
+
+    **The character prefabs are a variant tree, so a component wanted on every unit goes on the
+    root of that tree, not on each prefab.** `ParentUnit` is the base for all 13 unit variants
+    (`CatapultParentGreen` → `Demon`/`Kodo`, `DragonParentGreen` → `Bat`/`OrkMage`,
+    `_GolemParentGreen` → `Cyclop`/`OrkTank`/`Skeleton`, plus `BubkaBig`/`DragonBig`/`TankBig`), and
+    `Player` is the base for all 6 avatars (via `EnemyAvatarParent`). Adding to `ParentUnit` alone
+    gives all 13 the component by inheritance; adding it per-prefab instead creates redundant
+    overrides, and once the base gets it too, `[DisallowMultipleComponent]` turns that into a
+    conflict. Check `PrefabUtility.GetCorrespondingObjectFromSource` before bulk-adding anything to
+    these prefabs — the folder layout does not hint at the inheritance at all.
+
 16. **Entities/state-holding scripts must support battle restart.** Any script that spawns entities
     (creatures, shields, gems, projectiles, ...) or holds battle-scoped state (pending rolls, pending
     XP, AI control, ...) must subscribe to the static `GameManager.OnBattleRestart` event in its own
@@ -500,7 +543,7 @@ them for any new/modified game code under `Assets/Game`:
     `MonoBehaviour` controller — must carry a `[Tooltip(...)]`.** Say what it *does* (effect, valid
     range/units, how it interacts with other systems), not the name restated, and cross-reference the
     relevant `docs/*.md` file when one exists. This is strict and applies to every individual leaf
-    field, including ones inside a nested `[Serializable]` struct (`HpAdjustmentSettings`,
+    field, including ones inside a nested `[Serializable]` struct (`FightSO.ComebackSetting`,
     `EnemyData`, `FightSO.RoundLudoProgressOverride`, ...) — a C# attribute binds only to the single
     field directly below it, so two fields sharing one conceptual purpose (e.g.
     `playerCleanTripleIndex`/`enemyCleanTripleIndex`) each need their **own** `[Tooltip]`, never one

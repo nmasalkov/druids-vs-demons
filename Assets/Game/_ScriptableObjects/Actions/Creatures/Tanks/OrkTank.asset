@@ -19,18 +19,20 @@ MonoBehaviour:
   cardSprite: {fileID: -3934286573251214832, guid: c7a12dff2eb4e47469d1f57a35b489a7, type: 3}
   creaturePrefab: {fileID: 5198412419907215727, guid: c1fe99d406d2c1549a3d63a86ec0d75c, type: 3}
   levelStats:
-  - damage: 5
+  - damage: 4
     health: 45
     numberOfAttacks: 1
-  - damage: 7
+  - damage: 6
     health: 55
     numberOfAttacks: 1
-  - damage: 10
+  - damage: 8
     health: 70
     numberOfAttacks: 1
-  - damage: 12
+  - damage: 10
     health: 80
     numberOfAttacks: 1
+  specialDamageModifiers:
+  - {fileID: 11400000, guid: 53cfe550b5b844844956368d7234866b, type: 2}
   experienceReward: 1e0000003c00000078000000f0000000
   xpThresholds: 00000000780000004001000058020000
   healAmounts:

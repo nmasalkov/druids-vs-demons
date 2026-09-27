@@ -24,6 +24,12 @@ and encounter navigation — once it exists; `CampaignManager` is already built 
 There is no custom `.asmdef` for `Assets/Game` — it compiles into the default `Assembly-CSharp`
 assembly.
 
+**Every folder under `Assets/Game` is prefixed with `_`** (`_Scripts/_Global/_Campaign`,
+`_Prefabs/_Characters/_Units/_Archer`, ...) so project searches can target them. Create new folders
+the same way. The one exception is Unity's special `Editor` folder name, which must stay exactly
+`Editor` — a renamed `_Editor` would move editor-only scripts into the player assembly and break the
+build. Files are not prefixed.
+
 ### Robotek terminology mapping
 
 The user often describes mechanics in terms of the game Robotek. Translate as follows:
@@ -89,18 +95,19 @@ here — this list is added to over time and can lag behind the actual `docs/` f
 
 | System | Doc | Read it when touching... |
 | ------ | --- | ------------------------- |
-| Round/turn state machine, restart, pause | [`docs/GameLoop.md`](docs/GameLoop.md) | `GameManager`, `GameState`/`ActionState`, the restart/pause feature, the `Generation`/`IsStale` staleness guard |
+| Round/turn state machine, restart, pause | [`docs/GameLoop.md`](docs/GameLoop.md) | `GameManager`, `GameState`/`ActionState`, the restart/pause feature, the `Generation`/`IsStale` staleness guard, `BossPhaseTransitionState`/`BossPhaseTransitionManager` (a boss's second phase) |
 | Combat resolution, units, health/shield | [`docs/Battle.md`](docs/Battle.md) | `BattleState`, `Health`, `Shield`, `Targetable`/`Unit`/`Creature`/`Hero`, `StatusesManager`, `SpecialDamageModifierSO`/`DamageContext` (per-creature damage rules, e.g. ShieldBreaker) |
 | Nuke/Spell action pattern | [`docs/ActionsAndSpells.md`](docs/ActionsAndSpells.md) | adding/changing a nuke or spell, `ActionSO`/`ActionResolver`/`ActionAnimation`/`ActionState` |
 | Slot machine + AI roller | [`docs/SlotMachine.md`](docs/SlotMachine.md) | `SlotMachine`/`SlotColumn`, `RollStateManager`, `AIController` |
 | XP/leveling, gem pickups | [`docs/Experience.md`](docs/Experience.md) | `ExperienceManager`, `Experience`, `ExpirienceGem` |
 | Reroll energy/cost | [`docs/Energy.md`](docs/Energy.md) | `EnergyController`, `EnergyDisplay`, `SlotColumn`'s reroll cost gate |
 | Campaign/meta progression, run-state save data | [`docs/Campaign.md`](docs/Campaign.md) | `RunState`, `GameCatalog`, `CampaignStateManager`, `CampaignDebugTool`, `ActionSO.id` |
-| Encounters, campaign progress/navigation | [`docs/Encounters.md`](docs/Encounters.md) | `EncounterSO`/`FightSO`/`EncounterListSO`, `Encounter`/`EncounterPlayer`, `CampaignManager`, `CampaignProgressTool`, `HeroView.ReplaceHeroAvatar`, `LoadoutPickEncounter` |
+| Encounters, campaign progress/navigation | [`docs/Encounters.md`](docs/Encounters.md) | `EncounterSO`/`FightSO`/`EncounterListSO`, `Encounter`/`EncounterPlayer`, `CampaignManager`, `CampaignProgressTool`, `HeroView.ReplaceHeroAvatar`, `LoadoutPickEncounter`, `FightSO.secondPhase` (multi-phase fights) |
 | Reward cards, boost rewards | [`docs/Rewards.md`](docs/Rewards.md) | `RewardSO`/`RewardListSO`, `RewardDrawer`, `RewardBonuses`, `RewardCard`/`RewardEncounter`/`RewardEncounterView` |
 | Pre-battle loadout picker | [`docs/Loadout.md`](docs/Loadout.md) | `LoadoutPickEncounter`, `LoadoutPickEncounterView`, `MiniCard`, `SlotKind`/`SlotRef` |
-| Enemy AI decision-making | [`docs/AI.md`](docs/AI.md) | `AIController`, `AI/Decisions/*`, `AI/Scoring/*`, `AIDegrade`, the fight-wide reroll pool, `RollState`'s AI orchestration |
+| Enemy AI decision-making | [`docs/AI.md`](docs/AI.md) | `AIController`, `_AI/_Decisions/*`, `_AI/_Scoring/*`, `AIDegrade`, the fight-wide reroll pool, `RollState`'s AI orchestration |
 | Global service locator | [`docs/G.md`](docs/G.md) | `G`, `G.ApplyCampaignLoadout`, adding a new static accessor |
+| Animator-driven visuals (non-Spine) | [`docs/AnimationAPI.md`](docs/AnimationAPI.md) | `AnimationAPI`, `AnimationAPIControllerWiring` ("Wire controller"), `BossAnimator`, `FinalBoss.prefab`, any `.controller` under `Assets/Game/_Animations` |
 
 **Keep these docs up to date** (rule 18 below): when a change alters how a documented system works
 (new states, new events, changed resolution order, new restart participants, etc.), update the
@@ -110,7 +117,7 @@ relevant `docs/*.md` file in the same change instead of letting it go stale.
 
 ### Game loop: `GameManager` + `GameState`
 
-`GameManager` (`Global/GameManager/GameManager.cs`) is a singleton that drives the entire match as a
+`GameManager` (`_Global/_GameManager/GameManager.cs`) is a singleton that drives the entire match as a
 single coroutine, `RunGameLoop()` — the **single source of truth for round order** (read it
 top-to-bottom; no state ever dynamically inserts another state into the sequence). Hero death
 interrupts the loop out-of-band via `Hero.OnHeroDied` → `GameOverState`.
@@ -123,7 +130,7 @@ scheduled before a restart. Full detail: [`docs/GameLoop.md`](docs/GameLoop.md).
 
 ### `G` — global service locator
 
-`G.cs` (`Global/G.cs`) is a singleton most gameplay code reaches other systems through (both sides'
+`G.cs` (`_Global/G.cs`) is a singleton most gameplay code reaches other systems through (both sides'
 `HeroView`/`CreaturesManager`/`Hero`, the shared creature/nuke/spell pool) rather than holding direct
 references. Full detail: [`docs/G.md`](docs/G.md).
 
@@ -220,13 +227,16 @@ them for any new/modified game code under `Assets/Game`:
     bound to the system) and triggered via `PlayFeedbacks()` / `StopFeedbacks()` (plus the
     `Stop(true, StopEmittingAndClear)` residue fix when force-stopping looping effects). See
     `StatusesManager` for the pattern — it owns the serialized `MMF_Player` refs for every unit
-    status/attempt effect. Also: particle systems on units must
+    status/attempt effect. **Screen shake** follows the same rule: an `MMF_CameraShake` feedback,
+    consumed by the `MMCameraShaker` on `BattleScene`'s `CameraRig/CameraShaker` (Feel's camera-rig
+    setup, `Main Camera` nested underneath) — never move `Main Camera` directly. Crits are the first
+    user (`HitFeedback`'s `CritFeedback`, see `docs/Battle.md` "Hit feedbacks"). Also: particle systems on units must
     use main-module **Scaling Mode = Local**, not Hierarchy — the enemy side is mirrored via
     `localScale.x = -1`, and Hierarchy-scaled Billboard/Mesh particles inherit the negative scale
     and render invisible (verified live: identical simulation, nothing drawn). A world-space UI
     `Canvas` nested under a unit (e.g. `HpbarCanvas.prefab`'s health bar/text) has the opposite
     problem — it renders fine but mirrored (fill direction reversed, text backwards) — fixed via a
-    small self-correcting `MirrorCorrector` component (`Assets/Game/_Scripts/UI/MirrorCorrector.cs`)
+    small self-correcting `MirrorCorrector` component (`Assets/Game/_Scripts/_UI/MirrorCorrector.cs`)
     on the Canvas root: corrects once in `Awake()` (covers every normal spawn — the parent slot's
     scale is already final by then) and again on `CreatureAnimator.OnRunToSlotArrived`
     (`GetComponentInParent<CreatureAnimator>()`, null-guarded — Heroes have no `CreatureAnimator`
@@ -243,7 +253,7 @@ them for any new/modified game code under `Assets/Game`:
     rather than falling back to polling.
 
     A sibling gotcha with the same shape, for **projectiles**: `ProjectileAnimatorBase.FireProjectile`
-    and `SimpleProjectile.Update` both aim via `Quaternion.LookRotation(direction)`, which points
+    and `SimpleProjectile` (every frame, both trajectory types) aim via `Quaternion.LookRotation(direction)`, which points
     local **+Z** along travel. That is load-bearing for the particle-based projectiles — the Epic Toon
     FX missiles are authored the 3D way, so their cone `ShapeModule`s, local-space
     `VelocityModule`/`ForceModule`s and local simulation space all expect +Z to be "forward"; remove
@@ -251,15 +261,23 @@ them for any new/modified game code under `Assets/Game`:
     so that same yaw lands it in the world YZ plane — edge-on to the orthographic camera, zero
     projected width, invisible while everything else about it (sorting layer, material, lighting,
     alpha) checks out fine. Fix it on the **visual**, never in `SimpleProjectile`: put
-    `BillboardCorrector` (`Assets/Game/_Scripts/Units/BillboardCorrector.cs`) on any sprite-based
+    `BillboardCorrector` (`Assets/Game/_Scripts/_Units/BillboardCorrector.cs`) on any sprite-based
     projectile visual, so particle projectiles stay untouched and only prefabs that need it opt in.
     Its `alignToTravelDirection` toggle adds a Z-roll along flight for directional art (an arrow),
     off for art with no inherent facing (a rock). This was a real, live-caught bug: `RockProjectile`
     (Kodo's `RockFist`) is the project's first sprite-based projectile and so the first to expose a
     `LookRotation` that had been silently yawing every projectile 90° since forever.
 
+    **Ballistic spin** (`SimpleProjectile.spinRotationsPerSecond`, turns/sec, default 0, e.g.
+    `GhotAxe`) is applied by `SimpleProjectile` on the root, as a camera-axis rotation on top of the
+    aim. Particle visuals just inherit it: the whole emitter turns. `BillboardCorrector` must
+    therefore read `SimpleProjectile.TravelDirection`/`SpinAngle` rather than the parent's rotation
+    (which already contains the spin). A sprite-visual fix that goes back to reading
+    `transform.parent.forward` will double-count spin on aligned art and drop it on upright art.
+    `BallisticTrajectory` only moves position; don't put rotation back into it.
+
     **Depth sorting between units** is handled by `DepthSortingOrder`
-    (`Assets/Game/_Scripts/Utils/DepthSortingOrder.cs`) on the prefab ROOT: it sets sorting order
+    (`Assets/Game/_Scripts/_Utils/DepthSortingOrder.cs`) on the prefab ROOT: it sets sorting order
     from world Y (`order = -y * precision`), so a unit standing lower on screen draws in front. It
     resolves its own target in `Awake()` — a Spine `SkeletonAnimation`'s renderer, else a
     `SpriteRenderer`, else any `Renderer` — so it needs no wiring and works for both mesh-based and
@@ -273,6 +291,14 @@ them for any new/modified game code under `Assets/Game`:
     deliberately do **not** carry this — they're one per side at fixed positions, never race
     anything, and their authored order (177, "always on top") would be replaced by a y-derived value
     that puts the mage row in front of them.
+
+    **Projectile effects render on the `Shield` sorting layer**, above every unit and avatar on
+    `Default`. That covers every renderer in a `SimpleProjectile` prefab and in the prefabs its
+    `projectileParticle`/`muzzleParticle`/`impactParticle` fields point at. Left on `Default` with
+    their small authored orders, impacts and explosions draw behind the unit they hit. A newly added
+    projectile or swapped-in VFX prefab needs the same treatment: run the `set-projectile-layer-order`
+    skill, which also copies any directly-referenced vendor prefab into the projectile's folder
+    instead of editing the vendor asset.
 
     **The character prefabs are a variant tree, so a component wanted on every unit goes on the
     root of that tree, not on each prefab.** `ParentUnit` is the base for all 13 unit variants
@@ -522,7 +548,7 @@ them for any new/modified game code under `Assets/Game`:
     entry method calls by name instead. It's fine — expected — to end up with several small private
     helpers below it; that's the trade this rule is making (readability of the one method everyone
     opens first, over a minimal method count). See `ShouldSummonCreaturesDecision.Decide()`
-    (`AI/Decisions/`, `docs/AI.md`) for the shape:
+    (`_AI/_Decisions/`, `docs/AI.md`) for the shape:
     ```csharp
     public SummonChoice Decide()
     {
@@ -532,7 +558,7 @@ them for any new/modified game code under `Assets/Game`:
         return new SummonChoice(Degrade(DesiredSummon()), null);
     }
     ```
-    Every other `AI/Decisions/*.cs` class already follows this shape — treat it as the canonical
+    Every other `_AI/_Decisions/*.cs` class already follows this shape — treat it as the canonical
     reference whenever writing or reviewing a new decision-style class, not just AI code specifically.
     **When one decision needs to hand a specific choice (not just true/false) forward to whatever acts
     on it, return a small `readonly struct` pairing the bool with that choice** (`RerollChoice`,

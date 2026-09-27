@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: baddeee814d7429cb1d8dc2d9ddde911, type: 3}
+  m_Name: BossMage
+  m_EditorClassIdentifier: 
+  id: bossMage
+  actionName: Cursed Grimoire
+  description: An iron-bound spellbook that reads itself aloud, searing enemies with
+    forbidden beams.
+  cardSprite: {fileID: 5547777758291268696, guid: 210db1026b85b0d40a7cf47e0ca0235e, type: 3}
+  creaturePrefab: {fileID: 4896090350011670911, guid: a9db43f0581e7d64cad58102397991a1, type: 3}
+  levelStats:
+  - damage: 9
+    health: 24
+    numberOfAttacks: 1
+  - damage: 15
+    health: 28
+    numberOfAttacks: 1
+  - damage: 22
+    health: 32
+    numberOfAttacks: 1
+  - damage: 34
+    health: 42
+    numberOfAttacks: 1
+  specialDamageModifiers: []
+  critChancePercent: 0
+  critDamageBonusPercent: 0
+  experienceReward: 1e0000003c00000078000000f0000000
+  xpThresholds: 00000000780000004001000058020000
+  healAmounts:
+  - 3
+  - 7
+  - 10
+  - 24

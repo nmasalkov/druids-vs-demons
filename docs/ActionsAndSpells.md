@@ -11,7 +11,7 @@ Charm is a Spell — see the worked example in §3b.
 
 ## 1. Key files
 
-Data layer (`Assets/Game/_Scripts/ScriptableObjects/`):
+Data layer (`Assets/Game/_Scripts/_ScriptableObjects/`):
 - `ActionSO.cs` — abstract base. Holds `actionName`/`cardSprite`, virtual `AnimationPrefabBase`
   (null by default), virtual `CreateAndResolve(ActionContext, level)` (null by default).
 - `NukeSO.cs` / `SpellSO.cs` — abstract subclasses. Add `AnimationPrefab` (typed) and a virtual
@@ -22,17 +22,17 @@ Data layer (`Assets/Game/_Scripts/ScriptableObjects/`):
   and holds its own balance arrays (damage/HP/chance per level).
 
 Logic layer:
-- `Assets/Game/_Scripts/ScriptableObjects/ActionResolver.cs` — abstract base, one method:
+- `Assets/Game/_Scripts/_ScriptableObjects/ActionResolver.cs` — abstract base, one method:
   `ApplyInstant()`.
-- `Assets/Game/_Scripts/Nukes/NukeResolver.cs` — adds `List<NukeShot> Shots`, abstract
+- `Assets/Game/_Scripts/_Nukes/NukeResolver.cs` — adds `List<NukeShot> Shots`, abstract
   `Resolve(NukeSO, Hero caster, List<Creature> enemyCreatures, Hero enemyHero, Shield enemyShield, int level)`,
   and `BuildPriorityTargets(...)` (shield → mages → tanks → archers → hero, all-alive-of-class, not
   just the first) shared by nuke resolvers that need a priority order.
-- `Assets/Game/_Scripts/Spells/SpellResolver.cs` (not read in full here, but mirrors NukeResolver:
+- `Assets/Game/_Scripts/_Spells/SpellResolver.cs` (not read in full here, but mirrors NukeResolver:
   `List<SpellShot> Shots` + `Resolve(SpellSO, Hero caster, HeroView casterView, List<Creature> enemyCreatures, int level)`).
 - Concrete resolvers, one per action: `FireMagicResolver.cs`, `ShockResolver.cs`,
-  `StarfallResolver.cs` (Nukes/); `ShieldResolver.cs`, `CharmResolver.cs`, `BattleCryResolver.cs`
-  (Spells/). Each just fills `Shots` — no animation, no `Object.Instantiate` of gameplay effects.
+  `StarfallResolver.cs` (_Nukes/); `ShieldResolver.cs`, `CharmResolver.cs`, `BattleCryResolver.cs`
+  (_Spells/). Each just fills `Shots` — no animation, no `Object.Instantiate` of gameplay effects.
 - `NukeShot.cs` / `SpellShot.cs` (base "shot" types, one instance = one target + one effect) and
   their concrete shots (`FireMagicShot`, `StarfallShot`, `ShockShot`; `ShieldSpawnShot`/
   `ShieldPromoteShot`/`ShieldHealShot`, `CharmShot`, `BattleCryBuffShot`/`BattleCryDebuffShot`).
@@ -40,9 +40,9 @@ Logic layer:
   and the instant path reach the identical end state (rule 7).
 
 View layer:
-- `Assets/Game/_Scripts/ScriptableObjects/ActionAnimation.cs` — abstract MonoBehaviour base, one
+- `Assets/Game/_Scripts/_ScriptableObjects/ActionAnimation.cs` — abstract MonoBehaviour base, one
   method: `Execute(ActionSO source, Hero caster, ActionResolver resolver, Action onComplete)`.
-- `Assets/Game/_Scripts/Nukes/NukeActionAnimation.cs` / `Assets/Game/_Scripts/Spells/SpellActionAnimation.cs`
+- `Assets/Game/_Scripts/_Nukes/NukeActionAnimation.cs` / `Assets/Game/_Scripts/_Spells/SpellActionAnimation.cs`
   — typed intermediate bases; `Execute` is `sealed override` and downcasts to a typed
   `Execute(NukeSO/SpellSO, Hero, NukeResolver/SpellResolver, Action onComplete)` that concrete
   animations implement.
@@ -50,16 +50,16 @@ View layer:
   `ShieldSpellAnimation.cs`, `CharmAnimation.cs`, `BattleCryAnimation.cs`, `NoOpSpellAnimation.cs`.
 
 Orchestration:
-- `Assets/Game/_Scripts/ScriptableObjects/ActionContext.cs` — struct: `Caster`, `CasterView`,
+- `Assets/Game/_Scripts/_ScriptableObjects/ActionContext.cs` — struct: `Caster`, `CasterView`,
   `EnemyCreatures`, `EnemyHero`, `EnemyShield`.
-- `Assets/Game/_Scripts/ScriptableObjects/IActionEntry.cs` — `ActionSO Source { get; }`,
+- `Assets/Game/_Scripts/_ScriptableObjects/IActionEntry.cs` — `ActionSO Source { get; }`,
   `int Level { get; }` (level doubles as "match count", see §4).
-- `Assets/Game/_Scripts/Global/GameManager/ActionState.cs` — shared base for the two states below;
+- `Assets/Game/_Scripts/_Global/_GameManager/ActionState.cs` — shared base for the two states below;
   owns `PlayEntries`/`PlayEntry`/`ScheduleNext`/`CompleteWithCleanup`/`ResolveInstant`/`BuildContext`.
-- `Assets/Game/_Scripts/Global/GameManager/NukeState.cs` / `SpellState.cs` — one-liners: call
+- `Assets/Game/_Scripts/_Global/_GameManager/NukeState.cs` / `SpellState.cs` — one-liners: call
   `PlayEntries(RollStateManager.Instance.NukeEntries/SpellEntries, pauseBetween, stateName)` in
   `OnEnter()`, and expose a static `ResolveNukesInstant()`/`ResolveSpellsInstant()`.
-- `Assets/Game/_Scripts/Global/RollStateManager/RollStateManager.cs` — `NukeEntry`/`SpellEntry`
+- `Assets/Game/_Scripts/_Global/_RollStateManager/RollStateManager.cs` — `NukeEntry`/`SpellEntry`
   structs (`{ NukeSO/SpellSO; int Count; }`, `IActionEntry.Level => Count`), populated by
   `AnalyzeRoll()` after a roll finishes (groups the 3 rolled symbols, one entry per distinct
   symbol, `Count` = how many of that symbol landed).
@@ -77,21 +77,76 @@ Experience.md). Every concrete SO's balance array is indexed by `level - 1` (`Ge
 `GetHpForLevel`, `GetChanceForLevel`, etc.), clamped so an out-of-range level falls back to the
 highest configured tier.
 
+## 2b. Nuke resolution order (`NukeSO.resolutionOrder`)
+
+When one roll lands several *different* nukes, they resolve in ascending `NukeSO.resolutionOrder`
+(int, default 10) rather than in the order the columns happened to land them. The sort happens in
+`RollStateManager.AnalyzeRoll()` — the single place `NukeEntries` is built — so the animated path
+(`NukeState`) and the instant path (`NukeState.ResolveNukesInstant()`) can never disagree about
+order (rule 7). `OrderBy` is a stable sort, so nukes sharing a value keep their rolled order.
+
+Authored values: `FireMagic` 10, `Fireball` 10 (unused placeholder, no `animationPrefab`),
+`Starfall` 20, `Shock` 30 → live play order **FireMagic → Starfall → Shock**. Leave gaps when adding
+a nuke so it can be slotted between two existing ones without renumbering.
+
+Ordering is load-bearing for Shock specifically, because a shield blocks Shock outright (2c): Shock
+last means a damage nuke in the same roll gets its chance to break the shield *before* Shock checks
+for one.
+
+## 2c. A standing shield blocks Shock completely (`ShockResolver`)
+
+**Rule: while the target side has a live `Shield`, Shock shocks nothing. Not at level 1, not at 2,
+not on a triple. Ever.** This is a hard gameplay rule, not a targeting side effect — the shield is
+the counter to Shock.
+
+Implemented in `ShockResolver.Resolve` as the first guard: `if (IsAlive(enemyShield))` →
+`AddBlockedShots(enemyShield, level)` and return, so **no shot ever targets a creature while a
+shield is up**. Only when the shield is absent/dead does it fall through to the normal
+`BuildPriorityTargets` path.
+
+Three details worth keeping:
+
+- **The blocked case emits `level` real shots aimed at the shield**, not an empty list, so the
+  animation still plays `level` lightning bolts fizzling against the shield instead of the turn
+  silently doing nothing. They're inert by construction: `ShockShot.Apply()` shocks only a `Unit`,
+  and a `Shield` is a `Targetable` that isn't one — no status, no damage, shield HP untouched.
+- **`Shock.asset` sets `ignoresShield: false`** (it used to be `true`, from the earlier design where
+  Shock arced *past* the shield). The flag is now consistent with the rule rather than fighting it,
+  though it no longer decides anything for Shock: the guard returns before `BuildPriorityTargets`
+  whenever a shield is up, and once the shield is dead `AddIfAlive` filters it out anyway. Only
+  `Starfall` still actually uses `ignoresShield: true`.
+- **The check reads live shield state at the moment Shock resolves**, which is why resolution order
+  (2b) matters: `ActionState.PlayEntry` calls `CreateAndResolve(BuildContext(), ...)` per entry
+  immediately before playing it, so a `FireMagic` (order 10) that broke the shield has already
+  applied by the time Shock (order 30) resolves, and Shock then lands normally. The instant path
+  builds `ActionContext` once but holds the same `Shield` reference, and `IsAlive` tests
+  `Health.IsDead()` (plus Unity's fake-null for an already-destroyed shield), so both paths agree.
+
+`NukeResolver.IsAlive(Targetable)` is the shared alive test, factored out of the existing
+`AddIfAlive` so the guard and the priority list can't drift apart on what "alive" means.
+
+The AI already agrees with this rule: `ShockAIScorer.Score()` opens with
+`if (PlayerHasShield) return 0;`, so the AI won't spend a roll shocking into a shield
+(`docs/AI.md`).
+
 ## 3. Worked examples
 
 ### 3a. FireMagic (Nuke) — single damage pool, priority targets
 
-1. `FireMagicSO` (`ScriptableObjects/FireMagicSO.cs`) just overrides `CreateResolver() => new FireMagicResolver()`.
+1. `FireMagicSO` (`_ScriptableObjects/FireMagicSO.cs`) just overrides `CreateResolver() => new FireMagicResolver()`.
    Balance (`damagePerLevel`) and targeting flag (`ignoresShield`) live on the shared `NukeSO` base.
-2. `FireMagicResolver.Resolve(...)` (`Nukes/FireMagicResolver.cs`) builds a priority target list via
+2. `FireMagicResolver.Resolve(...)` (`_Nukes/FireMagicResolver.cs`) builds a priority target list via
    `NukeResolver.BuildPriorityTargets` (shield first unless `IgnoresShield`, then all alive mages,
    tanks, archers, then hero), then walks it distributing one flat damage pool
    (`source.GetDamageForLevel(level)`): each target absorbs up to its current HP, one `FireMagicShot`
    per target that actually receives damage, stops once the pool is exhausted.
-3. `FireMagicAnimation.Execute(...)` (`Nukes/FireMagicAnimation.cs`) is pure view: for each shot,
+3. `FireMagicAnimation.Execute(...)` (`_Nukes/FireMagicAnimation.cs`) is pure view: for each shot,
    after `castDelay + i*pauseBetweenShots`, instantiates a `SimpleProjectile` toward
    `shot.Target.HitFeedback.HitPlacePosition`, and on impact calls `shot.Apply()` (which calls
-   `Target.Health.TakeDamage(damage)` via `NukeShot.ApplyDamage`) then a per-shot completion
+   `Target.Health.TakeDamage(damage)` via `NukeShot.ApplyDamage`), then
+   `shot.Target.HitFeedback.PlayHitFeedbacks(false)` (target-side hit feedbacks; guarded against a
+   target destroyed mid-flight — see `docs/Battle.md` "Hit feedbacks"; `StarfallAnimation` does the
+   same, `ShockAnimation` doesn't since Shock deals no damage), then a per-shot completion
    callback; once all shots resolved, waits `trailingDelay` then calls `onComplete`.
 4. Instant path: `NukeState.ResolveNukesInstant()` → `ActionState.ResolveInstant` →
    `FireMagicSO.CreateAndResolve(ctx, level).ApplyInstant()` → calls every shot's `Apply()`
@@ -99,17 +154,17 @@ highest configured tier.
 
 ### 3b. Shield (Spell) — spawns a persistent Targetable, three-way branch
 
-1. `ShieldSO` (`ScriptableObjects/ShieldSO.cs`) holds `hpPerLevel`/`healPerLevel` arrays and
+1. `ShieldSO` (`_ScriptableObjects/ShieldSO.cs`) holds `hpPerLevel`/`healPerLevel` arrays and
    separate player/enemy `Shield` prefabs (`GetPrefab(isPlayer)`); overrides
    `CreateResolver() => new ShieldResolver()`.
-2. `ShieldResolver.Resolve(...)` (`Spells/ShieldResolver.cs`) branches on `casterView.Shield`
+2. `ShieldResolver.Resolve(...)` (`_Spells/ShieldResolver.cs`) branches on `casterView.Shield`
    (`HeroView.Shield => shieldSlot.Unit as Shield`):
    - no shield yet → `ShieldSpawnShot` (instantiate `Data.GetPrefab(isPlayer)` into
      `casterView.ShieldSlot`, `Slot.Unit = instance`, `instance.Init(level)`, `instance.OnSummon()`)
    - rolled level higher than existing → `ShieldPromoteShot` (`((Shield)Target).Promote(level)`,
      full HP refill at the new level)
    - rolled level ≤ existing → `ShieldHealShot` (flat `Target.Health.Heal(...)`)
-3. `ShieldSpellAnimation.Execute(...)` (`Spells/ShieldSpellAnimation.cs`) is a minimal host: calls
+3. `ShieldSpellAnimation.Execute(...)` (`_Spells/ShieldSpellAnimation.cs`) is a minimal host: calls
    `resolver.ApplyInstant()` immediately and completes — the actual grow-in tween lives on the
    summoned `Shield`'s own `ShieldAnimator` (`PlaySummon`/`PlayPromote`), triggered from
    `Shield.OnSummon()`/`Promote()` themselves, not from the ActionAnimation.
@@ -119,14 +174,38 @@ highest configured tier.
 
 ### 3c. Charm (Spell, Robotek "hack") — steals/re-steals a creature
 
-`CharmResolver.Resolve(...)` (`Spells/CharmResolver.cs`) picks one alive enemy creature whose class
+`CharmResolver.Resolve(...)` (`_Spells/CharmResolver.cs`) picks one alive enemy creature whose class
 has a free charm slot on the caster's board (`CreaturesManager.GetFreeCharmSlot`), ranks candidates
 by `CharmSO.GetStrength` (`currentHp + creatureLevel * levelStrengthWeight`), and picks the
 weakest/median/strongest candidate for level 1/2/3 (`PickByLevel`). It rolls success **once** up
-front (`chancePerLevel[level-1] * aliveCount`, clamped to 1) and bakes the result into a single
-`CharmShot`, so the animated and instant paths always agree on success/failure.
+front and bakes the result into a single `CharmShot`, so the animated and instant paths always agree
+on success/failure.
 
-`CharmShot.Apply()` (`Spells/CharmShots.cs`) does the actual re-parenting: clears the creature's old
+**Success chance, in two stages — order matters:**
+
+1. Base odds: `chancePerLevel[level-1] * aliveCount` (of the side being charmed), run through
+   `RewardBonuses.ApplyBonuses` and **clamped to 1**.
+2. **Creature-advantage penalty**, applied *after* that clamp:
+   `chance *= CharmSO.GetCreatureAdvantageMultiplier(casterAlive, charmedSideAlive)`, which is
+   `max(0, 1 - chancePenaltyPerExtraCreature * max(0, casterAlive - charmedSideAlive))`.
+
+With the authored `chancePenaltyPerExtraCreature` of `0.25`, each creature the caster out-numbers
+the charmed side by removes 25 percentage points of its own chance, linearly: a caster holding 4
+creatures against 2 lands on `1.0 * (1 - 0.25 * 2) = 0.5`. Being *behind* grants no bonus — the
+multiplier never exceeds 1. At a 4-creature lead it reaches 0 and Charm cannot succeed at all.
+
+Applying the penalty after the clamp is deliberate: it has to bite even when the base chance had
+already maxed out, which is exactly the snowball case it exists to stop (a side far ahead on board
+otherwise charmed at a guaranteed 100%).
+
+Verified live by sampling `Resolve()` 4000× per level at a 3-vs-1 board (multiplier 0.5): measured
+0.063 / 0.105 / 0.163 against expected 0.060 / 0.105 / 0.175 for levels 1/2/3.
+
+The AI reads the **same** `GetCreatureAdvantageMultiplier` to scale how badly it wants to cast Charm
+(`CharmAIScorer`, `docs/AI.md`), so the odds and the AI's appetite for those odds are tuned by one
+number and can't drift apart.
+
+`CharmShot.Apply()` (`_Spells/CharmShots.cs`) does the actual re-parenting: clears the creature's old
 slot, reparents its transform under the destination charm slot, updates `Creature.Slot` /
 `UnitSlot.Unit` both ways, and toggles `StatusesManager.IsCharmed` (charming a normal creature marks
 it; charming an already-charmed one clears the mark — a creature only ever changes sides via Charm,
@@ -150,7 +229,7 @@ which `CreaturesManager.ResetAll()` already destroys unconditionally (native + c
 
 ### 3d. BattleCry (Spell) — self-buff + enemy-debuff, no persistent object
 
-`BattleCryResolver.Resolve(...)` (`Spells/BattleCryResolver.cs`) emits one `BattleCryBuffShot` per
+`BattleCryResolver.Resolve(...)` (`_Spells/BattleCryResolver.cs`) emits one `BattleCryBuffShot` per
 creature on the caster's own board and one `BattleCryDebuffShot` per enemy creature, both applying a
 flat `AttackDamageMultiplier` via `StatusesManager` (read back later by
 `CreaturesManager.GetActiveBattleCryBuffMultiplier()` so a creature spawned *after* BattleCry was
@@ -158,7 +237,7 @@ cast the same turn still joins the active buff). Like Charm, this state lives en
 `StatusesManager` components that die with their creature GameObjects — restart via
 `CreaturesManager.ResetAll()` already covers it.
 
-## 4. `ActionState` orchestration (`Global/GameManager/ActionState.cs`)
+## 4. `ActionState` orchestration (`_Global/_GameManager/ActionState.cs`)
 
 - `BuildContext()` — builds an `ActionContext` from `GameManager.Instance.ActiveSide` each call
   (not cached), via `Caster`/`CasterView`/`EnemyHero`/`EnemyShield`/`EnemyCreatures` helpers that
@@ -196,10 +275,10 @@ elapsed. With the guard, that resumed call is a silent no-op instead.
 ## 5. How to add a new Nuke or Spell
 
 1. Add balance numbers to a new `[CreateAssetMenu]` SO subclassing `NukeSO`/`SpellSO` (e.g.
-   `ScriptableObjects/MyNukeSO.cs`), following the existing `float[] xPerLevel` + `GetXForLevel(level)`
+   `_ScriptableObjects/MyNukeSO.cs`), following the existing `float[] xPerLevel` + `GetXForLevel(level)`
    clamped-index pattern. Balance numbers belong here, never on the animation MonoBehaviour (project
    rule 13 — data/view separation).
-2. Write a resolver (`Nukes/MyNukeResolver.cs` or `Spells/MyNukeResolver.cs`) subclassing
+2. Write a resolver (`_Nukes/MyNukeResolver.cs` or `_Spells/MyNukeResolver.cs`) subclassing
    `NukeResolver`/`SpellResolver`, implementing `Resolve(...)` to fill `Shots` with concrete
    `NukeShot`/`SpellShot` subclasses. Put ALL data mutation in each shot's `Apply()` — never in the
    animation — so `ApplyInstant()` (which just calls every shot's `Apply()`) reaches the identical
@@ -216,7 +295,7 @@ elapsed. With the guard, that resumed call is a silent no-op instead.
    rule — see GameLoop.md). If it only mutates existing creatures/heroes via shots (like Charm/
    BattleCry), no new restart wiring is needed — it's covered transitively by the existing
    `CreaturesManager.ResetAll()`/`HeroView.ClearShield()`/`Hero.InitHealth()` subscribers.
-7. Optional: give the enemy AI a reason to pick it. Write a scorer in `AI/Scoring/` subclassing
+7. Optional: give the enemy AI a reason to pick it. Write a scorer in `_AI/_Scoring/` subclassing
    `ActionAIScorer` and override `CreateAIScorer()` on your SO to return it — one line, same shape as
    step 3's `CreateResolver()`. Without this, the SO falls back to `NoOpActionAIScorer` (score 0
    always), so the AI simply never picks it. See `docs/AI.md`.

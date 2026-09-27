@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: baddeee814d7429cb1d8dc2d9ddde911, type: 3}
+  m_Name: DarkMage
+  m_EditorClassIdentifier: 
+  id: darkMage
+  actionName: Shadow Wyrm
+  description: The Warlock's blackened dragon, breathing a searing stream of dark
+    fire.
+  cardSprite: {fileID: 8762221273336260094, guid: 2c186ae0c9e2edf4ea668cd425f3fb8a, type: 3}
+  creaturePrefab: {fileID: 588814956554724780, guid: a653b1d18c9041d4a8503a955e38547e, type: 3}
+  levelStats:
+  - damage: 11
+    health: 28
+    numberOfAttacks: 1
+  - damage: 18
+    health: 32
+    numberOfAttacks: 1
+  - damage: 26
+    health: 37
+    numberOfAttacks: 1
+  - damage: 40
+    health: 48
+    numberOfAttacks: 1
+  specialDamageModifiers: []
+  critChancePercent: 20
+  critDamageBonusPercent: 50
+  experienceReward: 1e0000003c00000078000000f0000000
+  xpThresholds: 00000000780000004001000058020000
+  healAmounts:
+  - 3
+  - 7
+  - 10
+  - 24

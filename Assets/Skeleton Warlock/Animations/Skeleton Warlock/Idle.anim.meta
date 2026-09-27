@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: fc236850f5d0499a935c192182ad2b93
+timeCreated: 1509426197
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 122856
+  packageName: Skeleton Warlock
+  packageVersion: 1.2
+  assetPath: Assets/Skeleton Warlock/Animations/Skeleton Warlock/Idle.anim
+  uploadId: 327764

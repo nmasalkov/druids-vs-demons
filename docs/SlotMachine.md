@@ -10,25 +10,25 @@ match counts) that `GameManager`'s `RollState`/`ActionState` machinery consumes 
 
 ## Key files
 
-- `Assets/Game/_Scripts/SlotMachine/SlotMachine.cs` — top-level machine: state, buttons, roll-type
+- `Assets/Game/_Scripts/_SlotMachine/SlotMachine.cs` — top-level machine: state, buttons, roll-type
   switching, triple detection, `FinishRoll()`.
-- `Assets/Game/_Scripts/SlotMachine/SlotColumn.cs` — per-column input/event surface (reroll button,
+- `Assets/Game/_Scripts/_SlotMachine/SlotColumn.cs` — per-column input/event surface (reroll button,
   `Start`/`Update` dispatch).
-- `Assets/Game/_Scripts/SlotMachine/SlotColumn.Mechanics.cs` — same class (`partial`), the actual
+- `Assets/Game/_Scripts/_SlotMachine/SlotColumn.Mechanics.cs` — same class (`partial`), the actual
   spin/stop/bounce physics and card recycling.
-- `Assets/Game/_Scripts/SlotMachine/Card.cs` — trivial sprite holder for one visible card cell.
-- `Assets/Game/_Scripts/Global/RollStateManager/RollStateManager.cs` — owns both `SlotMachine`
+- `Assets/Game/_Scripts/_SlotMachine/Card.cs` — trivial sprite holder for one visible card cell.
+- `Assets/Game/_Scripts/_Global/_RollStateManager/RollStateManager.cs` — owns both `SlotMachine`
   instances (player/enemy), turns a finished roll into `SpawnEntries`/`NukeEntries`/`SpellEntries`.
   Exposes `ActiveMachine`, a computed property tracking `GameManager.ActiveSide` live.
-- `Assets/Game/_Scripts/Global/GameManager/RollState.cs` — for the AI-controlled side, this is the
-  orchestrator that asks `AI/AIController.cs` for decisions and executes them (`SetRollType`/
+- `Assets/Game/_Scripts/_Global/_GameManager/RollState.cs` — for the AI-controlled side, this is the
+  orchestrator that asks `_AI/AIController.cs` for decisions and executes them (`SetRollType`/
   `StartAll`/`StopAll`/`TriggerReroll`/`FinishRoll`) — see `docs/AI.md`.
-- `Assets/Game/_Scripts/AI/AIController.cs` — the enemy AI's decision service. Never calls into
+- `Assets/Game/_Scripts/_AI/AIController.cs` — the enemy AI's decision service. Never calls into
   `SlotMachine`/`SlotColumn` itself; see `docs/AI.md`.
-- `Assets/Game/_Scripts/SlotMachine/SlotMachineRigger.cs` — the pure-data "backend" that decides
+- `Assets/Game/_Scripts/_SlotMachine/SlotMachineRigger.cs` — the pure-data "backend" that decides
   every roll result, before any spin animation starts. See "Dirty triple terminology" and
   "SlotMachineRigger — deciding roll results" below.
-- `Assets/Game/_Scripts/Global/Campaign/FightSO.cs` — home of `ComebackSetting` (the nested
+- `Assets/Game/_Scripts/_Global/_Campaign/FightSO.cs` — home of `ComebackSetting` (the nested
   `[Serializable] struct` behind Comeback Settings) and `GetComebackAdjustment`, the per-fight
   comeback ladder. Replaced the old fixed-size `HpAdjustmentSettings.cs` struct, which is deleted.
 
@@ -65,20 +65,37 @@ match counts) that `GameManager`'s `RollState`/`ActionState` machinery consumes 
   board state; round 1 skips it entirely (the `firstRound*` overrides win). Because "biggest wins"
   with adjustments that decrease as `hpPercent` rises behaves exactly like a most-severe-tier-wins
   curve, the shipped ladders reproduce the old HP curve exactly — `100 → -20`, `60 → 0`, then the
-  three comeback tiers at `25`/`15`/`10` carrying advantage thresholds `30`/`40`/`50`. Replaced the
+  three comeback tiers at `25`/`15`/`10` carrying advantage thresholds `30`/`40`/`50`. Fights 3–5-2's
+  player ladders use `+25`/`+37`/`+50` for those three tiers (nerfed from `+35`/`+55`/`+75` after a
+  live-caught streak: a 50%-HP player whose board was behind on *effective* firepower — enemy shield
+  HP counts against it — got a `+35`/`+75` boost at turn start and landed 3 clean triples in a row). Replaced the
   old `HpAdjustmentSettings` struct and its `playerHpAdjustmentsEnabled`/`enemyHpAdjustmentsEnabled`
   toggles (an empty list is the "off" switch now).
-- **Comeback halving**: a **positive** comeback adjustment is halved — and both the Dirty and Clean
-  Triple Index lowered by that same delta — each time the acting side re-enters a bonus turn, i.e.
-  every time it lands another triple (`70 → 35 → 17 → 8 → …`). So a big comeback boost helps land a
-  turn's *first* triple without fuelling an endless streak, decaying smoothly instead of vanishing in
-  one step (which is what the earlier `RevertPendingHpBoostForActiveSide` did). A **negative**
-  adjustment (the high-HP punish) is never halved and stays applied for the whole turn — halving it
-  would mean landing a triple rewards you by softening your own punish. Reset from scratch on the
-  side's next genuinely new turn.
+- **Comeback decay** (`FightSO.comebackDecayDivisor`, default 3, min 1 = no decay): a **positive**
+  comeback adjustment is integer-divided by this — and both the Dirty and Clean Triple Index lowered
+  by that same delta — each time the acting side re-enters a bonus turn, i.e. every time it lands
+  another triple (with 3: `50 → 16 → 5 → 1 → …`; was a hardcoded halving before). So a big comeback
+  boost helps land a turn's *first* triple without fuelling an endless streak, decaying smoothly
+  instead of vanishing in one step (which is what the earlier `RevertPendingHpBoostForActiveSide`
+  did). A **negative** adjustment (the high-HP punish) never decays and stays applied for the whole
+  turn — decaying it would mean landing a triple rewards you by softening your own punish. Reset
+  from scratch on the side's next genuinely new turn.
+- **Comeback demotion** (no field — always on, both sides): if a turn started with a **positive**
+  comeback adjustment and the side landed a triple during it (clean or dirty — detected as the first
+  bonus-turn `RollState` re-entry seeing a positive adjustment, inside `DecayComebackForActiveSide`),
+  the side's **next** genuinely new turn gets its freshly computed comeback demoted **one rung** down
+  its own ladder (`FightSO.DemoteComebackAdjustment`: the biggest positive `tripleAdjustment` strictly
+  below the one due, e.g. `+50 → +37`, `+37 → +25`, and the lowest positive rung `→ 0` — never into
+  the negative high-HP punish). Zero/negative adjustments are untouched. **Next turn only, no
+  stacking**: `ApplyPendingDemotion` (called from `RecomputeBaseForActiveSide`) consumes the flag at
+  that turn's start whether it changed anything or not; it's only re-armed if that turn is itself
+  boosted (even demoted) and triples again. Pending state is visible in the Inspector
+  (`_playerComebackDemotionPending`/`_enemyComebackDemotionPending`, rule 19) and cleared on restart.
+  Purpose: a low-HP side shouldn't get comfortable landing a boosted triple every turn — the
+  rubber band loosens one step each time it visibly worked.
 - **Dirty Triple Stabilization** (`FightSO.dirtyTripleStabilization`, 0 = disabled): subtracted from
   the acting side's current Dirty Triple Index each time they earn and re-enter a bonus turn from a
-  triple, so a lucky streak can't snowball indefinitely. Applied *after* comeback halving on the same
+  triple, so a lucky streak can't snowball indefinitely. Applied *after* comeback decay on the same
   bonus-turn re-entry. Reset to a freshly computed comeback-adjusted base the next time that side
   starts a genuinely new (non-bonus) turn.
 - **Clean Triple Stabilization** (`FightSO.playerCleanTripleStabilization`/
@@ -202,18 +219,21 @@ path that replaces that:
   the Rigger (`_playerComebackAdjustment`/`_enemyComebackAdjustment`, `[SerializeField] private` so
   it's visible in the Inspector at runtime per rule 19) because two later steps reuse that exact
   number: `ResetCleanBaseForActiveSide`, which runs immediately after in the same handler and adds it
-  to the **Clean** Triple Index too, and the per-bonus-turn halving below. **Unlike the old HP-only
+  to the **Clean** Triple Index too, and the per-bonus-turn decay below. **Unlike the old HP-only
   curve, the adjustment is not Dirty-only** — both indices carry it.
-  **A POSITIVE adjustment halves on each bonus turn rather than being stripped whole** —
-  `HalveComebackForActiveSide` runs on every bonus-turn `RollState` re-entry, before
-  `dirtyTripleStabilization` is applied, halving the stored value and lowering both indices by that
-  same delta (`70 → 35 → 17 → 8 → …`). A NEGATIVE adjustment (the high-HP punish) is left alone and
-  stays applied for the whole turn — halving it would make landing a triple soften your own punish.
+  **A POSITIVE adjustment decays on each bonus turn rather than being stripped whole** —
+  `DecayComebackForActiveSide` runs on every bonus-turn `RollState` re-entry, before
+  `dirtyTripleStabilization` is applied, dividing the stored value by
+  `FightSO.comebackDecayDivisor` (read live, default 3) and lowering both indices by that same delta
+  (`50 → 16 → 5 → 1 → …`). A NEGATIVE adjustment (the high-HP punish) is left alone and stays applied
+  for the whole turn — decaying it would make landing a triple soften your own punish.
   Caught live under the previous design: a `+75` near-death boost with `dirtyTripleStabilization` at
   0 produced 3 triples in a row, since nothing brought the boosted index back down between bonus
-  turns; the halving is the replacement answer to that, and it now applies to clean triples too.)
+  turns; the decay is the replacement answer to that, and it now applies to clean triples too. It
+  started as a hardcoded halving, moved to a `/3` `FightSO` field after halving still let a `+35`
+  carry a 3-clean-triple streak.)
   and `GameState.OnAnyStateStarted` (`RollState` re-entries that *aren't* a fresh `SwitchSideState`
-  turn, i.e. a bonus turn from `GameManager.TakeTurn()`'s triple-driven do-while loop, first halve the
+  turn, i.e. a bonus turn from `GameManager.TakeTurn()`'s triple-driven do-while loop, first decay the
   comeback adjustment as above, then apply both `FightSO.dirtyTripleStabilization` to the Dirty Triple
   Index *and* `FightSO.playerCleanTripleStabilization`/`enemyCleanTripleStabilization` (per-side fields,
   unlike the single shared `dirtyTripleStabilization`) to the Clean Triple Index, independently; a
@@ -221,7 +241,7 @@ path that replaces that:
   `FightSO.playerCleanTripleIndex`/`enemyCleanTripleIndex` base plus the fresh comeback adjustment —
   or `firstRoundCleanTripleIndex` during round 1, mirroring the Dirty base's own first-round override
   — and marks the turn's first
-  roll phase eligible for Ludo Progress). Resets both Dirty indices to neutral (and zeroes both comeback adjustments) on
+  roll phase eligible for Ludo Progress). Resets both Dirty indices to neutral (and zeroes both comeback adjustments and clears both pending comeback demotions) on
   `GameManager.OnBattleRestart` (rule 16 — this is battle-scoped state, not `DontDestroyOnLoad`),
   which also re-applies `FightSO`'s overrides (see below) — including the Clean Triple Index base —
   since a restart doesn't change the fight.
@@ -312,7 +332,7 @@ replay the action (see `docs/GameLoop.md`).
 
 ## AI control of the enemy machine
 
-`RollState` (`Global/GameManager/RollState.cs`) is the orchestrator for the AI-controlled side —
+`RollState` (`_Global/_GameManager/RollState.cs`) is the orchestrator for the AI-controlled side —
 `AIController` itself never touches `SlotMachine`/`SlotColumn` (see `docs/AI.md` for the full
 architectural principle). When the active side is `Enemy`, `RollState.BeginAITurn()`:
 

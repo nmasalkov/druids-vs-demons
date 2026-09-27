@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 6ee6ae1fc905480da1a1dc1e89d86a91
+timeCreated: 1561489863
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 122856
+  packageName: Skeleton Warlock
+  packageVersion: 1.2
+  assetPath: Assets/Skeleton Warlock/Textures/Skeleton Warlock/Anima 2D Meshes/Helmet.asset
+  uploadId: 327764

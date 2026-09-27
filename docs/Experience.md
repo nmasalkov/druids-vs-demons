@@ -11,22 +11,22 @@ state and promotion math.
 
 ## Key files
 
-- `Assets/Game/_Scripts/Units/ExperienceManager.cs` — singleton; owns pending XP + in-flight gem
+- `Assets/Game/_Scripts/_Units/ExperienceManager.cs` — singleton; owns pending XP + in-flight gem
   bookkeeping, drives the gem-flight sequence, exposes the rule-7 instant path and the
   battle-restart reset.
-- `Assets/Game/_Scripts/Units/Expirience.cs` — despite the filename, declares `class Experience`
+- `Assets/Game/_Scripts/_Units/Expirience.cs` — despite the filename, declares `class Experience`
   (in namespace `Game._Scripts.Creatures`). Lives on every `Creature` (`[RequireComponent(typeof(Experience))]`
   on `Creature.cs`). Owns `Level`, `TotalExperience`, and promotion.
-- `Assets/Game/_Scripts/Pickups/ExpirienceGem.cs` — the flying/dropping gem visual (DOTween-based
+- `Assets/Game/_Scripts/_Pickups/ExpirienceGem.cs` — the flying/dropping gem visual (DOTween-based
   curved paths), no gameplay state of its own.
-- `Assets/Game/_Scripts/ScriptableObjects/CreatureSO.cs` — per-level stats, XP rewards, XP
+- `Assets/Game/_Scripts/_ScriptableObjects/CreatureSO.cs` — per-level stats, XP rewards, XP
   thresholds (the balance data this whole system reads).
-- `Assets/Game/_Scripts/Units/Creature.cs` — exposes `Experience` as a cached component reference.
-- Callers: `Assets/Game/_Scripts/Global/GameManager/AttacksResolver.cs` /
+- `Assets/Game/_Scripts/_Units/Creature.cs` — exposes `Experience` as a cached component reference.
+- Callers: `Assets/Game/_Scripts/_Global/_GameManager/AttacksResolver.cs` /
   `AttacksResolver.Mechanics.cs` (registers pending XP and spawns gems from battle resolution —
   see the Battle system's own doc for how attacks are planned/executed),
-  `Assets/Game/_Scripts/Global/GameManager/PostBattleState.cs` (animated resolve),
-  `Assets/Game/_Scripts/Global/GameManager/BattleState.cs` (instant resolve).
+  `Assets/Game/_Scripts/_Global/_GameManager/PostBattleState.cs` (animated resolve),
+  `Assets/Game/_Scripts/_Global/_GameManager/BattleState.cs` (instant resolve).
 
 ## The pending-XP → gem flow
 

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 465c9fae07b045ae8e39346acfa5e714
+timeCreated: 1561489864
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 122856
+  packageName: Skeleton Warlock
+  packageVersion: 1.2
+  assetPath: Assets/Skeleton Warlock/Textures/Skeleton Warlock/Anima 2D Meshes/Robe_Bottom.asset
+  uploadId: 327764

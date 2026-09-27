@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 283aac0f9c16453ba20cc1514ac96b49
+timeCreated: 1564286266
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 122856
+  packageName: Skeleton Warlock
+  packageVersion: 1.2
+  assetPath: Assets/Skeleton Warlock/Controllers/Skeleton Warlock.controller
+  uploadId: 327764

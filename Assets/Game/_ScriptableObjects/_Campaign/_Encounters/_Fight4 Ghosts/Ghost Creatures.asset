@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c897eb2d016403daa021a87c833115a, type: 3}
+  m_Name: Ghost Creatures
+  m_EditorClassIdentifier: 
+  archer: {fileID: 11400000, guid: 9ea60af2fdec21945b38f50b8e552c13, type: 2}
+  tank: {fileID: 11400000, guid: 309b60b17a2761042ab0f0e8746bad8a, type: 2}
+  mage: {fileID: 11400000, guid: 88e77dcb5097a67439504a515c62fb0a, type: 2}

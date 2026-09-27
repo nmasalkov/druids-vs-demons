@@ -13,7 +13,7 @@ algorithm (`RewardDrawer`), and a small stat-boost hook (`RewardBonuses`) resolv
 
 ## `RewardSO` hierarchy
 
-`Global/Campaign/Rewards/`:
+`_Global/_Campaign/_Rewards/`:
 
 - **`RewardSO`** (abstract `ScriptableObject`) — `id`, `rewardName`, `description`, `typeLabel`
   (card's type line, e.g. "Boost"), a nullable `icon` (`EffectiveIcon` falls back to
@@ -39,13 +39,13 @@ algorithm (`RewardDrawer`), and a small stat-boost hook (`RewardBonuses`) resolv
 
 ## `RewardListSO`
 
-`Global/Campaign/RewardListSO.cs` — top-level catalog, same shape as `GameCatalog`:
+`_Global/_Campaign/RewardListSO.cs` — top-level catalog, same shape as `GameCatalog`:
 `List<RewardSO> allRewards` + `Find(string id)`. Asset:
-`_ScriptableObjects/Campaign/RewardListSO.asset`. Exposed via the static `G.RewardList` accessor,
+`_ScriptableObjects/_Campaign/RewardListSO.asset`. Exposed via the static `G.RewardList` accessor,
 but — like `EncounterListSO`/`G.EncounterList` — the field itself is **not** serialized on `G`
 (which is per-scene and doesn't exist in `MapScene`). It lives on `CampaignStateManager`
 instead: `G.RewardList => CampaignStateManager.Instance.RewardList`. `CampaignStateManager`
-lives on `_Prefabs/Campaign/CampaignProgress.prefab` (see `docs/Campaign.md`), instanced in
+lives on `_Prefabs/_Campaign/CampaignProgress.prefab` (see `docs/Campaign.md`), instanced in
 *both* `BattleScene.unity` and `MapScene.unity` (whichever scene boots first "wins" the session,
 the other's copy self-destructs) — so wiring `rewardList` on the prefab wires both instances at
 once. Before the prefab conversion this had to be set independently per scene and missing it on
@@ -218,15 +218,15 @@ are the entire "menu" a test controller needs (`RewardSO` objects, not `RewardCa
 `Save()` always run unconditionally; only whether `Complete()` fires immediately (`Headless`) or
 waits for the paired view depends on which mode it's running in — see CLAUDE.md rule 28.
 
-`RewardCard` (`Global/Campaign/Rewards/RewardCard.cs`, prefab
-`_Prefabs/UI/Cards/RewardCard.prefab`) — icon/name/type/description display, a single full-card
+`RewardCard` (`_Global/_Campaign/_Rewards/RewardCard.cs`, prefab
+`_Prefabs/_UI/_Cards/RewardCard.prefab`) — icon/name/type/description display, a single full-card
 `Button` as the click target (clicking anywhere on the card selects it — there's no separate
 sub-button), `Init(RewardSO)` (reads `EffectiveIcon`), `SetSelected(bool)` (delegates to the
 sibling `RewardCardAnimator`'s `PlaySelect()`/`PlayDeselect()`), `event Action<RewardCard>
 OnClicked`. No Claim button here — Claim lives once on `RewardEncounterView`, shared across all 3
 spawned cards.
 
-`RewardCardAnimator` (`Global/Campaign/Rewards/RewardCardAnimator.cs`, `[RequireComponent]`d by
+`RewardCardAnimator` (`_Global/_Campaign/_Rewards/RewardCardAnimator.cs`, `[RequireComponent]`d by
 `RewardCard`, same GameObject) owns all select/deselect/discard tweening via DOTween — same
 pattern as `ShieldAnimator`. `PlaySelect()`/`PlayDeselect()` `DOScale` to `1.12`/`1` and
 `DOAnchorPos` to base+`(0,15)`/base, 0.15s; `PlayDiscard(Action onComplete)` `DOScale`s to `0`
@@ -274,7 +274,7 @@ self-completes immediately instead of waiting on a view. See CLAUDE.md rule 28.
 
 ## Debugging: `DebugRewards` and `RunStateMonitor`
 
-`Global/Campaign/DebugRewards.cs` — a component on `CampaignProgress.prefab` alongside
+`_Global/_Campaign/DebugRewards.cs` — a component on `CampaignProgress.prefab` alongside
 `CampaignManager`/`CampaignStateManager`, same cross-scene duplicate-guard singleton pattern. Check
 `rollOnNextReward` and assign `slot1`/`slot2`/`slot3` to force exactly those 3 `RewardSO`s on the
 next `RewardEncounter` instead of a random draw — the override auto-clears once consumed (see
@@ -298,7 +298,7 @@ section (raw ids plus a resolve-to-assets button) that only covered the reward-s
 - **`HpBoostRewardSO`/`BonusEnergyRewardSO` have no icon assigned** — no linked `ActionSO` to
   borrow `cardSprite` from (`FallbackIcon` stays `null` for these two), so they render with a
   blank icon until placeholder art is assigned in the Inspector.
-- **All 14 reward assets live in `_ScriptableObjects/Campaign/Rewards/`**, referenced by
+- **All 14 reward assets live in `_ScriptableObjects/_Campaign/_Rewards/`**, referenced by
   `RewardListSO.asset`. The 3 "Big" creature variants (`BubkaBig`/`TankBig`/`DragonBig`, ids
   `archer_big`/`tank_big`/`mage_big`, 1.5x prefab scale) back the 3 `CreatureRewardSO`s and are
   registered in `GameCatalog.asset`'s `allCreatures` alongside the originals.

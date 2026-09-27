@@ -9,12 +9,12 @@ backend) and `LoadoutPickEncounterView` (the UI) follow the same headless-testab
 as `RewardEncounter`/`RewardEncounterView` (CLAUDE.md rule 28, `docs/Rewards.md`) — the backend never
 touches a UI reference, and only `Confirm()` ever persists into `RunState`. Played by `MapManager`, in
 place at the current map node, whenever the current fight's `FightSO.hasLoadoutPick` is true — see
-`docs/Encounters.md`. Same `_Prefabs/Campaign/LoadoutEncounter.prefab` that used to host a trivial
+`docs/Encounters.md`. Same `_Prefabs/_Campaign/LoadoutEncounter.prefab` that used to host a trivial
 briefing-text placeholder.
 
 ## `SlotKind`/`SlotRef` addressing
 
-`Global/Campaign/LoadoutPickEncounter.cs` nests both (CLAUDE.md rule 12 — single-owner, promoted to
+`_Global/_Campaign/LoadoutPickEncounter.cs` nests both (CLAUDE.md rule 12 — single-owner, promoted to
 public since the paired View needs them):
 
 ```csharp
@@ -125,7 +125,7 @@ truth stays on the backend's own private fields, exactly as rule 22 requires.
 
 ## `MiniCard`
 
-`Global/Campaign/MiniCard.cs` — a small icon-only display card used both for the 9 fixed equipped-
+`_Global/_Campaign/MiniCard.cs` — a small icon-only display card used both for the 9 fixed equipped-
 slot anchors and the dynamic Available pool grid. `Init(ActionSO)` sets `CardImage`'s sprite;
 `SetSelected(bool)` toggles the `BackGroundSelected` child GameObject active/inactive — a plain
 background swap, not a transform tween, so CLAUDE.md rule 27 (DOTween via a dedicated Animator)
@@ -177,7 +177,7 @@ public void Init(ActionSO action, string typeLabel)
 `description` (`[TextArea] public string description;`, matching `RewardSO`'s own field) lives on
 `ActionSO` itself, so every subtype (`CreatureSO`/`TankSO`/`ArcherSO`/`MageSO`, `NukeSO`, `SpellSO`)
 gets it for free — populated with short flavor text on all 13 real asset instances under
-`Assets/Game/_ScriptableObjects/Actions/**`.
+`Assets/Game/_ScriptableObjects/_Actions/**`.
 
 `Data` (`RewardSO`-typed) stays `null` on cards populated this way — nothing in
 `LoadoutPickEncounterView` reads it back, only `Init`'s own parameters matter. Deliberately does
@@ -259,14 +259,14 @@ button-click handler is named for what it actually does (`RebuildAvailablePool`,
 
 ## Editor setup checklist
 
-- **`Assets/Game/_Prefabs/UI/MiniCards/MiniCard.prefab`** (source prefab — propagates to every
+- **`Assets/Game/_Prefabs/_UI/_MiniCards/MiniCard.prefab`** (source prefab — propagates to every
   instance placed in `LoadoutEncounter.prefab` automatically): root RectTransform anchors
   `(0.5, 0.5)` (center — see the `MiniCard` section above for why this matters); `Button` component
   on the **root** GameObject (not `BackGroundUnselected` — see the `MiniCard` section above for why),
   `targetGraphic` → `BackGroundUnselected`'s `Image`; `MiniCard` component also on the root,
   `cardImage` → `CardImage`'s `Image`, `backgroundSelected` → `BackGroundSelected`, `button` → the
   root's own `Button`.
-- **`Assets/Game/_Prefabs/Campaign/LoadoutEncounter.prefab`** root: `LoadoutPickEncounter` +
+- **`Assets/Game/_Prefabs/_Campaign/LoadoutEncounter.prefab`** root: `LoadoutPickEncounter` +
   `LoadoutPickEncounterView` components (replacing the old placeholder `LoadoutEncounter` component).
   `OverlayPanel`'s old click-anywhere-dismiss `Button` was removed (the `Finish` button drives
   completion instead); its `Image` stays as the background. `LoadoutPickEncounterView`'s fields wire

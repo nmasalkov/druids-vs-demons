@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c897eb2d016403daa021a87c833115a, type: 3}
+  m_Name: Boss Creatures
+  m_EditorClassIdentifier: 
+  archer: {fileID: 11400000, guid: e86e78b3a99374d458518033a38931f9, type: 2}
+  tank: {fileID: 11400000, guid: d06d8eea8e523ad43a9956cd1f6d1e82, type: 2}
+  mage: {fileID: 11400000, guid: 30b71c39db473d946bd9c77fd126745b, type: 2}

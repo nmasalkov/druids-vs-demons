@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: a14d96ae5adb4bd2b99194cc88137283
+timeCreated: 1511414303
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 122856
+  packageName: Skeleton Warlock
+  packageVersion: 1.2
+  assetPath: Assets/Skeleton Warlock/Controllers/Skeleton Warlock Spells.controller
+  uploadId: 327764

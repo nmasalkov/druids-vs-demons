@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10f79816516741e1932bb7af24ebaa19, type: 3}
+  m_Name: BossTank
+  m_EditorClassIdentifier: 
+  id: bossTank
+  actionName: Orc Warlord
+  description: A plate-armored orc champion who plants himself on the front line
+    and refuses to fall.
+  cardSprite: {fileID: -1768960485312034589, guid: 2418471881d97d149a085620259a1e4d, type: 3}
+  creaturePrefab: {fileID: 864555159991215331, guid: 637c0622cc152a849b9dfad4ee3f36bf, type: 3}
+  levelStats:
+  - damage: 4
+    health: 36
+    numberOfAttacks: 1
+  - damage: 6
+    health: 46
+    numberOfAttacks: 1
+  - damage: 8
+    health: 56
+    numberOfAttacks: 1
+  - damage: 10
+    health: 66
+    numberOfAttacks: 1
+  specialDamageModifiers: []
+  critChancePercent: 0
+  critDamageBonusPercent: 0
+  experienceReward: 1e0000003c00000078000000f0000000
+  xpThresholds: 00000000780000004001000058020000
+  healAmounts:
+  - 3
+  - 7
+  - 10
+  - 24

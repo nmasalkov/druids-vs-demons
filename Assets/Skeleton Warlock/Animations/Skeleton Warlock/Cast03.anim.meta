@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 6aa2140c7fe24aaeaef359cc394a3f84
+timeCreated: 1509725312
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 122856
+  packageName: Skeleton Warlock
+  packageVersion: 1.2
+  assetPath: Assets/Skeleton Warlock/Animations/Skeleton Warlock/Cast03.anim
+  uploadId: 327764

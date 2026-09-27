@@ -20,20 +20,20 @@ it's genuinely `EnergyController`-owned state with no campaign-persistence conce
 
 ## Key files
 
-- `Assets/Game/_Scripts/Global/GameManager/EnergyController.cs` — singleton; owns
+- `Assets/Game/_Scripts/_Global/_GameManager/EnergyController.cs` — singleton; owns
   `CurrentRerollCost`, `TrySpendReroll()`, cost-reset-per-roll-phase, and the battle-restart
   revert. Exposes `CurrentEnergy` as a read-through onto `RunState.currentEnergy` — see above.
-  Lives on the `Global/GameManager` GameObject in `BattleScene.unity`, alongside `GameManager`,
+  Lives on the `_Global/_GameManager` GameObject in `BattleScene.unity`, alongside `GameManager`,
   `RollStateManager`, `ExperienceManager`, etc. — reads `CampaignStateManager`/`CampaignManager`
   (both cross-scene-persistent on the separate `CampaignProgress` prefab, not co-located here — see
   `docs/Campaign.md`) for `RunState`.
-- `Assets/Game/_Scripts/SlotMachine/SlotColumn.cs` — gates `OnRerollClicked` on
+- `Assets/Game/_Scripts/_SlotMachine/SlotColumn.cs` — gates `OnRerollClicked` on
   `EnergyController.Instance.TrySpendReroll()`, shows the per-slot reroll cost
   (`EnergyCount/EnergyQuantityText` in `Slot.prefab`), plays a feedback on cost change, and disables
   the reroll button when the player can't afford it.
-- `Assets/Game/_Scripts/UI/EnergyDisplay.cs` — shows `EnergyController.CurrentEnergy` on the
+- `Assets/Game/_Scripts/_UI/EnergyDisplay.cs` — shows `EnergyController.CurrentEnergy` on the
   `Canvas/EnergyCount` HUD object in `BattleScene.unity` and plays a feedback whenever it changes.
-  Inherits from `Assets/Game/_Scripts/UI/RerollResourceDisplay.cs`, an abstract base shared with the
+  Inherits from `Assets/Game/_Scripts/_UI/RerollResourceDisplay.cs`, an abstract base shared with the
   enemy side's `EnemyRerollDisplay` (`docs/AI.md`'s "Rerolls" section) — the base owns the text/
   feedback fields and the "update text on every change, play feedback only on an actual spend"
   wiring; each subclass just points it at its own controller's change/spent events.
@@ -75,6 +75,25 @@ to this knob, since it replaces `RunState` wholesale rather than going through e
   cost unconditionally on both sides' roll-finish is still harmless and avoids tracking whose turn
   it was.
 
+## Triple income
+
+Every time one of the **player's** rolls lands a triple (any roll type — creature, nuke or spell),
+they earn `EnergyController.energyPerTriple` energy (Inspector-tunable, default 1).
+
+- **Grant site:** `EnergyController.GrantTripleEnergy()`, subscribed to
+  `RollStateManager.Instance.OnRollFinished` alongside `ResetRerollCost`. `RollStateManager` computes
+  `TripleRolled` in `AnalyzeRoll` just before firing that event, and `GameManager.ActiveSide` still
+  names the side that rolled, so the guard is simply `TripleRolled && ActiveSide == Player`. The
+  enemy never earns energy — its rerolls come from its own fight-wide pool (`docs/AI.md`).
+- **Written like a spend:** straight into `RunState.currentEnergy`, no `Save()`. So the existing
+  restart snapshot handles it with zero new code — a same-encounter restart (pause menu, defeat)
+  reverts to `_encounterStartEnergy` and discards triple income along with reroll spend, while a won
+  encounter carries it forward into the next one (see "Restart interaction" below).
+- **Feedback:** fires `OnEnergyChanged` (text) and `OnEnergyGained` (HUD punch, the same feedback as
+  a spend). Deliberately no camera shake — screen shake is reserved for impacts (crits, see
+  `docs/Battle.md`'s "Hit feedbacks"); a resource gain gets a HUD pop. A triple's bonus turn resets
+  the reroll cost as usual, since it's still a finished roll phase.
+
 ## UI wiring
 
 Both `Slot.prefab`'s per-slot `EnergyCount` (icon + `EnergyQuantityText`) and `BattleScene`'s HUD
@@ -87,8 +106,8 @@ driving transforms directly.
 - `SlotColumn.rerollCostChangeFeedback` plays on `EnergyController.OnRerollCostChanged` — every
   column plays its own local copy since the cost is shared but each column owns its own HUD
   subtree.
-- `EnergyDisplay.energyChangeFeedback` plays on `EnergyController.OnEnergySpent` (**not**
-  `OnEnergyChanged`) — see "Two energy events" below.
+- `EnergyDisplay.energyChangeFeedback` plays on `EnergyController.OnEnergySpent` and
+  `OnEnergyGained` (**not** `OnEnergyChanged`) — see "Two energy events" below.
 
 ## Restart interaction
 
@@ -125,19 +144,21 @@ identical from inside the handler):
 One `OnBattleRestart` subscription, no special-casing of *which* restart this is — the snapshot
 being refreshed (or not) just beforehand is what makes the single handler correct for both cases.
 
-## Two energy events: `OnEnergyChanged` vs `OnEnergySpent`
+## Two energy events: `OnEnergyChanged` vs `OnEnergySpent`/`OnEnergyGained`
 
-`CurrentEnergy` changes for two very different reasons, and the HUD should only visibly react
-("shake") to one of them:
+`CurrentEnergy` changes for two very different kinds of reason, and the HUD should only visibly react
+("shake") to the gameplay kind:
 
 - **`OnEnergyChanged(int)`** fires on *every* change to `CurrentEnergy` — a real reroll spend
-  (`TrySpendReroll`), a fresh campaign value being applied (`ApplyCampaignEnergy`, i.e. initial load
-  or an encounter transition), or a restart reverting to the encounter-start snapshot
-  (`ResetForRestart`, see "Restart interaction" above). Used for anything that must always reflect
-  the true current number: `EnergyDisplay`'s text, `SlotColumn.RefreshRerollInteractable`.
+  (`TrySpendReroll`), a triple grant (`GrantTripleEnergy`), a fresh campaign value being applied
+  (`ApplyCampaignEnergy`, i.e. initial load or an encounter transition), or a restart reverting to
+  the encounter-start snapshot (`ResetForRestart`, see "Restart interaction" above). Used for anything
+  that must always reflect the true current number: `EnergyDisplay`'s text,
+  `SlotColumn.RefreshRerollInteractable`.
 - **`OnEnergySpent()`** fires *only* from `TrySpendReroll()` — the player actually spending energy
-  on a reroll. `EnergyDisplay.energyChangeFeedback` (the HUD shake/scale punch) subscribes to this
-  one, not `OnEnergyChanged`.
+  on a reroll — and **`OnEnergyGained()`** *only* from `GrantTripleEnergy()` — the player earning
+  energy from a triple (see "Triple income" below). `EnergyDisplay.energyChangeFeedback` (the HUD
+  shake/scale punch) subscribes to both, never to `OnEnergyChanged`.
 
 Before this split, `EnergyDisplay` played its feedback on every `OnEnergyChanged` fire, including
 campaign-driven ones — caught live: loading a new encounter (`ApplyCampaignEnergy`) immediately
@@ -155,7 +176,7 @@ encounter transition since only one real reroll spend happens at a time.
 - `EnergyController.Start()` subscribes to `RollStateManager.Instance.OnRollFinished` — this relies
   on `RollStateManager.Awake()` having already run (Unity runs every `Awake()` in the scene before
   any `Start()`), not on GameObject/component ordering. Both singletons happen to live on the same
-  `Global/GameManager` GameObject today, but the dependency is on Unity's Awake/Start phasing, not
+  `_Global/_GameManager` GameObject today, but the dependency is on Unity's Awake/Start phasing, not
   co-location.
 - The reroll-button interactable state (`SlotColumn.RefreshRerollInteractable`) also listens to
   `OnEnergyChanged`, not just `OnRerollCostChanged` — spending energy can make the *next* reroll

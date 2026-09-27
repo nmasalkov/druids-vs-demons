@@ -23,7 +23,7 @@ loadout source — not solved here.
 ## Two managers, split by concern
 
 Two cooperating singletons, both cross-scene-persistent (`DontDestroyOnLoad` + duplicate-guard),
-both placed as components on `_Prefabs/Campaign/CampaignProgress.prefab` (instanced as a root
+both placed as components on `_Prefabs/_Campaign/CampaignProgress.prefab` (instanced as a root
 GameObject in both `BattleScene.unity` and `MapScene.unity`, so either can be the session's
 first-loaded scene):
 
@@ -44,52 +44,52 @@ to replace a whole `RunState`.
 
 ## Key files
 
-- `Global/Campaign/RunState.cs` — the save data: a plain `[Serializable]` C# class (not a
+- `_Global/_Campaign/RunState.cs` — the save data: a plain `[Serializable]` C# class (not a
   `ScriptableObject` — see Gotchas), not saved directly, held by `CampaignStateManager`.
-- `Global/Campaign/Save/ISaveStorage.cs`/`PlayerPrefsSaveStorage.cs`/`SaveStorage.cs` — the storage
+- `_Global/_Campaign/_Save/ISaveStorage.cs`/`PlayerPrefsSaveStorage.cs`/`SaveStorage.cs` — the storage
   abstraction `RunState` is persisted through. See "Save system" below.
-- `Global/Campaign/GameCatalog.cs` — SO listing every `CreatureSO`/`NukeSO`/`SpellSO` asset in the
+- `_Global/_Campaign/GameCatalog.cs` — SO listing every `CreatureSO`/`NukeSO`/`SpellSO` asset in the
   game; resolves `RunState`'s loadout id strings back to actual assets at battle start.
-- `Global/Campaign/CampaignStateManager.cs` (+ `CampaignStateManager.Debug.cs`) — cross-scene
+- `_Global/_Campaign/CampaignStateManager.cs` (+ `CampaignStateManager.Debug.cs`) — cross-scene
   persistent singleton; `CurrentRun` is the actual owned `RunState`, loaded once in `Awake()`.
   Applies it to `G` and `EnergyController` whenever `BattleScene` is entered (boot-time, or via a
   `SceneManager.sceneLoaded` subscription for every later load — see "Load → resolve → apply flow"
   below). `Catalog` (public `GameCatalog` accessor, mirrors `RewardList`) lets an encounter backend
   outside this file (e.g. `LoadoutPickEncounter`, see `docs/Encounters.md`) resolve loadout ids
   without a second, independently-wired `GameCatalog` reference (rule 22).
-- `Global/Campaign/CampaignManager.cs` (+ `CampaignManager.Debug.cs`) — cross-scene persistent
+- `_Global/_Campaign/CampaignManager.cs` (+ `CampaignManager.Debug.cs`) — cross-scene persistent
   singleton; encounter navigation only, reads/mutates `RunState` through
   `CampaignStateManager.Instance.CurrentRun`. See `docs/Encounters.md`.
-- `Global/Campaign/CampaignDebugTool.cs` + `Global/Campaign/Editor/CampaignDebugToolEditor.cs` —
-  Editor-only override tool, mirrors `Global/Balance/BalanceTool.cs`'s pattern. Check a box, drag in
+- `_Global/_Campaign/CampaignDebugTool.cs` + `_Global/_Campaign/Editor/CampaignDebugToolEditor.cs` —
+  Editor-only override tool, mirrors `_Global/_Balance/BalanceTool.cs`'s pattern. Check a box, drag in
   a creature/nuke/spell asset (or set a number), press Play. Cross-scene-persistent
   (`DontDestroyOnLoad` + duplicate-guard, like `CampaignStateManager`/`CampaignManager` — see
   `docs/Encounters.md`), reads/writes `CampaignStateManager.Instance.CurrentRun` directly, no
   `CampaignManager` dependency.
-- `ScriptableObjects/ActionSO.cs` — gained a `public string id` field: the stable identifier
+- `_ScriptableObjects/ActionSO.cs` — gained a `public string id` field: the stable identifier
   `GameCatalog` looks assets up by (separate from `actionName`, which is just a display string).
-- `ScriptableObjects/CreaturesSO.cs`/`NukesSO.cs`/`SpellsSO.cs` (renamed from `Default*SO` — the
+- `_ScriptableObjects/CreaturesSO.cs`/`NukesSO.cs`/`SpellsSO.cs` (renamed from `Default*SO` — the
   asset instances on disk keep their original `Default*.asset` file names since those specific
   instances genuinely are the fallback defaults) — reused both as `G`'s hardcoded fallback and as the
   shape `CampaignStateManager` builds a runtime instance into.
-- `Global/G.cs` — gained the static `ApplyCampaignLoadout(CreaturesSO, NukesSO, SpellsSO)`, called
+- `_Global/G.cs` — gained the static `ApplyCampaignLoadout(CreaturesSO, NukesSO, SpellsSO)`, called
   by `CampaignStateManager` whenever `BattleScene` is entered with a run active. Full detail:
   [`docs/G.md`](G.md).
-- `Global/GameManager/EnergyController.cs` — gained `ApplyCampaignEnergy()`, called from
+- `_Global/_GameManager/EnergyController.cs` — gained `ApplyCampaignEnergy()`, called from
   `CampaignStateManager.ApplyEncounterToScene()` (initial load and every encounter transition). No
   local baseline — `CurrentEnergy` is a read-through onto `RunState.currentEnergy`, its one source of
   truth; see `docs/Energy.md` and Gotchas.
-- `Units/Hero.cs` — `GetMaxHealth()` reads `CampaignStateManager.Instance.CurrentMaxHp` for the
+- `_Units/Hero.cs` — `GetMaxHealth()` reads `CampaignStateManager.Instance.CurrentMaxHp` for the
   player's `Hero` only (`RunState.maxHp` plus claimed `HpBoostRewardSO` bonuses — see
   `docs/Rewards.md`).
-- `Global/Campaign/CampaignProfileSO.cs` — Editor-authorable snapshot of a whole `RunState` (SO
+- `_Global/_Campaign/CampaignProfileSO.cs` — Editor-authorable snapshot of a whole `RunState` (SO
   references instead of ids), pluggable into `CampaignDebugTool`'s "Use Debug Profile" slot. See
   below and CLAUDE.md rule 21.
-- `Global/Campaign/Rewards/*.cs`, `Global/Campaign/RewardListSO.cs`, `Global/Campaign/
+- `_Global/_Campaign/_Rewards/*.cs`, `_Global/_Campaign/RewardListSO.cs`, `_Global/_Campaign/
   RewardBonuses.cs` — the reward-card pick system built on top of this data layer. See
   `docs/Rewards.md`.
-- `Global/Campaign/RunStateMonitor.cs` — debug-only, lives as a child GameObject under
-  `_Prefabs/Campaign/CampaignProgress.prefab`. While enabled, re-serializes the *entire* live
+- `_Global/_Campaign/RunStateMonitor.cs` — debug-only, lives as a child GameObject under
+  `_Prefabs/_Campaign/CampaignProgress.prefab`. While enabled, re-serializes the *entire* live
   `RunState` (via `JsonUtility.ToJson(..., true)`) into an Inspector-visible string every frame —
   no hand-picked field list to keep in sync as `RunState` grows, no resolve button. Disabled by
   default (a disabled `MonoBehaviour` never gets `Update()` called, so there's no per-frame cost
@@ -188,7 +188,7 @@ save.
 Single-slot automatic save: created on first launch, updated at well-defined points, never via
 manual Save/Load buttons.
 
-- **Storage abstraction** (`Global/Campaign/Save/`): `ISaveStorage` (`Exists()`/`Read()`/
+- **Storage abstraction** (`_Global/_Campaign/_Save/`): `ISaveStorage` (`Exists()`/`Read()`/
   `Write(string)`/`Delete()`, single-slot — no key/slot parameter) is the only thing `RunState`/
   `CampaignStateManager` know about; neither touches `PlayerPrefs` directly anymore.
   `PlayerPrefsSaveStorage` is the default implementation (same `"DvD_RunState"` key
@@ -356,7 +356,7 @@ hand or replaying up to that point again.
   warning rather than throwing — the same "don't crash on stale save data" posture
   `GameCatalog.Find*`'s own callers already take (see Gotchas below).
 - **Destination**: `EditorUtility.SaveFilePanelInProject` defaults to
-  `Assets/Game/_ScriptableObjects/Campaign/Profiles` (created if missing) with a default filename
+  `Assets/Game/_ScriptableObjects/_Campaign/_Profiles` (created if missing) with a default filename
   of `RunState_Encounter<N+1>`; picking a location writes the asset via `AssetDatabase.CreateAsset`
   and selects/pings it. Cancelling the dialog discards the in-memory profile instance instead of
   leaving an orphaned unsaved object around.
@@ -425,7 +425,7 @@ hand or replaying up to that point again.
 - **Both `CampaignStateManager` and `CampaignManager` are `DontDestroyOnLoad`, on the same
   `CampaignProgress` prefab instance.** Unlike most other battle-scoped singletons (`G`/`GameManager`/
   `EnergyController`/`RollStateManager`, see `docs/GameLoop.md`), which live on the per-scene
-  `Global/GameManager` GameObject and are recreated fresh on every `BattleScene` load, these two need
+  `_Global/_GameManager` GameObject and are recreated fresh on every `BattleScene` load, these two need
   to survive scene reloads: `CampaignManager` owns navigation state that must persist across a
   `BattleScene ↔ MapScene` transition, and `CampaignStateManager` owns `RunState` itself, which a
   `MapScene`-hosted reward/loadout pick screen needs to read/write too. `CampaignStateManager`
@@ -448,7 +448,7 @@ hand or replaying up to that point again.
 ## Related docs
 
 - `docs/G.md` — `G`'s full accessor list and the static `ApplyCampaignLoadout` this system calls.
-- `docs/GameLoop.md` — `Global/GameManager` GameObject convention most other battle-scoped
+- `docs/GameLoop.md` — `_Global/_GameManager` GameObject convention most other battle-scoped
   singletons follow (unlike `CampaignStateManager`/`CampaignManager` — see Gotchas); the
   `OnBattleRestart` event this system's fields interact with (`EnergyController.ResetForRestart`,
   `Hero.InitHealth`).

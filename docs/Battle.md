@@ -6,20 +6,23 @@ side's turn (after round 1).
 
 ## Key files
 
-- `Assets/Game/_Scripts/Units/Targetable.cs` — base class for anything attackable.
-- `Assets/Game/_Scripts/Units/Unit.cs` — abstract layer adding animator + statuses (Hero/Creature).
-- `Assets/Game/_Scripts/Units/Health.cs` — damage/heal/death component, one per Targetable.
-- `Assets/Game/_Scripts/Units/Shield.cs` — the Shield-spell construct (Targetable, not a Unit).
-- `Assets/Game/_Scripts/Units/Hero.cs`, `Assets/Game/_Scripts/Units/Creature.cs` — the two `Unit`s.
-- `Assets/Game/_Scripts/Units/StatusesManager.cs` — per-unit status flags (shocked, charmed, BattleCry).
-- `Assets/Game/_Scripts/ScriptableObjects/Modifiers/SpecialDamageModifierSO.cs` +
+- `Assets/Game/_Scripts/_Units/Targetable.cs` — base class for anything attackable.
+- `Assets/Game/_Scripts/_Units/Unit.cs` — abstract layer adding animator + statuses (Hero/Creature).
+- `Assets/Game/_Scripts/_Units/Health.cs` — damage/heal/death component, one per Targetable.
+- `Assets/Game/_Scripts/_Units/Shield.cs` — the Shield-spell construct (Targetable, not a Unit).
+- `Assets/Game/_Scripts/_Units/Hero.cs`, `Assets/Game/_Scripts/_Units/Creature.cs` — the two `Unit`s.
+- `Assets/Game/_Scripts/_Units/StatusesManager.cs` — per-unit status flags (shocked, charmed, BattleCry).
+- `Assets/Game/_Scripts/_Units/HitFeedback.cs` + `Assets/Game/_Prefabs/_Feedbacks/HitFeedback.prefab` —
+  every Targetable's hit anchor and target-side hit feedbacks (per-hit Unity Events feedback, e.g.
+  the boss's Hurt; crit camera shake) — see "Hit feedbacks" below.
+- `Assets/Game/_Scripts/_ScriptableObjects/_Modifiers/SpecialDamageModifierSO.cs` +
   `DamageContext.cs` + `ShieldBreakerModifierSO.cs` — per-creature custom damage rules (below).
-- `Assets/Game/_Scripts/Global/GameManager/BattleState.cs` — the `GameState` that runs one battle.
-- `Assets/Game/_Scripts/Global/GameManager/AttacksResolver.cs` + `AttacksResolver.Mechanics.cs` —
+- `Assets/Game/_Scripts/_Global/_GameManager/BattleState.cs` — the `GameState` that runs one battle.
+- `Assets/Game/_Scripts/_Global/_GameManager/AttacksResolver.cs` + `AttacksResolver.Mechanics.cs` —
   pure-data attack planner (partial class split: public API / internal mechanics).
-- `Assets/Game/_Scripts/PlayerView/CreaturesManager.cs` — owns a side's creature slots.
-- `Assets/Game/_Scripts/PlayerView/HeroView.cs` — owns a side's Hero + Shield slot.
-- `Assets/Game/_Scripts/PlayerView/UnitSlot.cs` — a placement slot; `Unit` (a `Targetable` ref) and
+- `Assets/Game/_Scripts/_PlayerView/CreaturesManager.cs` — owns a side's creature slots.
+- `Assets/Game/_Scripts/_PlayerView/HeroView.cs` — owns a side's Hero + Shield slot.
+- `Assets/Game/_Scripts/_PlayerView/UnitSlot.cs` — a placement slot; `Unit` (a `Targetable` ref) and
   `Creature` (typed convenience cast) are the same backing field.
 
 ## Class hierarchy
@@ -27,7 +30,7 @@ side's turn (after round 1).
 ```
 Targetable (MonoBehaviour, [RequireComponent(Health)])
 ├── Unit (abstract, [RequireComponent(StatusesManager)], adds Animator + StatusesManager)
-│   ├── Hero      ([RequireComponent(HeroAnimator)])
+│   ├── Hero      ([RequireComponent(HeroAnimator)] — BossAnimator subclass for Animator-driven avatars, docs/AnimationAPI.md)
 │   └── Creature  ([RequireComponent(CreatureAnimator, Experience)])
 └── Shield (Targetable directly — no Animator, no StatusesManager, no Experience)
 ```
@@ -114,6 +117,15 @@ protected override void HandleDeath()
   transition into death, and `AttacksResolver.Resolve()`'s simulated-HP tracking already prevents a
   single `Resolve()` call from hitting an already-dead-in-simulation target again — so this can't
   double-fire within one battle resolution.
+- **Skipped for a scripted board wipe.** `Creature.KillWithoutOwnerSplash()` sets a flag that
+  `HandleDeath()` checks before dealing the splash; `CreaturesManager.KillAll()` kills a whole side
+  through it. Death animations and feedbacks play exactly as normal — only the splash is skipped,
+  because this rule models a creature lost *in combat*, not one removed by a cutscene. The one user
+  today is the boss phase transition (`docs/GameLoop.md`), where charging it would be actively harmful:
+  the enemy hero is already dead, so its creatures' splash would re-fire `Hero.OnHeroDied` mid-swap,
+  and the player would otherwise take ~60% of their board's max HP for something they didn't do —
+  enough to die inside the transition. Contrast `CreaturesManager.ResetAll()`, which destroys instantly
+  with no death at all and remains the battle-restart path.
 
 ## Shield mechanics
 
@@ -150,8 +162,9 @@ estimation** trio, in its own section at the bottom of the file:
 
 - `public static float EstimateFirepower(bool isPlayerSide)` — pre-battle total-damage-output
   estimate, mirroring `ResolveTeam`'s exact per-attacker formula below (`stats.damage *
-  AttackDamageMultiplier`, `numberOfAttacks` hits, shocked creatures contribute 0) without the
-  target/simulated-HP bookkeeping, since it's a total-output estimate rather than a resolved plan.
+  AttackDamageMultiplier * ExpectedCritMultiplier`, `numberOfAttacks` hits, shocked creatures
+  contribute 0) without the target/simulated-HP bookkeeping, since it's a total-output estimate
+  rather than a resolved plan. Crits count at their average value — see "Critical strike" below.
 - `public static float EstimateEffectiveFirepower(bool isPlayerSide)` — the above **minus the
   opposing barrier**: the HP of the `Shield` in the *other* side's `HeroView.ShieldSlot`, i.e. the
   one standing in this side's way. Floored at 0 via `Mathf.Max` — "can't get through the barrier at
@@ -163,10 +176,28 @@ estimation** trio, in its own section at the bottom of the file:
   the given side leads on effective firepower; positive means that side is falling behind.
 
 This was previously an `AttacksResolver.Debug.cs` (rule 20) file, marked debug-only. It isn't
-anymore: `OpponentFirepowerAdvantage` is a real gameplay input, read every turn by
-`SlotMachineRigger` to evaluate `FightSO`'s Comeback Settings (see `docs/SlotMachine.md`).
-`BalanceTool`'s "compared firepower" HUD toggle reads `EstimateEffectiveFirepower` too, so the HUD
-and the rigging can never disagree.
+anymore: `OpponentFirepowerAdvantage` is a real gameplay input with **two** consumers, both reading it
+every turn —
+
+- `SlotMachineRigger` evaluates `FightSO`'s Comeback Settings against it (see `docs/SlotMachine.md`).
+- `RerollBudgetDecision` discounts the enemy hero's current HP by the player's lead, so an out-gunned
+  AI spends its reroll pool as freely as a damaged one (see `docs/AI.md`, exposed to `_AI` code as
+  `AIController.PlayerFirepowerLead`).
+
+Both read it live off the same board state at the start of the acting side's turn, so the two can
+never disagree about who's ahead. `BalanceTool`'s "compared firepower" HUD toggle reads
+`EstimateEffectiveFirepower` too, so the HUD matches what both systems act on.
+
+**The HUD's readout is self-disabling, and deliberately so.** `BalanceTool.DrawFirepowers()` runs every
+frame while `Show Firepowers` is checked, which makes it the one place a scene-setup bug behind this
+estimate (an unwired `HeroView` on `G`, a missing `CreaturesManager`) gets re-reported ~60 times a
+second. Rules 1 and 5 say that null must still throw and be seen — so the first failure is logged in
+full, with its real stack trace, and then the readout unchecks `ShowFirepowers` on itself and prints a
+follow-up line saying so. The bug stays impossible to miss; it just can't evict every other message
+from the console first. This was caught live: one unwired reference filled the entire Unity log buffer
+with 41 identical `NullReferenceException`s from this single line and nothing else survived in it.
+Re-check the toggle after fixing the reference. The guard is confined to this debug HUD — nothing in
+gameplay catches around a firepower read.
 
 1. **`Resolve(playerCreatures, enemyCreatures, playerHero, enemyHero, playerShield, enemyShield)`**:
    builds a simulated-HP dictionary per side (`BuildSimulatedHP` — snapshots current HP for every
@@ -185,7 +216,9 @@ and the rigging can never disagree.
    the attacker skips its turn too. Each attacker fires `stats.numberOfAttacks` hits, re-picking a
    target each hit against the live simulated HP (so multi-hit archers can finish off a target and
    move to the next). Once each hit's target is known, `ApplySpecialModifiers` runs the attacker's
-   own `CreatureSO.specialDamageModifiers` over that value — see "Special damage modifiers" below.
+   own `CreatureSO.specialDamageModifiers` over that value — see "Special damage modifiers" below —
+   and then, always last, the hit rolls for a critical strike (`AttackAssignment.IsCritical`) — see
+   "Critical strike" below.
 4. **XP registration** (`RegisterExperienceRewards`, called inside `Resolve` — i.e. XP is registered
    before any animation plays): Shield targets never grant XP. Hero hits grant `damage * 10` XP per
    shot regardless of death. Creature targets grant `CreatureSO.GetExperienceReward(level)` XP once
@@ -198,8 +231,16 @@ and the rigging can never disagree.
    attack is scheduled to start once A's `arriveTime` (`GetRangedDelay() + GetRunDuration()`) elapses.
    Remaining tanks sharing the same target are **chained** (`ExecuteTankChain`) so they take turns
    instead of piling onto one melee position simultaneously — each waits for the previous tank's
-   `OnLeapBackStarted` event. All non-tank attackers (ranged) fire simultaneously from their slots.
-   Each `HitInfo.OnHit` callback is what actually calls `target.Health.TakeDamage(damage)` and —if
+   `OnLeapBackStarted` event. **Shield before hero**: chains on a `Shield` start first, and a chain
+   whose target is the hero *behind* that shield (`_guardingShields`, filled in `Resolve()`) has its
+   head wait on the shield chain's last tank's `OnLeapBackStarted` (`FindShieldBreakerChain`) — so
+   when one tank breaks a weak shield and a second tank goes for the hero, the second visibly waits for
+   the break instead of running through the still-standing shield. A tank can only be assigned the
+   hero while its shield is up if that shield is doomed earlier in the same resolve, so any tank chain
+   on it is the breaker. Ranged breakers (a mage/archer breaking the shield) don't hold a tank back.
+   All non-tank attackers (ranged) fire simultaneously from their slots.
+   Each `HitInfo.OnHit` callback is what actually calls `target.Health.TakeDamage(damage)`, then
+   `target.HitFeedback.PlayHitFeedbacks(isCritical)` (see "Hit feedbacks" below) and —if
    `shouldSpawnGem`— `ExperienceManager.Instance.SpawnGem(...)`, i.e. real damage/XP only lands when
    the animation's hit callback fires, not when `Resolve()` planned it.
 
@@ -207,7 +248,7 @@ and the rigging can never disagree.
 
 A per-creature hook for custom damage rules ("this creature hits shields harder", "…deals less to
 tanks", …) that would otherwise have to be special-cased inside `AttacksResolver`. Three files, all
-under `Assets/Game/_Scripts/ScriptableObjects/Modifiers/`:
+under `Assets/Game/_Scripts/_ScriptableObjects/_Modifiers/`:
 
 - **`SpecialDamageModifierSO`** — abstract `ScriptableObject` with one method,
   `float ModifyDamage(in DamageContext context, float damage)`. The logic lives on the SO itself,
@@ -221,7 +262,7 @@ under `Assets/Game/_Scripts/ScriptableObjects/Modifiers/`:
   (`OrkMage`/`OrkTank`/`Kodo`), matching their shield-breaking `OrkBreaker` hero avatar.
 
 `CreatureSO.specialDamageModifiers` is a plain `SpecialDamageModifierSO[]`, empty for most creatures.
-Assets live in `Assets/Game/_ScriptableObjects/Modifiers/`.
+Assets live in `Assets/Game/_ScriptableObjects/_Modifiers/`.
 
 **Where it runs.** `AttacksResolver.ApplySpecialModifiers` (`AttacksResolver.Mechanics.cs`), called
 from `ResolveTeam` **inside the per-hit loop**, after the BattleCry multiplier and after the target
@@ -250,13 +291,15 @@ Three things about that placement are load-bearing:
 
 **Chained, multiplicative stacking.** Each modifier takes the running value and returns the next, in
 array order, so several compound. The bonus multiplies the already-BattleCry-adjusted damage: Kodo at
-level 1 (3 dmg) under a ×2 BattleCry buff hits a shield for `3 × 2 × 1.5 = 9`.
+level 1 (3 dmg) under a ×2 BattleCry buff hits a shield for `3 × 2 × 1.5 = 9`. A critical strike, if
+rolled, multiplies after the whole chain — see "Critical strike" below.
 
 **Not persisted, so no `id` and no catalog entry** — unlike `ActionSO`/`RewardSO` (rule 23), these are
 referenced directly from `CreatureSO` assets as real Unity asset references, never stored in
 `RunState`, so they never make a `JsonUtility` round-trip.
 
-**`EstimateFirepower` deliberately excludes them** (`AttacksResolver.Mechanics.cs`). It's a pre-battle
+**`EstimateFirepower` deliberately excludes them** (`AttacksResolver.Mechanics.cs`) — unlike crits,
+which it includes at their expected value. It's a pre-battle
 total-output estimate with no targets picked yet, so a target-dependent modifier structurally can't
 apply — a shield-breaking roster reads its plain firepower in BalanceTool's HUD and then hits harder
 than the HUD says once a Shield is actually up. Worth knowing that this understatement now also
@@ -266,8 +309,87 @@ than its real threat, so it earns its opponent slightly less comeback assistance
 
 **Adding a new rule:** subclass `SpecialDamageModifierSO`, implement `ModifyDamage`, add a
 `[CreateAssetMenu(... menuName = "Game/Modifiers/…")]`, create the asset under
-`_ScriptableObjects/Modifiers/`, and drop it into the relevant creatures' `specialDamageModifiers`.
+`_ScriptableObjects/_Modifiers/`, and drop it into the relevant creatures' `specialDamageModifiers`.
 `AttacksResolver` never changes.
+
+## Critical strike
+
+Every creature can crit. Two plain fields on `CreatureSO` (not a `SpecialDamageModifierSO` — every
+creature has them, and they must always run last, which an array-ordered modifier can't guarantee):
+
+- `critChancePercent` (`[Range(0,100)]` int) — chance each individual hit is a crit.
+- `critDamageBonusPercent` (`[Min(0)]` int) — extra damage on a crit: `50` = ×1.5, `100` = ×2.
+  Exposed as `CreatureSO.CritDamageMultiplier` (`1 + bonus/100`).
+
+Both default to 0, so a creature without authored values never crits. Currently only the ghost
+roster (`GhostArcher`/`GhostTank`/`GhostMage`) has crits: 20% for +50%.
+
+**Where it runs.** `ResolveTeam`, inside the per-hit loop, right after `ApplySpecialModifiers`:
+
+```csharp
+float modifiedDamage = ApplySpecialModifiers(attacker, target, buffedDamage);
+bool isCritical = RollsCritical(attacker.Data);
+float dmgPerHit = isCritical ? modifiedDamage * attacker.Data.CritDamageMultiplier : modifiedDamage;
+```
+
+- **Always the last multiplier** — on top of BattleCry and every special modifier. A 3-damage hit
+  under a ×2 BattleCry, from a ShieldBreaker (×1.5) creature with +50% crit, against a shield, crits
+  for `3 × 2 × 1.5 × 1.5 = 13.5`.
+- **Rolled per hit** — a multi-hit archer can crit some hits and not others.
+- **Rolled inside `Resolve()`**, so the result is baked into `AttackAssignment.Damage`/`IsCritical`
+  and the animated and instant paths land identical damage (rule 7), same as special modifiers.
+- `RollsCritical` returns `false` without touching `UnityEngine.Random` when the chance is 0, so the
+  mechanic doesn't shift any other system's RNG sequence for the (majority) crit-less creatures.
+  Otherwise it uses `AIController.RollForProbability`.
+- XP for hero hits (`damage * 10`) scales with crit damage automatically.
+
+**Firepower estimate includes crits at their expected value** —
+`CreatureSO.ExpectedCritMultiplier` (`1 + chance × bonus`, e.g. 1.1 for 20% × +50%). Unlike special
+modifiers, crits don't depend on the target, so the average is knowable up front without rolling.
+This keeps `OpponentFirepowerAdvantage` (the comeback-rigging input, `docs/SlotMachine.md`) and
+BalanceTool's HUD honest about a crit roster's real threat.
+
+## Hit feedbacks
+
+Every `Targetable` — the 13 unit prefabs (via `ParentUnit.prefab`), the 7 hero avatars (via
+`Player.prefab`), and `Shield.prefab`/`ShieldRed` — carries exactly one nested instance of
+`_Prefabs/_Feedbacks/HitFeedback.prefab`, cached by `Targetable.Awake()` via
+`GetComponentInChildren<HitFeedback>()` (rule 14). It has two jobs:
+
+- **`HitPlacePosition`** (`HitPlaceAcnhor` child) — where projectiles and nuke effects land. Each unit
+  type tunes it with a position override on its type parent (`CatapultParentGreen` (0.24, 1.12),
+  `DragonParentGreen` (0.89, 1.47), `_GolemParentGreen` (0.603, 1.198), the Big variants the same;
+  `Player` (-0.28, 2.21); shields (0, 0)).
+- **`PlayHitFeedbacks(bool isCritical)`** — called right after damage lands, animated path only:
+  from `BuildHitInfos`'s `OnHit` right after `TakeDamage` for creature attacks
+  (`ApplyAttacksInstant` plays nothing), and from the projectile impact callback of the **damaging**
+  nuke animations (`StarfallAnimation`, `FireMagicAnimation`) right after `shot.Apply()`, with
+  `isCritical = false` (`NukeResolver.ApplyInstant` plays nothing). `ShockAnimation` deliberately
+  doesn't call it — Shock deals no damage, heroes are immune to it, and a standing `Shield` blocks it
+  outright (`docs/ActionsAndSpells.md` §2c), so a hit reaction would be false feedback. The nuke call is guarded by `shot.Target != null`, same as
+  `NukeShot.ApplyDamage`: the target can be destroyed while the projectile is still flying.
+  - Every hit plays `hitFeedback`, the `MMF_Player` on the prefab **root**, holding one
+    `MMF_Events` ("Hit Events", Feel's Events/Unity Events feedback). Its `PlayEvents` is empty in
+    the base prefab, so for most targets it does nothing. A prefab that wants a reaction overrides
+    that UnityEvent: `FinalBoss.prefab` wires it to `BossAnimator.PlayHurt`, which plays the boss's
+    Hurt animation (see `docs/AnimationAPI.md`). A future per-unit hit reaction (flash, sound,
+    another animation) is the same one-override change, no code.
+  - A crit additionally plays `critFeedback`, the `MMF_Player` on the `CritFeedback` child, whose
+    single `MMF_CameraShake` (0.2s, 0.15 x/y amplitude, 40 Hz) shakes the screen.
+
+**Camera shake goes through Feel's camera rig, never the camera directly.** A feedback living inside
+a prefab can't reference the scene camera, so `MMF_CameraShake` broadcasts an `MMCameraShakeEvent`
+(channel 0) and the `MMCameraShaker` (+ `MMWiggle`) on `BattleScene`'s `CameraRig/CameraShaker`
+consumes it by wiggling its own local position, with `Main Camera` nested underneath. Wiggling a rig
+child, not the camera itself, is Feel's documented setup — an earlier attempt at shaking the camera
+directly didn't look right. Any future screen-shake feedback should just add another
+`MMF_CameraShake`; no new wiring needed.
+
+**Shields needed the prefab too, not just units/avatars**: creature attacks hit shields, and
+`PlayHitFeedbacks(true)` on a shield with no `critFeedback` wired would throw (rule 1 forbids a
+defensive null-check). `Shield.prefab`'s own root-level `HitFeedback` component was removed in
+favour of the nested prefab; its anchor used to be `ShieldVisual` at (0, 0), which the nested
+anchor's default matches.
 
 ## StatusesManager
 
@@ -299,7 +421,7 @@ script that creates entities or holds battle-scoped state subscribes to the stat
   spirit: an instant reset path shouldn't wait on animation).
 - **`CreaturesManager.Start()`** subscribes `GameManager.OnBattleRestart += ResetAll;` — destroys every
   creature in every native + charm slot instantly, no death animation (`Assets/Game/_Scripts/
-  PlayerView/CreaturesManager.cs`).
+  _PlayerView/CreaturesManager.cs`).
 
 If you add new Battle-owned state (e.g. a new per-unit buff, a new construct like Shield, a new
 manager holding live references to units), **wire it into `OnBattleRestart` the same way** — see the

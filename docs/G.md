@@ -2,14 +2,14 @@
 
 ## What this system does
 
-`G` (`Assets/Game/_Scripts/Global/G.cs`) is a scene singleton that most gameplay code goes through to
+`G` (`Assets/Game/_Scripts/_Global/G.cs`) is a scene singleton that most gameplay code goes through to
 reach the two sides' `HeroView`/`CreaturesManager`/`Hero` and the shared creature/nuke/spell pool,
 instead of holding direct references to those objects. It's the standard "reach other systems through
 here" entry point for this codebase.
 
 ## Key file
 
-- `Global/G.cs` — the whole system is one file: a `MonoBehaviour` singleton (`Instance` set in
+- `_Global/G.cs` — the whole system is one file: a `MonoBehaviour` singleton (`Instance` set in
   `Awake()`), a handful of `[SerializeField]` Inspector-wired references, and static properties/
   methods wrapping them.
 

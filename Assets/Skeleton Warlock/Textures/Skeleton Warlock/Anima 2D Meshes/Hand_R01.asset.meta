@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 9c148030f5a7449b89a4487ad09821eb
+timeCreated: 1561489568
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 122856
+  packageName: Skeleton Warlock
+  packageVersion: 1.2
+  assetPath: Assets/Skeleton Warlock/Textures/Skeleton Warlock/Anima 2D Meshes/Hand_R01.asset
+  uploadId: 327764

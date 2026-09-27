@@ -12,7 +12,7 @@ specifically to skip all of that.
 
 ## Use BalanceTool, not the live UI
 
-`Global/BalanceTool` in `BattleScene` (`Assets/Game/_Scripts/Global/Balance/BalanceTool.cs` +
+`Global/BalanceTool` in `BattleScene` (`Assets/Game/_Scripts/_Global/_Balance/BalanceTool.cs` +
 `Editor/BalanceToolEditor.cs`) exposes plain public methods that its custom Inspector draws as buttons:
 `SpawnPlayerMage`/`SpawnPlayerArcher`/`SpawnPlayerTank`, the matching `SpawnEnemy*` trio, `PlayBattle`,
 `PlayNukeAction`, `PlaySpellAction`. Call them directly via `execute_script` — that's exactly what

@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10f79816516741e1932bb7af24ebaa19, type: 3}
+  m_Name: DarkTank
+  m_EditorClassIdentifier: 
+  id: darkTank
+  actionName: Obsidian Warden
+  description: A slab of living obsidian bristling with axes, anchoring the Warlock's
+    front line.
+  cardSprite: {fileID: 4976837278099494308, guid: a00e6932d256c024384785bf9c64bdb9, type: 3}
+  creaturePrefab: {fileID: 4505710810714619312, guid: bd66180c545860941829b419b567aa76, type: 3}
+  levelStats:
+  - damage: 5
+    health: 41
+    numberOfAttacks: 1
+  - damage: 7
+    health: 53
+    numberOfAttacks: 1
+  - damage: 10
+    health: 64
+    numberOfAttacks: 1
+  - damage: 12
+    health: 76
+    numberOfAttacks: 1
+  specialDamageModifiers: []
+  critChancePercent: 20
+  critDamageBonusPercent: 50
+  experienceReward: 1e0000003c00000078000000f0000000
+  xpThresholds: 00000000780000004001000058020000
+  healAmounts:
+  - 3
+  - 7
+  - 10
+  - 24

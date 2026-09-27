@@ -10,6 +10,12 @@
       },
       "hash": "620446adff3fa0b064fdea90ee35100370006146"
     },
+    "com.febucci.text-animator-unity": {
+      "version": "file:com.febucci.text-animator-unity",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.unity.2d.animation": {
       "version": "10.2.0",
       "depth": 0,

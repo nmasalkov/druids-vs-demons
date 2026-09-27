@@ -6,7 +6,7 @@ Drives the enemy's turn: whether to summon creatures or cast a nuke/spell, which
 go for, and whether/how much to reroll — all computed from weights on the current fight's
 `FightSO.enemyData`, with a "stupidity"/"critical failure" mechanism that lets the AI occasionally
 miss its own best move. Everything is broken into small, single-purpose **decision classes**
-(`Assets/Game/_Scripts/AI/Decisions/`), one command-pattern-style class per choice, each just
+(`Assets/Game/_Scripts/_AI/_Decisions/`), one command-pattern-style class per choice, each just
 `new SomeDecision().Decide()`. Per-action scoring for nukes/spells is similarly modular — linked
 directly to each action's own `ScriptableObject` via `CreateAIScorer()`, so a new nuke/spell plugs
 into the AI automatically (see "How to add AI scoring to a new nuke/spell" below).
@@ -40,9 +40,9 @@ This system's contribution is making that future work purely additive instead of
 
 ## Key files
 
-- `Global/Campaign/FightSO.cs` — `EnemyData.stupidityChance`/`criticalFailureChance` (`[Range(0,100)]`
+- `_Global/_Campaign/FightSO.cs` — `EnemyData.stupidityChance`/`criticalFailureChance` (`[Range(0,100)]`
   ints) and `rerollsAmount` (int, the fight-wide reroll pool — see "Rerolls" below).
-- `AI/AIController.cs` — the thin static façade: `RollForProbability` (also reused by
+- `_AI/AIController.cs` — the thin static façade: `RollForProbability` (also reused by
   `SlotMachineRigger` — see `docs/SlotMachine.md` — as the underlying primitive for its dirty-triple
   chance roll), the `Decide*` methods (each just `new XyzDecision().Decide()`), and the fight-wide
   reroll pool (`RerollsRemaining`/
@@ -52,45 +52,52 @@ This system's contribution is making that future work purely additive instead of
   `docs/Energy.md`'s "Two energy events"): `OnRerollsChanged` fires on every change to the pool (a
   spend or a `ResetRerollPool()` reset), `OnRerollSpent` only on an actual spend — so UI feedback
   plays for real spending only, not for a battle-restart/initial reset.
-- `AI/AIController.StateChecks.cs` — partial class (mirrors the `SlotColumn.cs`/
+- `_AI/AIController.StateChecks.cs` — partial class (mirrors the `SlotColumn.cs`/
   `SlotColumn.Mechanics.cs` split): `PlayerHeroBelow`/`EnemyHeroBelow`/`AnyPlayerCreatureBelow`/
   `AnyEnemyCreatureBelow` (float 0..1 thresholds), `PlayerCreatureCount`/`EnemyCreatureCount`,
-  `EnemyBoardFull`, `ShockedEnemyCreatures` (the AI's own stunned native creatures). These are the
-  primitives `Decisions/` classes use directly, and that `Scoring/ActionAIScorer` wraps for its own
-  int-percent-based API.
-- `AI/AIDegrade.cs` — the one shared stupidity/critical-failure resolver every stupidity-affected
+  `EnemyBoardFull`, `ShockedEnemyCreatures` (the AI's own stunned native creatures), and
+  `PlayerFirepowerLead` (signed board-power differential, see "Rerolls" below). These are the
+  primitives `_Decisions/` classes use directly, and that `_Scoring/ActionAIScorer` wraps for its own
+  int-percent-based API. **`_AI` code reads board state only through these named accessors** — never
+  `G`/`Health`/`CreaturesManager`/`AttacksResolver` directly (the same convention `ActionAIScorer`
+  states for scorers), so a new board-state read gets a named primitive here first.
+- `_AI/AIDegrade.cs` — the one shared stupidity/critical-failure resolver every stupidity-affected
   decision goes through (see "The degrade algorithm" below).
-- `AI/RerollChoice.cs` — `readonly struct { bool ShouldReroll; int SlotIndex; ShouldRerollDecision.
+- `_AI/RerollChoice.cs` — `readonly struct { bool ShouldReroll; int SlotIndex; ShouldRerollDecision.
   RerollMode NextMode; bool GrantBonusReroll }`, the reroll decision's return type — built via
   `RerollChoice.Reroll(...)`/`RerollChoice.Finish(...)` factory methods, not a raw constructor.
   Carries the per-turn state machine's next mode and whether this call grants the one-time bonus
   reroll (see "Rerolls" below).
-- `AI/SummonChoice.cs` — `readonly struct { bool ShouldSummon; CreatureSO RepairTarget; }`, the
+- `_AI/SummonChoice.cs` — `readonly struct { bool ShouldSummon; CreatureSO RepairTarget; }`, the
   summon decision's return type — see "`SummonChoice`: threading the repair target through" below.
-- `AI/Decisions/` — one class per choice: `ShouldSummonCreaturesDecision`,
+- `_AI/_Decisions/` — one class per choice: `ShouldSummonCreaturesDecision`,
   `PreferredCreatureTypeDecision`, `PickActionDecision`, `RerollBudgetDecision`,
   `ShouldRerollDecision`.
-- `AI/Scoring/` — `ActionAIScorer` (abstract base, the readable query surface every concrete scorer
+- `_AI/_Scoring/` — `ActionAIScorer` (abstract base, the readable query surface every concrete scorer
   is built on) + `NoOpActionAIScorer` + one concrete scorer per action (`FireMagicAIScorer`,
   `ShockAIScorer`, `StarfallAIScorer`, `ShieldAIScorer`, `CharmAIScorer`, `BattleCryAIScorer`).
-- `ScriptableObjects/ActionSO.cs` — `CreateAIScorer()` (virtual, defaults to `NoOpActionAIScorer`),
+- `_ScriptableObjects/ActionSO.cs` — `CreateAIScorer()` (virtual, defaults to `NoOpActionAIScorer`),
   the SO→scorer factory every concrete nuke/spell SO overrides in one line, mirroring the existing
   `CreateResolver()` pattern (`docs/ActionsAndSpells.md`).
-- `Global/GameManager/RollState.cs` — the orchestrator (see above). Owns the AI's per-turn state
+- `_Global/_GameManager/RollState.cs` — the orchestrator (see above). Owns the AI's per-turn state
   (`_desiredAction`, `_rerollBudget`, `_rerollsUsed`, `_rerollMode`, `_bonusGranted`) as plain fields
   on the `GameState` instance —
   no restart handling needed, since a fresh `RollState` is `new`'d every `TakeTurn()` iteration and
   `GameManager.RestartBattle()` already tears down the current state before firing
   `OnBattleRestart` (`docs/GameLoop.md`).
-- `Global/GameManager/GameManager.cs` — `IsFirstRound` (public property, was a private coroutine
+- `_Global/_GameManager/GameManager.cs` — `IsFirstRound` (public property, was a private coroutine
   local before this system), read by `ShouldSummonCreaturesDecision`'s NO-STUPID first-turn rule.
-- `Global/RollStateManager/RollStateManager.cs` — `ActiveMachine` (computed property, tracks
+- `_Global/_RollStateManager/RollStateManager.cs` — `ActiveMachine` (computed property, tracks
   `GameManager.ActiveSide` live — rule 22, one source of truth) replaces the old
   `AIController.Instance.TakeControl`/`ReleaseControl` coupling entirely.
-- `Units/Health.cs` — `HealthPercent` (0..1 float) and `CurrentHealth` (raw float points).
+- `_Units/Health.cs` — `HealthPercent` (0..1 float) and `CurrentHealth` (raw float points).
   `HealthPercent` is the primitive every HP-threshold check in this system is ultimately built on;
-  `CurrentHealth` is the one exception — `RerollBudgetDecision`'s formula reads it directly (see
-  "Rerolls" below).
+  `CurrentHealth` is the one exception — `RerollBudgetDecision`'s formula reads it directly (via
+  `AIController.EnemyHeroCurrentHealth`) and discounts it by the board-power deficit (see "Rerolls"
+  below).
+- `_Global/_GameManager/AttacksResolver.Mechanics.cs` — `OpponentFirepowerAdvantage`, the board-power
+  differential behind `AIController.PlayerFirepowerLead`. Shared with `SlotMachineRigger`'s comeback
+  ladder; see `docs/Battle.md` for the estimate's exact formula and what it deliberately excludes.
 
 ## Decisions and the degrade algorithm
 
@@ -178,7 +185,7 @@ priority signal layered on top of both.
 
 ### `SummonChoice`: threading the repair target through
 
-`AI/SummonChoice.cs` — `readonly struct { bool ShouldSummon; CreatureSO RepairTarget; }`, mirroring
+`_AI/SummonChoice.cs` — `readonly struct { bool ShouldSummon; CreatureSO RepairTarget; }`, mirroring
 `RerollChoice`'s shape. `ShouldSummonCreaturesDecision` is the **only** place that picks which shocked
 creature to repair (`BestToRepair` — highest current HP); it hands that choice forward as
 `RepairTarget` rather than `PreferredCreatureTypeDecision` re-deriving it independently. `RollState`
@@ -227,10 +234,15 @@ of the AI's turns for the whole fight, and only resets when the battle restarts.
 
 **The per-turn base budget is a formula, not a fixed constant or a match-count tier.** Design
 deliberately balances each fight's `EnemyData.hp` against `rerollsAmount` at roughly a 10:1 ratio (e.g.
-100 hp / 10 rerolls), so `RerollBudgetDecision.Decide()` reads current HP against that ratio and lets
-the AI conserve its pool near full HP, spiking its per-turn budget the more it's actually been hurt:
+100 hp / 10 rerolls), so `RerollBudgetDecision.Decide()` reads that ratio against how badly the AI is
+actually doing — and lets it conserve its pool while it's fine, spiking the per-turn budget the more
+it's losing. **"How badly it's doing" is two things, not one: HP already lost AND board power it's
+behind on.**
 
 ```csharp
+private const float HealthPerReroll = 10f;
+private const float HealthPerFirepowerPoint = 1f;
+
 public int Decide()
 {
     int pool = AIController.RerollsRemaining;
@@ -238,13 +250,52 @@ public int Decide()
     return Mathf.Min(desiredBudget, pool); // "at least 1" must never exceed what's left in the pool
 }
 
-private static int HealthReserve() => Mathf.FloorToInt(AIController.EnemyHeroCurrentHealth / 10f);
+private static int HealthReserve() => Mathf.FloorToInt(EffectiveHealth() / HealthPerReroll);
+
+private static float EffectiveHealth() => AIController.EnemyHeroCurrentHealth - FirepowerDeficitAsHealth();
+
+private static float FirepowerDeficitAsHealth() =>
+    Mathf.Max(0f, AIController.PlayerFirepowerLead) * HealthPerFirepowerPoint;
 ```
 
-`HealthReserve()` reads **raw current HP points** (`AIController.EnemyHeroCurrentHealth`, backed by
+`EffectiveHealth()` reads **raw current HP points** (`AIController.EnemyHeroCurrentHealth`, backed by
 `Health.CurrentHealth`) rather than a percent — the one HP check in this system that isn't
 percent-based, because the formula is only meaningful against the fight's own hp:rerolls ratio.
 Computed once per turn, at `RollState.HandlePostRollsEnter()`.
+
+#### The board-power deficit term
+
+**Every 10 points the player's board out-guns the AI's counts exactly like 10 HP the AI has already
+lost.** An AI at full HP staring down a board that badly out-guns its own is about to *become* hurt, so
+it stops hoarding rerolls now rather than after the damage lands. Worked example: enemy at 120 hp with
+14 rerolls left reserves 12 and gets a budget of **2**; with the player's board at 30 power against its
+own 10, the +20 deficit reads as 100 effective hp, reserving 10 for a budget of **4**.
+
+- "Power" is `AIController.PlayerFirepowerLead` → `AttacksResolver.OpponentFirepowerAdvantage(false)`,
+  the **same** number `SlotMachineRigger` feeds `FightSO`'s comeback ladder — deliberately one shared
+  measure (rule 22), so the comeback rigging and the AI's reroll spending can never disagree about who
+  is ahead. Its exact formula (expected damage output per battle phase, crits at expected value,
+  shocked creatures counting 0, minus the Shield in that side's way, floored at 0) and what it
+  deliberately excludes (`specialDamageModifiers`, e.g. ShieldBreaker) live in `docs/Battle.md`.
+- **It's one-way.** `Mathf.Max(0f, ...)` clamps the lead, so the AI being *ahead* on power never grows
+  the reserve past what its HP alone dictates — a winning AI plays at its HP-derived budget, it doesn't
+  get stingier than that. The accessor itself stays signed (mirroring `OpponentFirepowerAdvantage`'s own
+  semantics); the one-way policy belongs to this decision, not to the primitive.
+- **A player Shield inflates the lead**, because effective firepower subtracts the barrier facing each
+  side: a big player Shield drives the enemy's effective firepower toward 0, widening the player's lead
+  and handing the AI more rerolls. Intended — "I'm being walled, roll harder."
+- **Neither end needs new clamping.** If the lead exceeds the AI's remaining HP, `EffectiveHealth()`
+  goes negative and `pool - HealthReserve()` exceeds `pool` — `Decide()`'s pre-existing
+  `Mathf.Min(desiredBudget, pool)` caps that at the whole remaining pool, and its `Mathf.Max(1, ...)`
+  still guarantees the AI can always chase a pair.
+- **Timing: it reads the board the turn *started* with.** `HandlePostRollsEnter` fires when the enemy's
+  reels land, which is before `SpawningState` adds whatever this turn's roll just summoned — the same
+  board state `SlotMachineRigger` read at the top of the turn. So the budget is set against the board
+  the AI is actually facing right now, not one that includes its own not-yet-spawned reinforcement.
+- Both weights are named `const`s on `RerollBudgetDecision` (`HealthPerReroll = 10f`,
+  `HealthPerFirepowerPoint = 1f`), not per-fight `EnemyData` fields — retune them there. Making them
+  per-fight would mean an asset migration pass, since a new `EnemyData` field silently backfills as 0
+  on every existing `FightSO` (see the Gotchas below).
 
 **Unlike before, the per-turn budget isn't fixed for the rest of the turn — it can grow by +1 once**,
 a bonus granted the moment the AI observes it's completed the desired action's own pair while chasing
@@ -382,10 +433,10 @@ actively fishes instead of banking the single match.
 the point it commits to triggering one — never inside a `Decide*` method, so decisions themselves stay
 free of side effects.
 
-**UI: `EnemyRerollDisplay`** (`UI/EnemyRerollDisplay.cs`, on `Canvas/EnemyRerollCount` in
+**UI: `EnemyRerollDisplay`** (`_UI/EnemyRerollDisplay.cs`, on `Canvas/EnemyRerollCount` in
 `BattleScene.unity`, a prefab variant of `EnergyCount.prefab`) mirrors the pool onto the HUD, the same
 way `EnergyDisplay` mirrors the player's energy (`docs/Energy.md`). Both now share an abstract base,
-`UI/RerollResourceDisplay.cs` — it owns the text/feedback fields and the "update text on every
+`_UI/RerollResourceDisplay.cs` — it owns the text/feedback fields and the "update text on every
 change, play feedback only on an actual spend" `Start()`/`OnDestroy()` wiring; each subclass just
 points `CurrentValue` and `Subscribe()`/`Unsubscribe()` at its own controller's events
 (`EnergyController.OnEnergyChanged`/`OnEnergySpent` vs `AIController.OnRerollsChanged`/
@@ -393,7 +444,7 @@ points `CurrentValue` and `Subscribe()`/`Unsubscribe()` at its own controller's 
 
 ## Scoring: `ActionAIScorer` and how to add AI scoring to a new nuke/spell
 
-`ActionAIScorer` (`AI/Scoring/ActionAIScorer.cs`) is the shared, readable query surface every
+`ActionAIScorer` (`_AI/_Scoring/ActionAIScorer.cs`) is the shared, readable query surface every
 concrete scorer is built on — the direct answer to "don't want to see data plumbing in concrete
 scorers." Every raw `G`/`Health`/`CreaturesManager` read lives here exactly once, named for what it
 means:
@@ -417,15 +468,50 @@ rather than becoming another base-class helper used nowhere else — the line be
 access" (belongs on the base) and "this action's specific formula" (belongs in the concrete class) is
 the guide.
 
+The simplest case of a scorer that must agree with its resolver is `ShockAIScorer`, whose first line
+is `if (PlayerHasShield) return 0;` — a standing shield blocks Shock outright at every level
+(`docs/ActionsAndSpells.md` §2c), so a non-zero score there would be the AI knowingly wasting a roll.
+Any change to that gameplay rule has to be mirrored here.
+
+### A scorer that has to agree with its own resolver: `CharmAIScorer`
+
+Most scorers read only board state. `CharmAIScorer` is the exception worth copying when a formula
+needs to stay in step with the action's real odds: Charm's success chance is cut 25% per creature the
+caster out-numbers the charmed side by (`docs/ActionsAndSpells.md` §3c), so an AI that kept rating
+Charm on board size alone would keep casting a spell whose chance had quietly collapsed.
+
+It therefore takes its `CharmSO` (`new CharmAIScorer(this)` from `CharmSO.CreateAIScorer()`) and
+scales its score by the **same** `CharmSO.GetCreatureAdvantageMultiplier(...)` the resolver uses:
+
+```csharp
+public override int Score()
+{
+    if (PlayerCreatureCount == 0) return 0;                       // nothing to steal
+    return ClampScore(Mathf.RoundToInt(StealValue() * AdvantagePenalty()));
+}
+```
+
+`StealValue()` is the old board-size appetite (`1 => 10, 2 => 50, 3 => 95, _ => 100`);
+`AdvantagePenalty()` is `_source.GetCreatureAdvantageMultiplier(EnemyCreatureCount, PlayerCreatureCount)`.
+One tunable (`chancePenaltyPerExtraCreature`) now moves the odds and the AI's appetite together.
+
+This replaced a flat `- 5 * EnemyCreatureCount` term, which penalised the AI for simply *having* a
+board rather than for out-numbering the player — the thing that actually reduces the chance. Example
+measured live: player board 1, AI board 3 → `StealValue(1) = 10`, advantage 2 → ×0.5 → score **5**.
+
+Pass the SO in like this only when the scorer genuinely needs the action's own balance numbers;
+board-state-only scorers stay parameterless.
+
 **To add AI scoring to a new nuke/spell:**
 
-1. Write a scorer class in `AI/Scoring/`, subclassing `ActionAIScorer`, implementing
+1. Write a scorer class in `_AI/_Scoring/`, subclassing `ActionAIScorer`, implementing
    `public override int Score()` using the base class's named helpers (add a new helper there if you
    need board state no existing one exposes — don't reach `G`/`Health`/`CreaturesManager` directly
    from the concrete scorer).
 2. Override `CreateAIScorer()` on the new nuke/spell's `NukeSO`/`SpellSO` subclass:
    `public override ActionAIScorer CreateAIScorer() => new MyNewAIScorer();` — one line, same shape
-   as the existing `CreateResolver()` override (`docs/ActionsAndSpells.md`).
+   as the existing `CreateResolver()` override (`docs/ActionsAndSpells.md`). Pass `this` if the
+   scorer needs the SO's balance numbers, as `CharmSO` does.
 3. That's it — `PickActionDecision` picks it up automatically the next time it scores all 6 of the
    AI's actions; no registration list to update anywhere else.
 
@@ -469,4 +555,7 @@ If you don't override `CreateAIScorer()`, the SO falls back to `NoOpActionAIScor
   mechanic), the `Generation`/`IsStale` staleness guard `RollState` relies on, the restart event.
 - `docs/ActionsAndSpells.md` — the `ActionSO`→Resolver→Animation pattern `CreateAIScorer()` mirrors,
   and how to add a new nuke/spell in the first place (before it needs AI scoring at all).
+- `docs/Battle.md` — `AttacksResolver`'s firepower estimation trio behind
+  `AIController.PlayerFirepowerLead`: the exact per-creature formula, the Shield subtraction, and what
+  the estimate deliberately leaves out (so the reroll budget under-counts a ShieldBreaker roster too).
 - `docs/Campaign.md` — `FightSO`/`EnemyData`, `CampaignStateManager.CurrentFight`.

@@ -39,11 +39,14 @@ encounter — see "Fight results" below.
 
 ## Key files
 
-- `Global/Campaign/FightSO.cs` — the sole `EncounterListSO` entry type (renamed from `BattleSO`,
+- `_Global/_Campaign/FightSO.cs` — the sole `EncounterListSO` entry type (renamed from `BattleSO`,
   `[MovedFrom]`-guarded so the existing asset files kept resolving through the rename). `fightId`
   (string, `[FormerlySerializedAs("battleId")]`), `isTutorial` (bool, still inert — forward-looking),
   `enemyData` (`EnemyData`), `hasLoadoutPick` (bool), `hasReward` (bool), `rewardAmount` (int — the
-  guaranteed energy grant, only meaningful when `hasReward` is true), `neutralDirtyTripleIndex`
+  guaranteed energy grant, only meaningful when `hasReward` is true),
+  `continuesPreviousFight` (bool — marks this entry as a later phase of the fight before it rather
+  than a campaign node of its own, see "Multi-phase fights" below),
+  `neutralDirtyTripleIndex`
   (int, default 100 — the starting point the Comeback Adjustment is added to, applied to
   `SlotMachineRigger.neutralDirtyTripleIndex`) + `firstRoundDirtyTripleIndex` (int, default 50 —
   forced Dirty Triple Index for either side's opening turn while `GameManager.IsFirstRound`,
@@ -68,73 +71,83 @@ encounter — see "Fight results" below.
   `G.EnemyCreatures` via `G.ApplyCampaignEnemyCreatures` — see `docs/G.md`), plus the AI-tuning fields
   (`stupidityChance`/`criticalFailureChance`/`rerollsAmount` — see `docs/AI.md`). Expandable later
   without touching `FightSO` itself.
-- `Global/Campaign/Encounter.cs` — abstract `MonoBehaviour` base for a pick-screen phase played by
+- `_Global/_Campaign/Encounter.cs` — abstract `MonoBehaviour` base for a pick-screen phase played by
   `MapManager` (loadout) or `BattleRewardPresenter` (reward): `event Action OnCompleted` + protected
   `Complete()`, plus `Headless`/`CompletePresentation()` (CLAUDE.md rule 28 — the backend/view split
   and headless-testability mechanism). No shared `Play(...)` signature anymore — each subclass exposes
   its own concrete `Play(...)` (`LoadoutPickEncounter.Play()` takes nothing, `RewardEncounter.Play(int
   rewardAmount)` takes the granted amount) since there's no longer a common `EncounterSO` data type to
   abstract over. Mirrors `GameState`'s "one runner, self-contained states" shape (`docs/GameLoop.md`).
-- `Global/Campaign/RewardEncounter.cs` — **backend only** (rule 28): grants `currentEnergy` and draws
+- `_Global/_Campaign/RewardEncounter.cs` — **backend only** (rule 28): grants `currentEnergy` and draws
   3 reward cards on `Play(int rewardAmount)`, exposes `SelectReward(RewardSO)`/`Confirm()` plus
   `OnRewardsDrawn`/`OnSelectionChanged`/`OnClaimed` events — no UI reference of any kind, fully
   drivable headlessly (`Headless = true`, no prefab needed). See `docs/Rewards.md`.
-- `Global/Campaign/RewardEncounterView.cs` — the paired **view** (rule 28):
+- `_Global/_Campaign/RewardEncounterView.cs` — the paired **view** (rule 28):
   `[RequireComponent(typeof(RewardEncounter))]`, owns `messageText`/`claimButton`/`cardSlots`/
   `cardPrefab`, subscribes to the backend's events in `Awake()`, forwards clicks to
   `SelectReward`/`Confirm`, and calls `CompletePresentation()` once its discard animation finishes.
   See `docs/Rewards.md`.
-- `Global/Campaign/LoadoutPickEncounter.cs` — **backend only** (rule 28): owns the pending edit state
+- `_Global/_Campaign/LoadoutPickEncounter.cs` — **backend only** (rule 28): owns the pending edit state
   for all 9 loadout slots (`SlotKind`/`SlotRef`-addressed), exposes `SelectSlot`/`SelectCandidate`/
   `Swap()`/`Confirm()` plus `OnLoadoutLoaded`/`OnPoolChanged`/`OnSelectionChanged`/`OnSwapped`/
   `OnConfirmed` events, gated by `gatheredCreatureIds`/`gatheredNukeIds`/`gatheredSpellIds`
   (`docs/Campaign.md`) unless an `unlockAll` debug bypass is set — fully drivable headlessly. See
   `docs/Loadout.md`.
-- `Global/Campaign/LoadoutPickEncounterView.cs` — the paired **view** (rule 28):
+- `_Global/_Campaign/LoadoutPickEncounterView.cs` — the paired **view** (rule 28):
   `[RequireComponent(typeof(LoadoutPickEncounter))]`, owns the 9 equipped-slot anchors, the Available
   pool container, the Comparison panel, and the Swap/Finish buttons, subscribes to the backend's
   events in `Awake()`. See `docs/Loadout.md`.
-- `Global/Campaign/BattleRewardPresenter.cs` — `BattleScene`-local dispatcher (scene-local singleton,
+- `_Global/_Campaign/BattleRewardPresenter.cs` — `BattleScene`-local dispatcher (scene-local singleton,
   recreated on every `BattleScene` load, **not** `DontDestroyOnLoad` — same pattern as
   `RollStateManager`) for the post-victory reward pick: instantiates `RewardEncounter.prefab` as an
   overlay inside `BattleScene`, waits for its `OnCompleted`, then calls
   `CampaignManager.Instance.CompleteCurrentEncounter()`. Replaces the old generic `EncounterPlayer` —
   see "Encounter dispatch" below.
-- `Global/Campaign/EncounterListSO.cs` — `List<FightSO> fights`, the ordered campaign sequence,
+- `_Global/_Campaign/EncounterListSO.cs` — `List<FightSO> fights`, the ordered campaign sequence,
   indexed by `CampaignManager.CurrentEncounterIndex`.
-- `Global/Campaign/CampaignManager.cs` — the navigation API (below): which fight is current,
+- `_Global/_Campaign/CampaignManager.cs` — the navigation API (below): which fight is current,
   advance/restart/defeat/victory/complete. Reads/mutates `RunState` through
   `CampaignStateManager.Instance.CurrentRun` (see "Two cross-scene-persistent managers" below) —
   pure navigation logic, owns no data of its own beyond `EncounterListSO`.
-- `Global/Campaign/CampaignManager.Debug.cs` — `partial class` split of the same type
+- `_Global/_Campaign/CampaignManager.Debug.cs` — `partial class` split of the same type
   holding the debug-only `SetSessionEncounterOverride`/`SetSessionEncounterIndexOverride` surface
   (CLAUDE.md rule 20).
-- `Global/Campaign/CampaignStateManager.cs` (+ `CampaignStateManager.Debug.cs`) — sole owner/loader
+- `_Global/_Campaign/CampaignStateManager.cs` (+ `CampaignStateManager.Debug.cs`) — sole owner/loader
   of `RunState` (see "Two cross-scene-persistent managers" below) plus the loadout/energy/enemy-avatar
   application that used to live on a `BattleScene`-only `CampaignManager`.
-- `Global/Campaign/Editor/CampaignManagerEditor.cs` — read-only Inspector view of the
+- `_Global/_Campaign/Editor/CampaignManagerEditor.cs` — read-only Inspector view of the
   current encounter index/asset (CLAUDE.md rule 19).
-- `Global/Campaign/CampaignProgressTool.cs` + `Global/Campaign/Editor/CampaignProgressToolEditor.cs`
+- `_Global/_Campaign/CampaignProgressTool.cs` + `_Global/_Campaign/Editor/CampaignProgressToolEditor.cs`
   — Editor-only debug tool mirroring `CampaignDebugTool`'s pattern.
-- `PlayerView/HeroView.cs` — `ReplaceHeroAvatar(GameObject avatarPrefab)`.
-- `Global/Campaign/CampaignStateManager.cs` — `CurrentRun` is the actual owned `RunState`; has
+- `_PlayerView/HeroView.cs` — `ReplaceHeroAvatar(GameObject avatarPrefab)`.
+- `_Global/_Campaign/CampaignStateManager.cs` — `CurrentRun` is the actual owned `RunState`; has
   `CurrentFight` (renamed from `CurrentBattle`) and `ApplyEncounterToScene()` (called whenever
   `BattleScene` is entered, applies both energy and enemy avatar/HP — see `docs/Campaign.md`'s "Load
   → resolve → apply flow").
-- `Units/Hero.cs` — `GetMaxHealth()` gained a symmetric enemy-side branch.
-- `UI/PauseMenuController.cs` — `HandleRestartClicked()` calls
+- `_Units/Hero.cs` — `GetMaxHealth()` gained a symmetric enemy-side branch.
+- `_UI/PauseMenuController.cs` — `HandleRestartClicked()` calls
   `CampaignManager.Instance.ResetCurrentEncounter()` instead of calling
   `GameManager.RestartBattle()` directly.
-- `Global/GameManager/GameOverState.cs` — no longer a pure dead end; calls
+- `_Global/_GameManager/GameOverState.cs` — no longer a pure dead end; calls
   `CampaignManager.Instance.ResolveVictory()`/`ResolveDefeat()` after logging. See
   "Fight results" below.
-- `Global/Campaign/CampaignProfileSO.cs` — Editor-authorable whole-`RunState` snapshot for
+- `_Global/_Campaign/CampaignProfileSO.cs` — Editor-authorable whole-`RunState` snapshot for
   `CampaignDebugTool`'s "Use Debug Profile" — see `docs/Campaign.md`.
 
-Assets: `_ScriptableObjects/Campaign/Encounters/AllEncounters.asset` (an `EncounterListSO`) +
-`Fight1 Tutorial.asset`/`Fight2 Easy Demon.asset`/`Fight3 Shield Breaker.asset`/`Fight4 Elite.asset`/
-`Fight5 Final Boss.asset`, referencing enemy avatar prefabs under
-`_Prefabs/Characters/Units/Avatars/Enemies/`. `_Prefabs/Campaign/LoadoutEncounter.prefab`/
+Assets: `_ScriptableObjects/_Campaign/_Encounters/AllEncounters.asset` (an `EncounterListSO`) + one
+folder per authored fight, each holding the `FightSO` and its enemy roster (`CreaturesSO`):
+`_Fight1 Tutorial/` (`Fight1 Tutorial.asset` + `Creatures.asset`), `_Fight2 Skeleton/` (+ `Skeleton
+Creatures.asset`), `_Fight3 Orks/` (+ `Ork Creatures.asset`), `_Fight4 Ghosts/` (+ `Ghost Creatures.asset`),
+`_Fight5 Final Boss/` (+ `Boss Creatures.asset` — `BossCatapult`/`BossTank`/`BossMage`; avatar
+`FinalBoss.prefab`, the Animator-driven Skeleton Warlock — see `docs/AnimationAPI.md`), and the boss's
+second phase `_Fight5-2 Final Boss/` (+ `Boss 2 Creatures.asset` — `DarkCatapult`/`DarkTank`/`DarkMage`;
+avatar `FinalBoss 2.prefab`) which *is* listed in `AllEncounters.fights` as `fights[5]` but flagged
+`continuesPreviousFight`, so it gets no map point of its own (see "Multi-phase fights" below).
+Fights reference enemy avatar
+prefabs under `_Prefabs/_Characters/_Avatars/_Enemies/`. A new themed fight is set up by the
+`setup-creature` skill's encounter step. When it replaces a loose placeholder, it moves that asset
+into the new folder so the guid stays the same, which leaves `AllEncounters` and `MapManager.points`
+untouched. `_Prefabs/_Campaign/LoadoutEncounter.prefab`/
 `RewardEncounter.prefab` are the two `Encounter` prefabs `MapManager`/`BattleRewardPresenter`
 instantiate directly (no longer resolved generically through an `EncounterSO.EncounterPrefab` field —
 see "Encounter dispatch" below).
@@ -196,7 +209,7 @@ live on `CampaignStateManager.Debug.cs`, since they mutate/gate `RunState` direc
 Every other singleton (`G`, `GameManager`, `EnergyController`, `RollStateManager`,
 `BattleRewardPresenter`) lives on the per-scene `Global` GameObject and is recreated on every scene
 load (`docs/GameLoop.md`). `CampaignStateManager` and `CampaignManager` are the exception: both live
-on `_Prefabs/Campaign/CampaignProgress.prefab` (a **root-level** GameObject — `DontDestroyOnLoad` only
+on `_Prefabs/_Campaign/CampaignProgress.prefab` (a **root-level** GameObject — `DontDestroyOnLoad` only
 works on scene roots, see CLAUDE.md rule 26), instanced in **both** `BattleScene.unity` and
 `MapScene.unity` so whichever loads first wins the session regardless of entry point, and both use
 the standard Unity duplicate-guard singleton pattern:
@@ -291,13 +304,39 @@ private void EnterBattleScene()
 public void ApplyEncounterToScene()
 {
     EnergyController.Instance.ApplyCampaignEnergy();
+    ApplyFightToScene(CampaignManager.Instance.CurrentFight);
+}
 
-    var fight = CampaignManager.Instance.CurrentFight;
+/// Swaps the whole enemy side over to a specific fight. Takes the fight rather than reading
+/// CampaignManager.CurrentFight itself, because a boss phase is never an EncounterListSO entry.
+public void ApplyFightToScene(FightSO fight)
+{
     CurrentFight = fight;
     G.EnemyView.ReplaceHeroAvatar(fight.enemyData.enemyAvatarPrefab);
     G.ApplyCampaignEnemyCreatures(ResolveEnemyCreatures(fight));
+    OnCurrentFightChanged?.Invoke();
+}
+
+/// No-op unless a boss phase transition moved CurrentFight off this node's own fight.
+public void RevertToEncounterFight()
+{
+    var fight = CampaignManager.Instance.CurrentFight;
+    if (CurrentFight == fight) return;
+    ApplyFightToScene(fight);
 }
 ```
+
+**`ApplyFightToScene` deliberately doesn't touch reroll energy** — only `ApplyEncounterToScene` does,
+because a mid-fight phase swap must leave the player whatever they've already spent.
+
+**`static event Action OnCurrentFightChanged`** fires at the end of every `ApplyFightToScene`. It exists
+for the "read once and cache" consumers, which a mid-fight phase swap would otherwise strand on the
+previous phase's numbers: `SlotMachineRigger.ApplyFightOverrides` (the triple-rigging indices) and
+`AIController.ResetRerollPool` (the fight-wide reroll pool, which refills for the new phase). Both
+subscribe in `Start()` and unsubscribe in `OnDestroy()` (rule 3). On a scene load the event fires before
+either of their `Start()`s, which is harmless — each does its own first apply there anyway. Everything
+else (`Hero.GetMaxHealth`, the AI decision classes, `SlotMachineRigger`'s per-turn reads) already reads
+`CurrentFight` live and needs no subscription.
 
 `public` (not `private`) so it's callable from outside this object's own lifecycle (e.g. debug
 tooling). No `CampaignManager.Instance == null` guard (per CLAUDE.md rule 5) — `CampaignManager`
@@ -309,13 +348,80 @@ wherever this runs. Unlike before this refactor, there's no longer any `is not F
 **Enemy creature roster now varies per fight.** `ResolveEnemyCreatures(fight)` returns
 `fight.enemyData.creatures` if set, otherwise falls back to **`G.DefaultCreatures`** (logging a
 warning) — this is the guard for the "new `FightSO` fields silently default to unset on existing
-assets" Gotcha below, since `creatures` was added after `Fight2`–`Fight5` were authored and they don't
-have it set yet. The fallback deliberately targets `G.DefaultCreatures`, not `G.EnemyCreatures` itself
+assets" Gotcha below, since `creatures` was added after the original fights were authored (today all
+five fights — plus `Fight5-2`, the boss's second phase — have their own roster, so the fallback only
+fires for a newly added, not-yet-themed fight). The fallback deliberately targets `G.DefaultCreatures`, not `G.EnemyCreatures` itself
 — see CLAUDE.md's player/enemy creature pool rule for why (a mutable field with no per-encounter reset
 would silently leak the previous fight's roster forward). The result is pushed into `G.EnemyCreatures`
 via `G.ApplyCampaignEnemyCreatures` (`docs/G.md`), which `SlotMachine`'s enemy-side instance and
 `PreferredCreatureTypeDecision` (`docs/AI.md`) both read live — no caching, so this is a single write
 per encounter, not something every read site needs to know about.
+
+## Multi-phase fights (`FightSO.continuesPreviousFight`)
+
+A fight can continue after its boss dies. A phase is an ordinary `EncounterListSO.fights` entry
+flagged **`continuesPreviousFight`**, sitting directly after the fight it continues. When the enemy
+hero dies and the *next* entry carries that flag, `GameManager` runs `BossPhaseTransitionState`
+instead of `GameOverState`: it swaps the enemy side over to that fight in place, advances the
+encounter index onto it, and drops back into the round loop. The full sequence, timings and rationale
+live in `docs/GameLoop.md` — this section is just the campaign-layer contract:
+
+- **List order is the only source of truth for "what comes next"** (rule 22).
+  `CampaignManager.NextPhase` is `fights[currentIndex + 1]` when that entry is flagged, else null.
+  This replaced an earlier `FightSO secondPhase` reference, which encoded the same fact a second
+  time and could silently disagree with the list.
+- **A phase *is* a real encounter index, but not a campaign node.** `Fight5-2` is
+  `fights[5]` — "encounter 6". What distinguishes it from a node is the flag, and three behaviours
+  keyed off it:
+  - `CampaignManager.NodeCount` counts only non-phase fights (5 today), and
+    `MapManager.AssignEncounters()` assigns points against *that* — so a phase gets **no
+    `MapEncounterPoint`** and doesn't shift the ones after it. `NodeIndexOf()` maps a phase index
+    back to the point of the node it continues, so a map refresh while on a phase (only reachable
+    via a debug profile) shows the owning node rather than indexing past the end of `points`.
+  - `HasNextEncounter` ignores phases, so the campaign correctly ends after the boss's last phase
+    instead of treating that phase as one more encounter. `AdvanceToNextEncounter()` jumps to the
+    next *node*, never landing on a phase.
+  - `NodeStartIndex()` walks back over phases to the fight that opens the node.
+- **The phase advance is never saved.** `CampaignManager.AdvanceToBossPhase()` bumps
+  `currentEncounterIndex` but calls neither `Save()` nor `LoadCurrentEncounter()` — no scene load,
+  no persistence. Both phases therefore have to be won in one session: quitting or losing in phase 2
+  resumes at the fight's first phase, never halfway through the boss.
+- **Restart/defeat rewinds off the phase.** `CampaignManager.ResetCurrentEncounter()` calls
+  `RewindToNodeStart()` (index back to `NodeStartIndex`) *before*
+  `CampaignStateManager.RevertToEncounterFight()` — order matters, since the revert compares the
+  scene's fight against `CampaignManager.CurrentFight` and would compare phase 2 against itself and
+  no-op if the index hadn't moved back first. Covers all three callers (pause menu,
+  `CampaignProgressTool`'s button, and `ResolveDefeat`).
+- **Entering a phase directly** (a `CampaignProfileSO` whose `currentEncounterIndex` points at one)
+  never ran the transition, so `GameManager.OpenContinuationFight()` reproduces the board it would
+  have left behind: the enemy's level-1 trio is pre-spawned via
+  `BossPhaseTransitionState.SpawnEnemyCreatures()` (one shared definition, so the two entry paths
+  can't drift) and `IsFirstRound` starts false so the player's first turn is followed by a battle.
+- Phases chain: a phase entry can itself be followed by another flagged entry. `Fight5-2` is the
+  last fight in the list, so the chain ends there.
+- `CampaignManager.CurrentFight` no longer clamps an out-of-range index *silently* — it logs a
+  warning naming the bad index and the valid range. A debug profile authored with an index past the
+  end of the campaign used to just play the last fight with nothing in the console to explain it.
+
+Authored today: `fights[5]` = `Fight5-2 Final Boss.asset`, flagged `continuesPreviousFight`, so it's
+the second phase of `fights[4]` = `Fight5 Final Boss` (its own folder `_Fight5-2 Final Boss/` with
+`Boss 2 Creatures.asset`; avatar `FinalBoss 2.prefab`, the burning Skeleton Warlock —
+`docs/AnimationAPI.md`). `fights.Count` is 6 while `NodeCount` (and `MapManager.points`) is 5.
+
+`Boss 2 Creatures.asset` holds the phase's own roster — `DarkCatapult` ("Blight Bloom"), `DarkTank`
+("Obsidian Warden") and `DarkMage` ("Shadow Wyrm"), wired by the `setup-creature` skill as dark
+counterparts of the **player defaults** (`Bubka`/`Golem`/`Dragon`) rather than of phase 1's
+`Boss Creatures`, so the two phases field completely different creatures. Their balance is the player
+default's `levelStats` boosted ~15% (damage rounded up, health rounded to nearest — so damage lands
+17–33% higher at the levels where 15% of a small integer would otherwise round away) plus a 20% /
++50% critical strike, matching the Ghost trio (`docs/Battle.md`).
+
+The two that need a projectile deliberately avoid the only two the player can ever field (`ARC` on
+`Bubka`/`BubkaBig`, `LightningSoftGreenOBJ` on `Dragon`/`DragonBig` — both inherited from their type
+parent rather than overridden, so they're easy to collide with by accident): `DarkCatapult` uses
+`Skull` (shared with phase 1's `BossCatapult` — same boss, same role, never on screen at once) and
+`DarkMage` uses `MagicFire` (previously unused by any creature; its particles were already on the
+`Shield` sorting layer, so no `set-projectile-layer-order` pass was needed).
 
 ## Soft reload and scene-aware navigation
 
@@ -483,9 +589,9 @@ Both `RewardEncounter` and `LoadoutPickEncounter` split into a headless-testable
 paired `<Name>View` that owns all the UI (rule 28). There is no longer a single generic dispatcher
 that reads an `EncounterSO.EncounterPrefab` field — each pick-screen type has exactly one fixed
 scenario it plays in, so its own dispatcher instantiates its own fixed prefab reference directly:
-`MapManager` (`Global/Map/MapManager.cs`, `MapScene`-local, see "MapEncounterPoint and MapManager"
+`MapManager` (`_Global/_Map/MapManager.cs`, `MapScene`-local, see "MapEncounterPoint and MapManager"
 below) owns `loadoutEncounterPrefab` and plays the loadout pick in place, while
-`BattleRewardPresenter` (`Global/Campaign/BattleRewardPresenter.cs`, `BattleScene`-local singleton)
+`BattleRewardPresenter` (`_Global/_Campaign/BattleRewardPresenter.cs`, `BattleScene`-local singleton)
 owns `rewardEncounterPrefab` and plays the reward pick after victory. Both wait for the instantiated
 `Encounter`'s `OnCompleted` and clean it up the same way:
 
@@ -644,7 +750,7 @@ methods real gameplay UI will use later. No separate debug-only logic exists.
 ## `CampaignManagerEditor` — Inspector visibility
 
 Per CLAUDE.md rule 19 ("surface important runtime state in the Inspector"), `CampaignManager`
-gets a custom Editor (`Global/Campaign/Editor/CampaignManagerEditor.cs`) showing, read-only
+gets a custom Editor (`_Global/_Campaign/Editor/CampaignManagerEditor.cs`) showing, read-only
 and live-updating during Play mode: the current encounter index, the resolved `FightSO` object
 reference, and its `fightId` string. Selecting the `CampaignProgress`
 GameObject during Play always shows what encounter you're actually on — no debugger needed. Guards
@@ -655,7 +761,7 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
 - Both `Assets/Game/_Scenes/BattleScene.unity` and `Assets/Game/_Scenes/MapScene.unity` are
   registered in Build Settings' Scenes In Build (required for `SceneManager.LoadScene` to resolve
   either by name).
-- `CampaignProgress` is `_Prefabs/Campaign/CampaignProgress.prefab` (root-level GameObject,
+- `CampaignProgress` is `_Prefabs/_Campaign/CampaignProgress.prefab` (root-level GameObject,
   `CampaignManager` + `CampaignStateManager` + `DebugRewards` components, `encounterList`/
   `catalog`/`rewardList` wired, plus a `RunStateMonitor` child — see `docs/Campaign.md` and
   `docs/Rewards.md`), instanced in **both** `BattleScene.unity` and `MapScene.unity` — whichever
@@ -664,7 +770,7 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
   and both scene instances pick it up automatically; per-instance field values (`encounterList`/
   `catalog`/`rewardList` references) still need matching independently if they ever diverge, same as
   any prefab instance override. `encounterList` points at
-  `_ScriptableObjects/Campaign/Encounters/AllEncounters.asset`. `Global/CampaignProgressTool`
+  `_ScriptableObjects/_Campaign/_Encounters/AllEncounters.asset`. `Global/CampaignProgressTool`
   (`CampaignProgressTool` component) stays `BattleScene`-only — no equivalent tooling exists in
   `MapScene` yet.
 - `CampaignDebugTool` (root-level GameObject, `CampaignDebugTool` component) is likewise placed in
@@ -678,11 +784,11 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
   `BattleScene.unity` (replaces the old `Global/EncounterPlayer`). `MapScene.unity`'s `Global/
   MapManager` GameObject (`MapManager` component) owns `loadoutEncounterPrefab` → `LoadoutEncounter
   .prefab` — see "`MapEncounterPoint` and `MapManager`" below.
-- `_Prefabs/Campaign/LoadoutEncounter.prefab` (`Canvas`, 9 equipped-slot anchors, an Available pool
+- `_Prefabs/_Campaign/LoadoutEncounter.prefab` (`Canvas`, 9 equipped-slot anchors, an Available pool
   grid, a Comparison panel, Swap/Finish buttons — see `docs/Loadout.md`'s Editor setup checklist)
-  and `_Prefabs/Campaign/RewardEncounter.prefab` (`Canvas` + tint `Image`, a Claim `Button`, three
+  and `_Prefabs/_Campaign/RewardEncounter.prefab` (`Canvas` + tint `Image`, a Claim `Button`, three
   `cardSlots` anchors (`CardSlot1`/`CardSlot2`/`CardSlot3`, each holding a disabled placeholder card
-  — CLAUDE.md's anchor+disabled-template rule) and `cardPrefab` (`_Prefabs/UI/Cards/RewardCard.prefab`)
+  — CLAUDE.md's anchor+disabled-template rule) and `cardPrefab` (`_Prefabs/_UI/_Cards/RewardCard.prefab`)
   for the 3 drawn reward cards — see `docs/Rewards.md`) — each is a fully self-contained `Canvas` (own
   `CanvasScaler`/`GraphicRaycaster`, `sortingOrder 5`), instantiated fresh by whichever dispatcher is
   active (`MapManager` or `BattleRewardPresenter`) and destroyed on completion, never left placed in a
@@ -690,7 +796,7 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
   components** (rule 28) — `LoadoutEncounter.prefab` carries `LoadoutPickEncounter` +
   `LoadoutPickEncounterView`, `RewardEncounter.prefab` carries `RewardEncounter` +
   `RewardEncounterView` — every UI reference lives on the `View` component, never the backend.
-- `_Prefabs/Map/MapEncounterPoint.prefab` needs a `MapEncounterPoint` component, its
+- `_Prefabs/_Map/MapEncounterPoint.prefab` needs a `MapEncounterPoint` component, its
   `futureEncounterVisual`/`currentEncounterVisual`/`completeEncounterVisual` fields wired to the
   prefab's existing named children, an `MMPositionShaker` on the root, an `ArriveFightFeedback` child
   with an `MMF_Player` (an `MMF_PositionShake` feedback targeting that `MMPositionShaker`), and an
@@ -758,10 +864,9 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
   `neutralDirtyTripleIndex`/`firstRoundDirtyTripleIndex` backfill to `100`/`50` the same way
   (matching `SlotMachineRigger`'s own prior hardcoded defaults exactly), so an existing fight's
   round-1/base Dirty Triple Index math is unchanged unless explicitly re-authored.
-  `enemyData.creatures` is the same story but with a soft landing: `Fight2`–`Fight5` don't have it set
-  yet (only `Fight1 Tutorial` does, pointing at its own `Creatures.asset`), so until each is authored
-  with its own roster, `ResolveEnemyCreatures` falls back to `G.DefaultCreatures` (logged as a warning)
-  rather than crashing.
+  `enemyData.creatures` is the same story but with a soft landing: `Fight1`–`Fight5` each point at the
+  roster in their own folder, but a newly added fight without one makes `ResolveEnemyCreatures` fall
+  back to `G.DefaultCreatures` (logged as a warning) rather than crashing.
 
 - **A leftover `CampaignDebugTool` granular override can make the player's pool match the enemy's,
   and it'll look exactly like a bug in whichever creature-pool code was touched most recently.** Real,
@@ -794,7 +899,7 @@ can be the session's first-loaded scene under the existing duplicate-guard singl
 
 ### `MapEncounterPoint` and `MapManager`
 
-- **`Global/Map/MapEncounterPoint.cs`** — one fight's point on the map, three visual states
+- **`_Global/_Map/MapEncounterPoint.cs`** — one fight's point on the map, three visual states
   (`futureEncounterVisual`/`currentEncounterVisual`/`completeEncounterVisual`, exactly one active at a
   time — `SetFuture()`/`SetCurrent()`/`SetComplete()`, visuals only, no path side effects). Path
   visibility is separate and explicit: `HidePaths()`/`ShowPathIn()`/`ShowPathOut()`, each null-checked
@@ -811,7 +916,7 @@ can be the session's first-loaded scene under the existing duplicate-guard singl
   `fight` itself stays `[SerializeField]` even though nothing authors it directly (CLAUDE.md rule 19 —
   load-bearing runtime state stays visible in the Inspector by default, not hidden behind a debugger);
   any value seen on it in Edit mode is stale and gets overwritten the instant Play mode starts.
-- **`Global/Map/MapManager.cs`** — `MapScene`'s orchestrator, singleton (`Instance`). Holds a
+- **`_Global/_Map/MapManager.cs`** — `MapScene`'s orchestrator, singleton (`Instance`). Holds a
   serialized `MapEncounterPoint[] points` — one entry per fight in `EncounterList`, same order;
   `AssignEncounters()` (called once from `Start()`, before the first `RefreshForCurrentEncounter()`)
   walks `EncounterList.fights` and calls `points[i].SetFight(fights[i])` for each index —
@@ -857,13 +962,13 @@ can be the session's first-loaded scene under the existing duplicate-guard singl
   after the previous call's full sequence has resolved (calls never overlap); `CampaignProgressTool`'s
   Play-mode buttons are the one exception that could call in mid-sequence, left unguarded as debug-only
   exposure (YAGNI).
-- **`Global/Map/Editor/MapManagerEditor.cs`** — rule-19 read-only live Inspector view (mirrors
+- **`_Global/_Map/Editor/MapManagerEditor.cs`** — rule-19 read-only live Inspector view (mirrors
   `CampaignManagerEditor`): the resolved current `MapEncounterPoint` and current encounter
   index/asset.
 
 ### `SceneNames`
 
-`Global/Campaign/SceneNames.cs` — `BattleScene`/`MapScene` string constants for every
+`_Global/_Campaign/SceneNames.cs` — `BattleScene`/`MapScene` string constants for every
 `SceneManager.LoadScene` call site above.
 
 ## Related docs

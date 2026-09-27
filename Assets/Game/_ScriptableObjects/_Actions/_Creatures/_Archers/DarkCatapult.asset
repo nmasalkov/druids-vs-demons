@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ec2b78b95354236a2135cf1434f4356, type: 3}
+  m_Name: DarkCatapult
+  m_EditorClassIdentifier: 
+  id: darkCatapult
+  actionName: Blight Bloom
+  description: A carnivorous black bloom rooted in the back line, lobbing cursed
+    skulls in high arcs.
+  cardSprite: {fileID: -4357873696111671151, guid: d932fb10c56a944468b1f5937e931763, type: 3}
+  creaturePrefab: {fileID: 8986399583673468760, guid: 34132167f2eb2d949bb6efaab3b3cffd, type: 3}
+  levelStats:
+  - damage: 4
+    health: 32
+    numberOfAttacks: 2
+  - damage: 4
+    health: 39
+    numberOfAttacks: 3
+  - damage: 6
+    health: 48
+    numberOfAttacks: 3
+  - damage: 7
+    health: 58
+    numberOfAttacks: 4
+  specialDamageModifiers: []
+  critChancePercent: 20
+  critDamageBonusPercent: 50
+  experienceReward: 1e0000003c00000078000000f0000000
+  xpThresholds: 00000000780000004001000058020000
+  healAmounts:
+  - 3
+  - 7
+  - 10
+  - 24

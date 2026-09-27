@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: eb30d2209d9e4c968912e1e06bc81fa6
+timeCreated: 1561489863
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 122856
+  packageName: Skeleton Warlock
+  packageVersion: 1.2
+  assetPath: Assets/Skeleton Warlock/Textures/Skeleton Warlock/Anima 2D Meshes/Chest.asset
+  uploadId: 327764

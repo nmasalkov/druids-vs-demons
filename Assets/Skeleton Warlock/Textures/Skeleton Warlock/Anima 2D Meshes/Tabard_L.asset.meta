@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: cac172009269443fbd9ad73ff5e76365
+timeCreated: 1513126831
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 122856
+  packageName: Skeleton Warlock
+  packageVersion: 1.2
+  assetPath: Assets/Skeleton Warlock/Textures/Skeleton Warlock/Anima 2D Meshes/Tabard_L.asset
+  uploadId: 327764

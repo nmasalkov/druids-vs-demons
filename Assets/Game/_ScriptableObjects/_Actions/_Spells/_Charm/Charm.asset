@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1864af9225930fb4ab6f22716a8de14e, type: 3}
+  m_Name: Charm
+  m_EditorClassIdentifier: 
+  id: charm
+  actionName: Charm
+  description: A chance to hack an enemy creature, turning it to fight for your side.
+  cardSprite: {fileID: 21300000, guid: 5523ebed68f9a82479f223b6cb082b82, type: 3}
+  animationPrefab: {fileID: 2913066308180658946, guid: 0a7cb8bf68db31c439b63a4ad5c6955a, type: 3}
+  chancePerLevel:
+  - 0.12
+  - 0.21
+  - 0.35
+  chancePenaltyPerExtraCreature: 0.25
+  levelStrengthWeight: 100

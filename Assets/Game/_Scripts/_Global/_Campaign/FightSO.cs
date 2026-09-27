@@ -1,0 +1,241 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
+using UnityEngine.Serialization;
+
+/// <summary>
+/// Enemy side data for one fight: which avatar to spawn and how much HP it has. Expandable
+/// later (e.g. an AI tactic enum) without touching FightSO itself. See docs/Encounters.md.
+/// </summary>
+[Serializable]
+public struct EnemyData
+{
+    [Tooltip("Enemy HeroView prefab spawned for this fight (replaces the scene's default avatar).")]
+    public GameObject enemyAvatarPrefab;
+    [Tooltip("Enemy hero's max HP for this fight.")]
+    public int hp;
+    [Tooltip("Creature pool this fight's enemy rolls from. If left empty, falls back to " +
+             "G.DefaultCreatures (the player's own resolved pool) — see CLAUDE.md rule 29.")]
+    public CreaturesSO creatures;
+
+    [Tooltip("Weight (0-100) that the AI won't go with its calculated best decision and degrades to " +
+             "the next-best one instead (see AIDegrade). Decisions marked NO STUPID ignore this.")]
+    [Range(0, 100)] public int stupidityChance;
+    [Tooltip("Rolled only if stupidity triggers. If it also triggers, the AI picks a fully random " +
+             "option instead of degrading to the next-best one.")]
+    [Range(0, 100)] public int criticalFailureChance;
+    [Tooltip("Total rerolls the AI can spend across the WHOLE fight (not per turn) - depletes as it " +
+             "rerolls and never refills until the fight restarts. See docs/AI.md.")]
+    public int rerollsAmount;
+    [Tooltip("Enemy hero HP% (0-1, e.g. 0.15 = 15%) below which reroll decisions stop rolling " +
+             "stupidity/critical-failure entirely and always proceed ('rolls for his life') — see " +
+             "ShouldRerollDecision.AttemptReroll, docs/AI.md. Baseline is 0.15; override per fight to " +
+             "make a boss more/less reckless near death.")]
+    [Range(0f, 1f)] public float lowHpStupidityBypassThreshold;
+}
+
+/// <summary>
+/// Data for one campaign fight: which enemy to face, and the optional pre/post phases wrapped
+/// around it. fightId/isTutorial aren't consumed by any logic yet — forward-looking data for a
+/// future pre-battle phase. The sole EncounterListSO entry type — LoadoutPickSO/RewardPickSO were
+/// folded into hasLoadoutPick/hasReward/rewardAmount below since they never carried enough unique
+/// data to justify being separate list entries. Renamed from BattleSO — campaign-layer naming only;
+/// the per-turn combat-resolution machinery (BattleState, RunBattle(), AttacksResolver) keeps its
+/// own "Battle" naming, unrelated to this. See docs/Encounters.md.
+/// </summary>
+[MovedFrom(true, sourceClassName: "BattleSO")]
+[CreateAssetMenu(fileName = "Fight", menuName = "Game/Campaign/Fight")]
+public class FightSO : ScriptableObject
+{
+    [Tooltip("Stable identifier for this fight. Not read by any logic yet — reserved for a future " +
+             "pre-battle phase/save data to reference this specific fight.")]
+    [FormerlySerializedAs("battleId")] public string fightId;
+    [Tooltip("Marks this as the tutorial fight. Not read by any logic yet — reserved for future " +
+             "tutorial-specific behavior.")]
+    public bool isTutorial;
+    [Tooltip("The enemy side's data for this fight — avatar, HP, creature pool, AI tuning.")]
+    public EnemyData enemyData;
+
+    [Tooltip("If true, a loadout-pick phase plays in MapScene, in place at this node, before advancing into the fight.")]
+    public bool hasLoadoutPick;
+    [Tooltip("If true, a reward-pick phase plays as an overlay inside BattleScene right after victory, before this encounter completes.")]
+    public bool hasReward;
+    [Tooltip("Guaranteed energy reward granted when the reward phase plays. Only meaningful when hasReward is true.")]
+    public int rewardAmount;
+
+    [Header("Boss Phases")]
+    [Tooltip("Marks this fight as a later phase of the fight immediately before it in " +
+             "EncounterListSO.fights, rather than a campaign node of its own. When the previous " +
+             "fight's enemy hero dies, BossPhaseTransitionState swaps the whole enemy side over to " +
+             "this one in place (avatar, HP, creature pool, AI tuning, triple rigging), advances the " +
+             "encounter index onto it WITHOUT saving, and the fight resumes from the player's turn. " +
+             "A phase is not a map destination: MapManager gives it no MapEncounterPoint, " +
+             "AdvanceToNextEncounter skips over it, and a defeat/restart rewinds to the node's first " +
+             "phase so both phases must be won in one session. Entering one directly (a debug " +
+             "profile pointing at its index) reproduces the board the transition would have left: " +
+             "the enemy's level-1 trio is pre-spawned and the player's first turn is followed by a " +
+             "battle. Leave false for an ordinary fight. See docs/GameLoop.md and docs/Encounters.md.")]
+    public bool continuesPreviousFight;
+
+    [Header("Dirty Triple Index — Base Values")]
+    [Tooltip("The neutral baseline a side's Dirty Triple Index computes from before HP-based " +
+             "adjustment is applied, on any turn past round 1. 100 = genuine unbiased 1-in-3 odds " +
+             "a dirty triple situation (2 of 3 slots already matching) completes. Applied to " +
+             "SlotMachineRigger.neutralDirtyTripleIndex at fight start. See docs/SlotMachine.md.")]
+    public int neutralDirtyTripleIndex = 100;
+    [Tooltip("Forced Dirty Triple Index for whichever side starts a turn while GameManager." +
+             "IsFirstRound is still true (covers both sides' opening turns) — skips the HP-based " +
+             "formula and neutralDirtyTripleIndex entirely for round 1. Applied to " +
+             "SlotMachineRigger.firstRoundDirtyTripleIndex at fight start. See docs/SlotMachine.md.")]
+    public int firstRoundDirtyTripleIndex = 50;
+    [Tooltip("Dirty Triple Stabilization: subtracted from the acting side's Dirty Triple Index each " +
+             "time they re-enter a bonus turn from a triple, preventing an unbounded lucky streak. " +
+             "0 (default) disables it entirely. See docs/SlotMachine.md.")]
+    public int dirtyTripleStabilization;
+
+    [Header("Clean Triple Index Override")]
+    [Tooltip("Per-fight base for SlotMachineRigger.PlayerCleanTripleIndex, applied once at fight " +
+             "start. Chance (0-200, same curve as Dirty) a fresh roll short-circuits into an " +
+             "instant, all-3-matching triple before any per-slot decision runs. 100 = neutral " +
+             "33.3%, 0 = never, 200 = always. See docs/SlotMachine.md.")]
+    public int playerCleanTripleIndex = 100;
+    [Tooltip("Same as playerCleanTripleIndex, but for SlotMachineRigger.EnemyCleanTripleIndex.")]
+    public int enemyCleanTripleIndex = 100;
+    [Tooltip("Forced Clean Triple Index for whichever side starts a turn while GameManager.IsFirstRound " +
+             "is still true (covers both sides' opening turns) — skips playerCleanTripleIndex/" +
+             "enemyCleanTripleIndex entirely for round 1, mirroring firstRoundDirtyTripleIndex above. " +
+             "Applied to SlotMachineRigger.firstRoundCleanTripleIndex at fight start. See docs/SlotMachine.md.")]
+    public int firstRoundCleanTripleIndex = 50;
+    [Tooltip("Player Clean Triple Stabilization: a SIGNED delta ADDED to the player's current Clean " +
+             "Triple Index each time they re-enter a bonus turn from a triple (dirty or clean — " +
+             "either kind grants the bonus turn). Enter a NEGATIVE number to stabilize (e.g. -50 " +
+             "decreases the index by 50 per bonus-turn re-entry, preventing a lucky streak of " +
+             "instant clean triples from snowballing) — unlike dirtyTripleStabilization above, " +
+             "which is always a positive magnitude subtracted, this field's sign controls the " +
+             "direction directly. Reset back to playerCleanTripleIndex on the player's next " +
+             "genuinely new (non-bonus) turn. Independent of, and stacks separately from, " +
+             "dirtyTripleStabilization above. 0 (default) disables it entirely. See docs/SlotMachine.md.")]
+    public int playerCleanTripleStabilization;
+    [Tooltip("Same as playerCleanTripleStabilization, but for the enemy side and enemyCleanTripleIndex.")]
+    public int enemyCleanTripleStabilization;
+
+    [Header("Comeback Settings — Player (biggest matching entry wins, not cumulative)")]
+    [Tooltip("Player-side comeback ladder, replacing the old fixed 4-tier HP curve. Each entry " +
+             "matches when the player's hero HP is at or below its HP Percent OR the enemy's " +
+             "firepower advantage reaches its Opponent Advantage; the BIGGEST Triple Adjustment " +
+             "among all matching entries is added to both the player's Dirty AND Clean Triple " +
+             "Index for the turn. An empty list disables the mechanism for this side entirely. " +
+             "See docs/SlotMachine.md.")]
+    public List<ComebackSetting> playerComebackSettings = new();
+
+    [Header("Comeback Settings — Enemy (biggest matching entry wins, not cumulative)")]
+    [Tooltip("Same as playerComebackSettings, but for the enemy side — matched against the enemy " +
+             "hero's HP and the PLAYER's firepower advantage over the enemy.")]
+    public List<ComebackSetting> enemyComebackSettings = new();
+
+    [Header("Comeback Decay")]
+    [Tooltip("Each time a side re-enters a bonus turn (lands another triple), a POSITIVE comeback " +
+             "adjustment is divided by this (integer division) and both that side's Dirty and Clean " +
+             "Triple Index drop by the difference — with 3, a +50 boost decays +50 -> +16 -> +5 -> +1 " +
+             "across a streak. 1 = no decay (full boost for the whole streak). A negative adjustment " +
+             "(the high-HP punish) never decays. Applies to both sides. See docs/SlotMachine.md.")]
+    [Min(1)] public int comebackDecayDivisor = 3;
+
+    [Header("Ludo Progress Index")]
+    [Tooltip("Amount PlayerDirtyTripleIndex/EnemyDirtyTripleIndex increases after each reroll, " +
+             "during a side's first (non-bonus) roll phase of its turn only — disabled for the " +
+             "rest of that turn once that side gets one triple. 0 = disabled. Fallback for any " +
+             "round not listed in the per-round overrides below. See docs/SlotMachine.md.")]
+    public int ludoProgressIndex;
+    [Tooltip("Optional per-round override, e.g. round 1 => 20 forces LudoProgressIndex to 20 " +
+             "specifically during round 1's turns (both sides). A round not listed here falls " +
+             "back to the common value above.")]
+    public List<RoundLudoProgressOverride> perRoundLudoProgressOverrides = new();
+
+    /// <summary>Looks up the effective LudoProgressIndex for a given 1-indexed round — the first
+    /// matching per-round override, or the common fallback value if none match.</summary>
+    public int GetLudoProgressIndexForRound(int round)
+    {
+        foreach (var entry in perRoundLudoProgressOverrides)
+            if (entry.round == round) return entry.ludoProgressIndex;
+        return ludoProgressIndex;
+    }
+
+    /// <summary>Biggest tripleAdjustment among the entries matching this side's HP% or the
+    /// opponent's firepower advantage; 0 if no entry matches at all (or the list is empty).</summary>
+    public int GetComebackAdjustment(bool isPlayer, int hpPercent, int opponentAdvantage)
+    {
+        var settings = isPlayer ? playerComebackSettings : enemyComebackSettings;
+        // Seeded from the first match rather than from 0 — an all-negative ladder (the high-HP
+        // punish at full health) must be able to win, and a 0 seed would silently swallow it.
+        bool matched = false;
+        int best = 0;
+        foreach (var entry in settings)
+        {
+            if (!Matches(entry, hpPercent, opponentAdvantage)) continue;
+            if (!matched || entry.tripleAdjustment > best) best = entry.tripleAdjustment;
+            matched = true;
+        }
+        return matched ? best : 0;
+    }
+
+    /// <summary>One rung down this side's ladder from <paramref name="adjustment"/>: the biggest
+    /// POSITIVE tripleAdjustment strictly below it, or 0 if none (the lowest positive rung demotes to
+    /// no boost, never into the negative high-HP punish). Zero/negative adjustments pass through
+    /// unchanged. Used by SlotMachineRigger's comeback demotion — see docs/SlotMachine.md.</summary>
+    public int DemoteComebackAdjustment(bool isPlayer, int adjustment)
+    {
+        if (adjustment <= 0) return adjustment;
+        var settings = isPlayer ? playerComebackSettings : enemyComebackSettings;
+        int best = 0;
+        foreach (var entry in settings)
+        {
+            if (entry.tripleAdjustment >= adjustment) continue;
+            best = Mathf.Max(best, entry.tripleAdjustment);
+        }
+        return best;
+    }
+
+    private static bool Matches(ComebackSetting entry, int hpPercent, int opponentAdvantage)
+        => hpPercent <= entry.hpPercent
+           || (entry.opponentAdvantage > 0 && opponentAdvantage >= entry.opponentAdvantage);
+
+    [Serializable]
+    public struct RoundLudoProgressOverride
+    {
+        [Tooltip("The 1-indexed round (GameManager.CurrentRound) this override applies to.")]
+        public int round;
+        [Tooltip("LudoProgressIndex to use during this specific round, instead of the common value above.")]
+        public int ludoProgressIndex;
+    }
+
+    /// <summary>
+    /// One rung of a side's comeback ladder — see <see cref="GetComebackAdjustment"/> and
+    /// docs/SlotMachine.md. Matching is an OR of the two thresholds, and the biggest
+    /// tripleAdjustment among matching entries wins — so a ladder authored with adjustments that
+    /// decrease as hpPercent rises behaves exactly like the old "most severe tier wins" curve,
+    /// while the advantage column can additionally fire a lower rung at any HP.
+    /// </summary>
+    [Serializable]
+    public struct ComebackSetting
+    {
+        [Tooltip("Matches when this side's hero HP is AT OR BELOW this percentage (0-100). A row at " +
+                 "100 always matches on HP, which is how a flat high-HP punish is authored; a row " +
+                 "at 0 only matches at death, i.e. it is effectively advantage-only.")]
+        [Range(0, 100)] public int hpPercent;
+        [Tooltip("Matches when the OPPONENT of this side (the enemy on the player's list, the " +
+                 "player on the enemy's list) leads on effective firepower by at least this much — " +
+                 "AttacksResolver.OpponentFirepowerAdvantage: each side's total creature damage " +
+                 "output minus the barrier standing in its way, floored at 0. Raw damage points, " +
+                 "not a percentage. 0 = this entry ignores firepower entirely and matches on HP " +
+                 "alone. See docs/Battle.md.")]
+        public int opponentAdvantage;
+        [Tooltip("Added to BOTH this side's Dirty and Clean Triple Index (0-200 scale, 100 = " +
+                 "neutral 1-in-3 odds) when this entry wins. Positive = easier triples (a comeback " +
+                 "boost, divided by comebackDecayDivisor each time this side lands a triple and " +
+                 "re-enters a bonus turn); " +
+                 "negative = harder triples (a punish, which stays applied for the whole turn).")]
+        public int tripleAdjustment;
+    }
+}

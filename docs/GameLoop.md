@@ -11,21 +11,21 @@ single source of truth for round order and is meant to be read top-to-bottom.
 
 ## Key files
 
-- `Global/GameManager/GameManager.cs` — singleton MonoBehaviour; owns the round coroutine,
+- `_Global/_GameManager/GameManager.cs` — singleton MonoBehaviour; owns the round coroutine,
   `ActiveSide`, the restart/staleness machinery, and hero-death → game-over handling.
-- `Global/GameManager/GameState.cs` — abstract base for every state; `OnEnter`/`OnExit`/
+- `_Global/_GameManager/GameState.cs` — abstract base for every state; `OnEnter`/`OnExit`/
   `CompleteState()` contract, plus the `Generation`/`IsStale` staleness guard.
-- `Global/GameManager/ActionState.cs` — abstract base for Nuke/Spell states; caster/target
+- `_Global/_GameManager/ActionState.cs` — abstract base for Nuke/Spell states; caster/target
   resolution helpers, the animated entry-playback loop (`PlayEntries`), and the instant-resolve
   path (`ResolveInstant`).
-- Concrete states (all in `Global/GameManager/`, one file each): `GameStartState`,
+- Concrete states (all in `_Global/_GameManager/`, one file each): `GameStartState`,
   `SwitchSideState`, `RollState`, `SpawningState`, `NukeState`, `SpellState`, `BattleState`,
   `PostBattleState`, `EndOfRoundState`, `GameOverState`.
-- `Units/ExperienceManager.cs`, `PlayerView/CreaturesManager.cs`, `PlayerView/HeroView.cs`,
-  `Units/Hero.cs`, `Global/RollStateManager/RollStateManager.cs`, `AI/AIController.cs`,
-  `Global/GameManager/EnergyController.cs` — all subscribe to the battle-restart event (see below).
-- `UI/PauseMenuController.cs` — pause overlay + `Time.timeScale` freeze.
-- `Utils/DoAfterDelay.cs` — the delayed-callback utility every state/animation chain runs on.
+- `_Units/ExperienceManager.cs`, `_PlayerView/CreaturesManager.cs`, `_PlayerView/HeroView.cs`,
+  `_Units/Hero.cs`, `_Global/_RollStateManager/RollStateManager.cs`, `_AI/AIController.cs`,
+  `_Global/_GameManager/EnergyController.cs` — all subscribe to the battle-restart event (see below).
+- `_UI/PauseMenuController.cs` — pause overlay + `Time.timeScale` freeze.
+- `_Utils/DoAfterDelay.cs` — the delayed-callback utility every state/animation chain runs on.
 
 ## Round flow
 
@@ -33,6 +33,14 @@ single source of truth for round order and is meant to be read top-to-bottom.
 
 ```
 Run(GameStartState)                          // 2s intro delay, no gameplay yet
+RunRounds()                                  // the loop below
+```
+
+`RunRounds()` is split out of `RunGameLoop()` because it has a **second entry point**: a boss's phase
+transition re-enters it without replaying the intro (see "Boss phase transition" below). Those two are
+the only callers; no state ever inserts itself into the sequence.
+
+```
 while (!gameOver):
     PlaySide(Player, runBattleAfter: !firstRound)   // round 1: player summons, no battle after
         SwitchSideState(Player)
@@ -66,6 +74,9 @@ while (!gameOver):
   (`ExperienceManager.ResolveGems()`) before completing.
 - `EndOfRoundState` is a pure marker — completes immediately, exists so the round boundary is
   visible in the state sequence and events.
+- `BossPhaseTransitionState` is the one state outside this sequence — it runs instead of
+  `GameOverState` when the dying enemy hero's fight has another phase, then falls back into
+  `RunRounds()`. See "Boss phase transition" below.
 - `GameOverState` **never calls `CompleteState()`** — the round loop stops here, by design. It logs
   the winner/draw, then hands off to `CampaignManager.Instance.ResolveVictory()`/
   `ResolveDefeat()`, which schedule the actual campaign transition (advance/reload/complete) after a
@@ -161,17 +172,129 @@ more):
 
 | Script | Handler | What it resets |
 |---|---|---|
-| `Units/Hero.cs` | `InitHealth` | Refills HP to max via `Health.Init(GetMaxHealth())`. One `Hero` instance per side subscribes independently — no need for `GameManager` to know about both sides. |
-| `PlayerView/HeroView.cs` | `ClearShield` | Destroys any live `Shield` GameObject and clears the shield slot. |
-| `PlayerView/CreaturesManager.cs` | `ResetAll` | Destroys every creature in every slot (native + both charm slots per class), unconditionally, no death animation. |
-| `Global/RollStateManager/RollStateManager.cs` | `ResetForRestart` | Clears `SpawnEntries`/`NukeEntries`/`SpellEntries`, resets `TripleRolled`/`LastRollType`, resets both slot machines' UI and deactivates them. |
-| `Units/ExperienceManager.cs` | `ClearForRestart` | Destroys any in-flight XP gem GameObjects, clears `pendingXp`/`activeGems`, resets `gemsInFlight` — discards XP rather than granting it (contrast with `ResolveGemsInstant`, which grants). |
-| `AI/AIController.cs` | `ResetRerollPool` | Re-seeds the AI's fight-wide reroll pool from the current fight's `enemyData.rerollsAmount`. See `docs/AI.md`. |
-| `Global/GameManager/EnergyController.cs` | `ResetForRestart` | Refills reroll energy to `CampaignStateManager.Instance.CurrentRun.currentEnergy` (read fresh, campaign-persistent — not a local baseline) and resets the reroll cost back to `baseRerollCost`. See `docs/Energy.md`. |
+| `_Units/Hero.cs` | `InitHealth` | Refills HP to max via `Health.Init(GetMaxHealth())`. One `Hero` instance per side subscribes independently — no need for `GameManager` to know about both sides. |
+| `_PlayerView/HeroView.cs` | `ClearShield` | Destroys any live `Shield` GameObject and clears the shield slot. |
+| `_PlayerView/CreaturesManager.cs` | `ResetAll` | Destroys every creature in every slot (native + both charm slots per class), unconditionally, no death animation. |
+| `_Global/_RollStateManager/RollStateManager.cs` | `ResetForRestart` | Clears `SpawnEntries`/`NukeEntries`/`SpellEntries`, resets `TripleRolled`/`LastRollType`, resets both slot machines' UI and deactivates them. |
+| `_Units/ExperienceManager.cs` | `ClearForRestart` | Destroys any in-flight XP gem GameObjects, clears `pendingXp`/`activeGems`, resets `gemsInFlight` — discards XP rather than granting it (contrast with `ResolveGemsInstant`, which grants). |
+| `_AI/AIController.cs` | `ResetRerollPool` | Re-seeds the AI's fight-wide reroll pool from the current fight's `enemyData.rerollsAmount`. See `docs/AI.md`. |
+| `_Global/_GameManager/EnergyController.cs` | `ResetForRestart` | Refills reroll energy to `CampaignStateManager.Instance.CurrentRun.currentEnergy` (read fresh, campaign-persistent — not a local baseline) and resets the reroll cost back to `baseRerollCost`. See `docs/Energy.md`. |
+| `_SlotMachine/SlotMachineRigger.cs` | `ResetForRestart` | Re-applies the fight's authored triple indices and clears per-turn rigging state. Also subscribes to `CampaignStateManager.OnCurrentFightChanged` for the same reason — see "Boss phase transition" below. |
+| `_Global/_Campaign/BattleRewardPresenter.cs` | `DestroyActiveReward` | Tears down a reward overlay left open when the player restarts from the pause menu. See `docs/Encounters.md`. |
+| `_Global/_Balance/BalanceTool.cs` | `ResetTimer` | Resets the debug HUD's fight timer. |
 
 Because subscribers are independent (none of them read another subscriber's post-reset state),
 firing order among them doesn't matter — `OnBattleRestart?.Invoke()` runs all of them
 synchronously before `RestartBattle()` proceeds to restart the loop.
+
+## Boss phase transition
+
+A fight can have more than one phase. A phase is the next `EncounterListSO.fights` entry, flagged
+`FightSO.continuesPreviousFight` (`docs/Encounters.md`). When the enemy hero dies and
+`CampaignManager.NextPhase` is non-null, the fight doesn't end — the whole enemy side is swapped over
+to that phase **in place**, the encounter index advances onto it, and the round loop carries on.
+Fight 5 is the only user today (`fights[4] Fight5 Final Boss` → `fights[5] Fight5-2 Final Boss`, the
+Skeleton Warlock turning into his burning form).
+
+**The campaign index moves, but isn't saved.** `CampaignManager.AdvanceToBossPhase()` bumps
+`RunState.currentEncounterIndex` and does nothing else — no `Save()`, no scene load. So phase 2 is
+genuinely "encounter 6" for everything that reads the index (the fight's own data, the debug
+tooling, `CampaignManagerEditor`) while still being un-bankable progress: a defeat or restart runs
+`RewindToNodeStart()` and both phases must be won in one session. See `docs/Encounters.md` for the
+node-vs-phase rules (map points, `HasNextEncounter`, `AdvanceToNextEncounter`).
+
+**Entering a phase directly.** A debug profile whose `currentEncounterIndex` points at a phase skips
+the transition entirely, so `GameManager.RunGameLoop()` calls `OpenContinuationFight()` right after
+`GameStartState` to reproduce the board the transition would have left: the enemy's level-1 trio is
+summoned via the shared `BossPhaseTransitionState.SpawnEnemyCreatures()` and `IsFirstRound` is set
+false so the player's first turn is followed by a battle. It's a no-op for an ordinary fight, and the
+real transition path never reaches it (that re-enters `RunRounds()` directly, not `RunGameLoop()`).
+
+**Entry.** `GameManager.HandleHeroDied()` gets one new guard clause ahead of the game-over path:
+
+```csharp
+private void HandleHeroDied(Creatures.Hero hero)
+{
+    if (_gameOver) return;
+    if (!IsGameOver()) return;
+    if (TryStartBossPhaseTransition()) return;
+    _gameOver = true;
+    AbandonCurrentRun();
+    new GameOverState().OnStateStart();
+}
+```
+
+`TryStartBossPhaseTransition()` returns true if it took over — **including while a transition is already
+running** (`_bossPhaseTransition`), so a second hero-death event mid-swap is swallowed rather than
+restarting the sequence. It stops the round coroutine the same way game over does (`AbandonCurrentRun()`,
+a shared extraction), sets `IsFirstRound = false` (phase 2 resumes mid-fight, so the player's turn must
+be followed by a battle) and `ActiveSide = Player`, then starts `RunBossPhaseTransition()` —
+`Run(new BossPhaseTransitionState())` followed by `RunRounds()`. `CurrentRound` is deliberately not
+reset. **`Generation` is deliberately not bumped**: nothing stale is in flight (we never reached
+`GameOverState`, so `CampaignManager.ResolveVictory()`'s 4-second closure was never scheduled), and
+bumping it would only invalidate the transition's own delayed steps.
+
+**The sequence** (`BossPhaseTransitionState`, timings from `BossPhaseTransitionManager` on `Global`,
+which exists for exactly the reason `PostBattleStateManager` does — a `GameState` is a plain C# class
+and can't hold serialized fields):
+
+| t | Step |
+|---|---|
+| 0 | `G.EnemyCreaturesManager.KillAll()` — the boss's creatures die with him |
+| +`RiseDelay` (3s) | `((BossAnimator)G.EnemyHero.Animator).PlayRise()` |
+| +`GetRiseDuration()` | `G.EnemyView.PlayResurrectionFeedback()` — camera shake + 0.5s white flash |
+| +`FlashToSwapDelay` (0.25s, mid-flash) | `CleanUpDead()` on the enemy board, then `CampaignManager.AdvanceToBossPhase()` and `CampaignStateManager.ApplyFightToScene(CampaignManager.CurrentFight)` — the index moves first, so the phase is applied *through* the same index `CurrentFight` resolves from rather than behind the campaign's back |
+| +`BoardSwapDelay` (2s) | `G.PlayerCreaturesManager.KillAll()` — returns the longest Spine `Dead` animation it started (`UnitAnimator.GetDeadDuration()`) |
+| +that death duration +`PostBattleStateManager.CleanUpDelay` (0.5s) | `G.PlayerCreaturesManager.CleanUpDead()` — bodies are cleared only once they've finished falling |
+| +`EmptyBoardDelay` (0.5s) | the new phase's level-1 archer/tank/mage are summoned onto the empty field |
+| +`PostSummonDelay` (0.75s) | `CompleteState()` |
+
+The player's board dies and is cleared *before* the enemy trio appears, not at the same moment: an
+earlier version killed the player's creatures and summoned the new trio in the same frame, then cleared
+the bodies 0.5s later — shorter than the `Dead` animation, so the creatures visibly vanished mid-fall.
+`KillAll()` skips creatures already dead (corpses left by the killing battle) so their death doesn't
+replay.
+
+Every step is scheduled through `Utils.DoAfterDelay` (rule 2) and re-checks `IsStale` first, since each
+one mutates real state before completing. The `BossAnimator` cast is unchecked (rule 5) — only an
+Animator-driven avatar can rise, so authoring a second phase behind a Spine avatar should fail loudly.
+
+**Why that last cleanup step is load-bearing, not polish.** `PostBattleState` is the only thing that
+normally clears corpses, and it won't run again until after the player's turn *and* the battle that
+follows it. A dead player creature left in its slot would make `SpawningState` read the slot as occupied
+and try to promote/heal the corpse instead of summoning a fresh unit — the summon would silently vanish.
+It reuses `PostBattleStateManager.CleanUpDelay` (on top of the death animation) so a purged body lingers
+the same beat as any other.
+
+**Why the purge suppresses splash damage.** `Creature.KillWithoutOwnerSplash()` sets a flag that
+`HandleDeath()` checks before dealing the usual 20%-of-max-HP splash to the owning hero
+(`docs/Battle.md`); `CreaturesManager.KillAll()` kills a whole board through it. Death animations and
+feedbacks play exactly as normal — only the splash is skipped, because that rule models a creature lost
+in combat, not one removed by a cutscene. This matters on both sides: the enemy hero is already dead, so
+a splash would re-fire `Hero.OnHeroDied` in the middle of the swap, and the player would otherwise eat
+~60% of their board's max HP for something they didn't do — enough to die inside the transition and
+leave the game half-swapped. Contrast `CreaturesManager.ResetAll()`, which destroys instantly with no
+death at all and stays the restart path.
+
+**What the swap actually changes.** `CampaignStateManager.ApplyFightToScene(fight)` sets `CurrentFight`,
+calls `HeroView.ReplaceHeroAvatar` and `G.ApplyCampaignEnemyCreatures`, then fires the static
+`CampaignStateManager.OnCurrentFightChanged`. The new avatar's own `Start()` runs `InitHealth()`, which
+reads the new phase's `enemyData.hp` live — so the boss comes back at full phase-2 HP with no extra
+plumbing. Anything that reads per-fight data *once* and caches it subscribes to that event so it can't
+be left on phase-1 values: `SlotMachineRigger.ApplyFightOverrides` (triple-rigging indices) and
+`AIController.ResetRerollPool` (the fight-wide reroll pool, which refills for the new phase). See
+`docs/Encounters.md`.
+
+**Restarting out of a later phase.** `CampaignManager.ResetCurrentEncounter()` calls
+`RewindToNodeStart()` (encounter index back to `NodeStartIndex`, undoing the phase advance) and then
+`CampaignStateManager.RevertToEncounterFight()` before `RestartBattle()` — both no-ops for an
+ordinary fight, but without them a restart or defeat reached in phase 2 would replay phase 2 instead
+of the fight's real opening. **Order matters**: the revert compares the scene's fight against
+`CampaignManager.CurrentFight`, so if the index hadn't rewound first it would compare phase 2 against
+itself and no-op. `RestartBattle()` also clears `_bossPhaseTransition`.
+
+Rule 7 counterpart: `BossPhaseTransitionState.ResolveInstant()` reaches the same end state with no
+animation, pause or feedback.
 
 ## Pause
 

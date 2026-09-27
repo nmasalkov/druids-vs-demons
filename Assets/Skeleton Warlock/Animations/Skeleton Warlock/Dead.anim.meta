@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: fc9011a53151482987943aaffbae6086
+timeCreated: 1513487339
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 122856
+  packageName: Skeleton Warlock
+  packageVersion: 1.2
+  assetPath: Assets/Skeleton Warlock/Animations/Skeleton Warlock/Dead.anim
+  uploadId: 327764

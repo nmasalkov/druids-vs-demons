@@ -7,13 +7,6 @@ using UnityEngine;
 
 public partial class AttacksResolver
 {
-    private static readonly Dictionary<Type, int> PriorityOrder = new()
-    {
-        { typeof(MageSO), 0 },
-        { typeof(ArcherSO), 1 },
-        { typeof(TankSO), 2 }
-    };
-
     private Dictionary<Targetable, float> BuildSimulatedHP(List<Creature> creatures, Hero hero, Shield shield)
     {
         var hp = new Dictionary<Targetable, float>();
@@ -26,20 +19,29 @@ public partial class AttacksResolver
         return hp;
     }
 
-    private int GetPriority(Creature creature)
+    /// <summary>Mage (0) → Archer (1) → Tank (2). Matched with <c>is</c>, so subclasses such as
+    /// <see cref="CounterTankSO"/> keep their class's priority.</summary>
+    private int GetPriority(Creature creature) => creature.Data switch
     {
-        var dataType = creature.Data.GetType();
-        return PriorityOrder.TryGetValue(dataType, out int p) ? p : 99;
-    }
+        MageSO => 0,
+        ArcherSO => 1,
+        TankSO => 2,
+        _ => 99
+    };
 
     private List<Creature> SortByPriority(List<Creature> creatures)
     {
         return creatures.OrderBy(GetPriority).ToList();
     }
 
+    /// <summary>Target order only (not attack order): a <see cref="CreatureSO.preferredTarget"/>
+    /// creature ranks ahead of every class, then the usual class priority breaks ties.</summary>
+    private int GetTargetPriority(Creature creature) =>
+        creature.Data.preferredTarget ? GetPriority(creature) - 100 : GetPriority(creature);
+
     /// <summary>
-    /// Returns the next attackable target. Priority: enemy shield (if alive) → highest priority
-    /// alive creature → enemy hero.
+    /// Returns the next attackable target. Priority: enemy shield (if alive) → preferred-target
+    /// creatures → highest priority alive creature → enemy hero.
     /// </summary>
     private Targetable GetHighestPriorityAliveTarget(List<Creature> enemies, Hero hero, Shield shield,
         Dictionary<Targetable, float> simHP)
@@ -49,7 +51,7 @@ public partial class AttacksResolver
 
         var creature = enemies
             .Where(e => simHP.TryGetValue(e, out float hp) && hp > 0)
-            .OrderBy(GetPriority)
+            .OrderBy(GetTargetPriority)
             .FirstOrDefault();
 
         if (creature != null) return creature;
@@ -66,7 +68,8 @@ public partial class AttacksResolver
         List<Creature> enemies,
         Hero enemyHero,
         Shield enemyShield,
-        Dictionary<Targetable, float> enemySimHP)
+        Dictionary<Targetable, float> enemySimHP,
+        bool isPlayerSide)
     {
         var assignments = new List<AttackAssignment>();
         var sorted = SortByPriority(attackers);
@@ -76,10 +79,9 @@ public partial class AttacksResolver
             // Shocked creatures skip their turn entirely.
             if (attacker.StatusesManager.IsShocked) continue;
 
-            var stats = attacker.Data.Stats(attacker.Experience.Level);
-            float buffedDamage = stats.damage * attacker.StatusesManager.AttackDamageMultiplier;
+            float buffedDamage = BuffedDamage(attacker, isPlayerSide);
             if (buffedDamage <= 0f) continue; // BattleCry Energy Drain reduced damage to 0 — skip turn
-            int hitCount = stats.numberOfAttacks;
+            int hitCount = attacker.Data.Stats(attacker.Experience.Level).numberOfAttacks;
 
             for (int i = 0; i < hitCount; i++)
             {
@@ -115,6 +117,85 @@ public partial class AttacksResolver
         return assignments;
     }
 
+    /// <summary>Per-hit damage before target-dependent steps: creature class reward boost (player side
+    /// only, docs/Rewards.md), then BattleCry. Also the base of a healing archer's heal.</summary>
+    private static float BuffedDamage(Creature attacker, bool isPlayerSide)
+    {
+        var stats = attacker.Data.Stats(attacker.Experience.Level);
+        float baseDamage = RewardBonuses.ApplyCreatureBonus(attacker.Data, stats.damage, isPlayerSide);
+        return baseDamage * attacker.StatusesManager.AttackDamageMultiplier;
+    }
+
+    // ============================================================
+    //  Counterattacks (docs/Battle.md "Counterattacks") — a post-pass over the regular hits, so the
+    //  two ResolveTeam passes stay untouched and counters can see who dies anyway.
+    // ============================================================
+
+    /// <summary>
+    /// For every regular hit landing on a <see cref="CounterTankSO"/> creature, plans a counter back at
+    /// the attacker — or at the Shield guarding the attacker's side, while that shield is still up
+    /// after all regular attacks. Skipped when that target is already dead after all regular attacks
+    /// (it would die anyway, so the counter isn't needed). Counters are appended to AllAttacks as
+    /// ordinary assignments and linked from their trigger via HasCounter/CounterIndex.
+    /// </summary>
+    private void ResolveCounters(Dictionary<Targetable, float> playerSimHP, Dictionary<Targetable, float> enemySimHP,
+        Shield playerShield, Shield enemyShield)
+    {
+        int regularCount = AllAttacks.Count;
+        for (int i = 0; i < regularCount; i++)
+        {
+            bool attackerIsPlayer = i < PlayerAttacks.Count;
+            var attackerSimHP = attackerIsPlayer ? playerSimHP : enemySimHP;
+            var attackerShield = attackerIsPlayer ? playerShield : enemyShield;
+            if (!TryPlanCounter(AllAttacks[i], attackerSimHP, attackerShield, out var counter)) continue;
+
+            var trigger = AllAttacks[i];
+            trigger.HasCounter = true;
+            trigger.CounterIndex = CounterAttacks.Count;
+            AllAttacks[i] = trigger;
+
+            CounterAttacks.Add(counter);
+            AllAttacks.Add(counter);
+        }
+    }
+
+    private bool TryPlanCounter(AttackAssignment trigger, Dictionary<Targetable, float> attackerSimHP,
+        Shield attackerShield, out AttackAssignment counter)
+    {
+        counter = default;
+        if (trigger.Target is not Creature { Data: CounterTankSO data } defender) return false;
+        if (defender.StatusesManager.IsShocked) return false;
+
+        var target = CounterTarget(trigger.Attacker, attackerShield, attackerSimHP);
+        if (attackerSimHP[target] <= 0f) return false; // dies anyway — no counter needed
+
+        // A flat share of the incoming hit — no boost, BattleCry, special modifiers or crit of its own.
+        float damage = trigger.Damage * data.CounterFraction(defender.Experience.Level);
+        float hpAfter = Mathf.Max(0f, attackerSimHP[target] - damage);
+        attackerSimHP[target] = hpAfter;
+
+        counter = new AttackAssignment
+        {
+            Attacker = defender,
+            Target = target,
+            Damage = damage,
+            ResultHP = hpAfter,
+            FatalBlow = hpAfter <= 0f,
+            IsCounter = true
+        };
+        return true;
+    }
+
+    /// <summary>The Shield guarding the attacker's side while it's still up after all regular
+    /// attacks, else the attacker itself.</summary>
+    private static Targetable CounterTarget(Creature attacker, Shield attackerShield,
+        Dictionary<Targetable, float> attackerSimHP)
+    {
+        if (attackerShield != null && attackerSimHP.TryGetValue(attackerShield, out float shieldHp) && shieldHp > 0f)
+            return attackerShield;
+        return attacker;
+    }
+
     /// <summary>
     /// Runs the attacker's <see cref="CreatureSO.specialDamageModifiers"/> over
     /// <paramref name="damage"/> in array order, each one taking the running value and returning
@@ -147,10 +228,16 @@ public partial class AttacksResolver
         var byAttacker = new Dictionary<Creature, List<AttackAssignment>>();
         foreach (var a in allAttacks)
         {
+            // Counters never animate as a turn of their own — they play from their trigger's OnHit.
+            if (a.IsCounter) continue;
             if (!byAttacker.ContainsKey(a.Attacker))
                 byAttacker[a.Attacker] = new List<AttackAssignment>();
             byAttacker[a.Attacker].Add(a);
         }
+
+        // Pre-phase: healers fire their support volleys first; every regular attack below (healers
+        // included) starts through the pre-phase gate.
+        float prePhase = PlayPrePhase(byAttacker);
 
         // Build a flat list with one entry per attacker (first target for animation)
         var uniqueAttacks = new List<AttackAssignment>();
@@ -191,14 +278,19 @@ public partial class AttacksResolver
             var hitsA = BuildHitInfos(byAttacker[creatureA]);
             var hitsB = BuildHitInfos(byAttacker[creatureB]);
 
-            mutualTankA.AttackWithHits(hitsA);
-
-            float arriveTime = mutualTankA.GetRangedDelay() + mutualTankA.GetRunDuration();
-            Utils.DoAfterDelay.Execute(() =>
+            var tankA = mutualTankA;
+            var tankB = mutualTankB;
+            _prePhaseGate.RunWhenOpen(() =>
             {
-                mutualTankB.SetPendingOnHit(hitsB.Count > 0 ? hitsB[0].OnHit : null);
-                mutualTankB.PlayAttackInPlace(null);
-            }, arriveTime);
+                tankA.AttackWithHits(hitsA);
+
+                float arriveTime = tankA.GetRangedDelay() + tankA.GetRunDuration();
+                Utils.DoAfterDelay.Execute(() =>
+                {
+                    tankB.SetPendingOnHit(hitsB.Count > 0 ? hitsB[0].OnHit : null);
+                    tankB.PlayAttackInPlace(null);
+                }, arriveTime);
+            });
 
             float dur = mutualTankA.GetAttackDuration();
             if (dur > maxDuration) maxDuration = dur;
@@ -233,13 +325,23 @@ public partial class AttacksResolver
             if (handledTanks.Contains(a.Attacker)) continue;
 
             var hits = BuildHitInfos(byAttacker[a.Attacker]);
-            a.Attacker.Animator.AttackWithHits(hits);
+            var animator = a.Attacker.Animator;
+            _prePhaseGate.RunWhenOpen(() => animator.AttackWithHits(hits));
 
-            float dur = a.Attacker.Animator.GetAttackDuration();
+            float dur = animator.GetAttackDuration();
             if (dur > maxDuration) maxDuration = dur;
         }
 
-        return maxDuration;
+        return prePhase + maxDuration + LongestCounterDuration();
+    }
+
+    /// <summary>Extra time the battle stays open so a counter triggered by the last hit can land.</summary>
+    private float LongestCounterDuration()
+    {
+        float longest = 0f;
+        foreach (var counter in CounterAttacks)
+            longest = Mathf.Max(longest, ((CounterTankAnimator)counter.Attacker.Animator).GetCounterDuration());
+        return longest;
     }
 
     /// <summary>
@@ -300,7 +402,8 @@ public partial class AttacksResolver
             return opponentTank.GetAttackDuration() + tank.GetAttackDuration() - tank.GetRangedDelay();
         }
 
-        tank.AttackWithHits(hits);
+        var headTank = tank;
+        _prePhaseGate.RunWhenOpen(() => headTank.AttackWithHits(hits));
         return tank.GetAttackDuration();
     }
 
@@ -337,32 +440,53 @@ public partial class AttacksResolver
         var gemSpawned = new HashSet<(Creature attacker, Targetable target)>();
 
         foreach (var a in assignments)
-        {
-            var target = a.Target;
-            var attacker = a.Attacker;
-            float damage = a.Damage;
-            bool targetIsDoomed = DoomedTargets.Contains(target);
-            bool isHeroTarget = target is Hero;
-            bool isShieldTarget = target is Shield;
-            // Shields never grant XP gems even if they're the "doomed" target this round.
-            bool shouldSpawnGem = !isShieldTarget && (isHeroTarget || (targetIsDoomed && gemSpawned.Add((attacker, target))));
-            bool isCritical = a.IsCritical;
-
-            hits.Add(new HitInfo
-            {
-                Target = target,
-                OnHit = () =>
-                {
-                    target.Health.TakeDamage(damage);
-                    target.HitFeedback.PlayHitFeedbacks(isCritical);
-                    if (shouldSpawnGem)
-                    {
-                        ExperienceManager.Instance.SpawnGem(target.transform.position, attacker);
-                    }
-                }
-            });
-        }
+            hits.Add(new HitInfo { Target = a.Target, OnHit = BuildOnHit(a, gemSpawned) });
         return hits;
+    }
+
+    /// <summary>Gem de-dup for counters, shared across every trigger (a counter-tank killing one
+    /// archer through two counters still spawns one gem).</summary>
+    private readonly HashSet<(Creature attacker, Targetable target)> _counterGemSpawned = new();
+
+    /// <summary>
+    /// The hit callback that lands one planned assignment: damage, hit feedbacks, XP gem — and, when
+    /// the hit landed on a counter-tank, that tank's counter (death postponed around the damage so
+    /// even a killing blow is answered).
+    /// </summary>
+    private Action BuildOnHit(AttackAssignment a, HashSet<(Creature attacker, Targetable target)> gemSpawned)
+    {
+        var target = a.Target;
+        var attacker = a.Attacker;
+        float damage = a.Damage;
+        bool isCritical = a.IsCritical;
+        bool shouldSpawnGem = ShouldSpawnGem(a, gemSpawned);
+        Action counter = a.HasCounter ? BuildCounter(CounterAttacks[a.CounterIndex]) : null;
+        var counterTank = a.HasCounter ? (CounterTankAnimator)((Creature)target).Animator : null;
+
+        return () =>
+        {
+            counterTank?.BeginCounter();
+            target.Health.TakeDamage(damage);
+            target.HitFeedback.PlayHitFeedbacks(isCritical);
+            if (shouldSpawnGem)
+                ExperienceManager.Instance.SpawnGem(target.transform.position, attacker);
+            counter?.Invoke();
+        };
+    }
+
+    private Action BuildCounter(AttackAssignment counter)
+    {
+        var counterTank = (CounterTankAnimator)counter.Attacker.Animator;
+        var onHit = BuildOnHit(counter, _counterGemSpawned);
+        return () => counterTank.PlayCounter(counter.Target, onHit);
+    }
+
+    private bool ShouldSpawnGem(AttackAssignment a, HashSet<(Creature attacker, Targetable target)> gemSpawned)
+    {
+        // Shields never grant XP gems even if they're the "doomed" target this round.
+        if (a.Target is Shield) return false;
+        if (a.Target is Hero) return true;
+        return DoomedTargets.Contains(a.Target) && gemSpawned.Add((a.Attacker, a.Target));
     }
 
     // ============================================================
@@ -397,7 +521,9 @@ public partial class AttacksResolver
 
             var stats = creature.Data.Stats(creature.Experience.Level);
             // No ApplySpecialModifiers here — see the summary above.
-            float dmgPerHit = stats.damage * creature.StatusesManager.AttackDamageMultiplier
+            // EstimatedDamage: a non-attacker (counter-tank, future healer) counts its nominalDamage.
+            float dmgPerHit = RewardBonuses.ApplyCreatureBonus(creature.Data, creature.Data.EstimatedDamage(stats), isPlayerSide)
+                              * creature.StatusesManager.AttackDamageMultiplier
                               * creature.Data.ExpectedCritMultiplier;
             if (dmgPerHit <= 0f) continue;
 

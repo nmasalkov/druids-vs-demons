@@ -32,6 +32,7 @@ namespace Game._Scripts.Spells
             if (!shot.Success)
             {
                 creature.StatusesManager.PlayCharmFail();
+                shot.Apply(); // no-op unless improved Charm rolled ShockOnFail
                 Utils.DoAfterDelay.Execute(onComplete, failDuration);
                 return;
             }

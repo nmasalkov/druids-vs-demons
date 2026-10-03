@@ -10,7 +10,10 @@
     {
         public float Damage;
 
+        /// <summary>An improved-Starfall bonus strike (see <see cref="StarfallResolver"/>) — the
+        /// animation fires it after the main volley instead of with it. No gameplay difference.</summary>
+        public bool IsExtraStrike;
+
         public override void Apply() => ApplyDamage(Damage);
     }
 }
-

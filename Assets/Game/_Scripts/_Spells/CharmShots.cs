@@ -21,11 +21,18 @@ namespace Game._Scripts.Spells
         public UnitSlot DestinationSlot;
         public bool Success;
 
+        /// <summary>Improved Charm only (see CharmResolver): a failed charm shocks the target instead.</summary>
+        public bool ShockOnFail;
+
         public Creature Charmed => (Creature)Target;
 
         public override void Apply()
         {
-            if (!Success) return;
+            if (!Success)
+            {
+                if (ShockOnFail) Charmed.StatusesManager.ApplyShock();
+                return;
+            }
 
             var creature = Charmed;
             creature.Slot.Unit = null;

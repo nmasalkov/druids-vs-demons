@@ -12,6 +12,12 @@ public struct CreatureStats
 
     [Tooltip("How many separate hits this creature lands per battle turn. Each hit re-picks its target, so a multi-hit attacker can finish one target and roll onto the next.")]
     public int numberOfAttacks;
+
+    [Tooltip("Per-hit damage assumed by the pre-battle firepower estimate (comeback rigging, AI reroll budget, " +
+             "BalanceTool HUD) when this creature's real damage is 0 — e.g. a counter-tank or a future healer " +
+             "that still pulls its weight without attacking. Ignored when damage > 0; never used in real combat. " +
+             "See docs/Battle.md.")]
+    public float nominalDamage;
 }
 
 [CreateAssetMenu(fileName = "NewCreature", menuName = "Game/Actions/Creature")]
@@ -54,6 +60,13 @@ public class CreatureSO : ActionSO
     /// the pre-battle firepower estimate, which can't roll dice.</summary>
     public float ExpectedCritMultiplier => 1f + critChancePercent / 100f * (critDamageBonusPercent / 100f);
 
+    [Header("Targeting")]
+    [Tooltip("Taunt: enemy creature attacks hit this creature before any non-preferred creature, ahead " +
+             "of the normal Mage → Archer → Tank order. A standing shield still comes first. Only " +
+             "creature attacks honor it — nukes keep their own order. Several preferred creatures fall " +
+             "back to the class order among themselves. See docs/Battle.md (resolution step 2, targeting priority).")]
+    public bool preferredTarget;
+
     [Header("Experience")]
     [Tooltip("XP reward for killing this creature at each level (index 0 = level 1)")]
     public int[] experienceReward = { 30, 60, 120, 240 };
@@ -69,6 +82,10 @@ public class CreatureSO : ActionSO
         int index = Mathf.Clamp(level - 1, 0, levelStats.Length - 1);
         return levelStats[index];
     }
+
+    /// <summary>Per-hit damage the firepower estimate should count: the real damage, or
+    /// <see cref="CreatureStats.nominalDamage"/> for a creature that doesn't attack.</summary>
+    public float EstimatedDamage(CreatureStats stats) => stats.damage > 0f ? stats.damage : stats.nominalDamage;
 
     public int GetExperienceReward(int level)
     {

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Game._Scripts.Creatures;
 using UnityEngine;
 
@@ -55,6 +56,7 @@ namespace _Scripts.Creatures
                 skeletonAnimation.timeScale = 1f;
                 suppressAutoIdle = false;
                 PlayIdle();
+                OnVolleyFinished();
                 return;
             }
 
@@ -65,23 +67,42 @@ namespace _Scripts.Creatures
             var entry = spineAnimationState.GetCurrent(0);
 
             var hit = pendingHits[currentHitIndex];
+            Action extraShot = BuildExtraShot(currentHitIndex);
             currentHitIndex++;
 
-            if (hit.Target != null)
+            Action mainShot = BuildShot(missileAnimator, hit);
+            Utils.DoAfterDelay.Execute(() =>
             {
-                Vector3 targetPos = hit.Target.HitFeedback.HitPlacePosition.position;
-                var onHit = hit.OnHit;
-                Utils.DoAfterDelay.Execute(() =>
-                {
-                    missileAnimator.FireOnce(targetPos, onHit);
-                }, scaledFireDelay);
-            }
+                mainShot?.Invoke();
+                extraShot?.Invoke();
+            }, scaledFireDelay);
 
             if (entry != null)
             {
                 entry.Complete += OnShotAnimComplete;
             }
         }
+
+        /// <summary>
+        /// Fires <paramref name="hit"/> from <paramref name="launcher"/>, aiming at where the target stands
+        /// now (captured immediately, so a target that dies before the fire moment doesn't matter).
+        /// Null for a hit with no target — that shot plays its animation but launches nothing.
+        /// </summary>
+        protected static Action BuildShot(MissileAnimator launcher, HitInfo hit)
+        {
+            if (hit.Target == null) return null;
+            Vector3 targetPos = hit.Target.HitFeedback.HitPlacePosition.position;
+            var onHit = hit.OnHit;
+            return () => launcher.FireOnce(targetPos, onHit);
+        }
+
+        /// <summary>Extra missiles fired at the same moment as shot <paramref name="shotIndex"/>'s
+        /// main missile; null for a plain archer. See SplitShotArcherAnimator.</summary>
+        protected virtual Action BuildExtraShot(int shotIndex) => null;
+
+        /// <summary>Called once the volley's last shot animation has finished and the archer is back
+        /// to idle.</summary>
+        protected virtual void OnVolleyFinished() { }
 
         private void OnShotAnimComplete(Spine.TrackEntry trackEntry)
         {
@@ -94,10 +115,14 @@ namespace _Scripts.Creatures
             base.PlayAttack();
         }
 
-        public override float GetAttackDuration()
+        public override float GetAttackDuration() => GetAttackDuration(shotCount);
+
+        /// <summary>Duration of a volley of <paramref name="shots"/> shots (capped at totalDuration,
+        /// matching the time-scaling in AttackWithHits).</summary>
+        public float GetAttackDuration(int shots)
         {
             float singleAnimDuration = base.GetAttackDuration();
-            float naturalTotal = singleAnimDuration * shotCount;
+            float naturalTotal = singleAnimDuration * shots;
             return naturalTotal > totalDuration ? totalDuration : naturalTotal;
         }
     }

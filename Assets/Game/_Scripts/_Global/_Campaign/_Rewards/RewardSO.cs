@@ -27,6 +27,11 @@ public abstract class RewardSO : ScriptableObject
     public Sprite EffectiveIcon => icon != null ? icon : FallbackIcon;
     protected virtual Sprite FallbackIcon => null;
 
+    /// <summary>True if RewardCard should draw its "++" BoostOverlay over the icon — for rewards
+    /// that upgrade something the icon depicts (BoostSO). Rewards whose own icon already carries
+    /// the plus (Vitality, Energy Cell) or that aren't upgrades (creature unlocks) keep it off.</summary>
+    public virtual bool ShowsBoostOverlay => false;
+
     public abstract void Claim(RunState run);
     public abstract bool IsOwned(RunState run);
 }

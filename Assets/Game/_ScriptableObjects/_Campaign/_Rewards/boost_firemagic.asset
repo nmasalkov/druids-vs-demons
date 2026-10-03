@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: boost_firemagic
   rewardName: Boost Fire Magic
-  description: +20% to Fire Magic's damage.
+  description: +20% Fire Magic damage (13 / 20 / 60 becomes 16 / 24 / 72).
   typeLabel: Boost
   icon: {fileID: 0}
   unique: 1

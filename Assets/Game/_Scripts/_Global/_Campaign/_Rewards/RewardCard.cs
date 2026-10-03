@@ -17,6 +17,8 @@ public class RewardCard : MonoBehaviour
     [SerializeField] private TMP_Text typeText;
     [SerializeField] private TMP_Text descriptionText;
     [SerializeField] private Button button;
+    [Tooltip("The \"++\" overlay drawn on top of the icon. Shown only for upgrade rewards (RewardSO.ShowsBoostOverlay — every BoostSO), hidden otherwise.")]
+    [SerializeField] private GameObject boostOverlay;
 
     private RewardCardAnimator _animator;
 
@@ -39,6 +41,7 @@ public class RewardCard : MonoBehaviour
         nameText.text = reward.rewardName;
         typeText.text = reward.typeLabel;
         descriptionText.text = reward.description;
+        boostOverlay.SetActive(reward.ShowsBoostOverlay);
     }
 
     /// <summary>Pure-display overload for LoadoutPickEncounterView's Comparison panel: shows an
@@ -53,6 +56,7 @@ public class RewardCard : MonoBehaviour
         nameText.text = action.actionName;
         typeText.text = typeLabel;
         descriptionText.text = action.description;
+        boostOverlay.SetActive(false);
     }
 
     public void SetSelected(bool selected)

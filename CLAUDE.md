@@ -287,10 +287,13 @@ them for any new/modified game code under `Assets/Game`:
     moving only the body would leave every shadow drawing on top of every creature. Those two
     filters (same parent + same sorting layer) are also what keep the ~22 status/hit
     `ParticleSystemRenderer`s out of it: they live outside the `Visual`/`Character` container, on the
-    `Shield`/`UI` layers, and are ordered deliberately by `StatusesManager`. Note the hero avatars
-    deliberately do **not** carry this — they're one per side at fixed positions, never race
-    anything, and their authored order (177, "always on top") would be replaced by a y-derived value
-    that puts the mage row in front of them.
+    `Shield`/`UI` layers, and are ordered deliberately by `StatusesManager`. The hero avatars
+    carry it too, inherited from the `Player.prefab` root (the base of every avatar variant). They
+    used to rely on a fixed authored order instead, which broke two ways: `-y * 150` already
+    exceeded the default avatar's 177 on every tank/mage row, and the themed enemy avatars, rebuilt
+    on vendor meshes, had dropped to orders 0–2. Any creature then drew over the enemy avatar even
+    while standing behind it — live-caught with a charmed Bulba covering the mummy. Avatar bodies
+    now carry small authored orders, with the shadow one below, and the y-derived order does the rest.
 
     **Projectile effects render on the `Shield` sorting layer**, above every unit and avatar on
     `Default`. That covers every renderer in a `SimpleProjectile` prefab and in the prefabs its
@@ -298,12 +301,13 @@ them for any new/modified game code under `Assets/Game`:
     their small authored orders, impacts and explosions draw behind the unit they hit. A newly added
     projectile or swapped-in VFX prefab needs the same treatment: run the `set-projectile-layer-order`
     skill, which also copies any directly-referenced vendor prefab into the projectile's folder
-    instead of editing the vendor asset.
+    instead of editing the vendor asset. To build a brand-new projectile from vendor missile/muzzle/impact
+    parts, use the `add-projectile` skill (it creates the `_Projectiles/_<Name>/` folder with local copies).
 
     **The character prefabs are a variant tree, so a component wanted on every unit goes on the
     root of that tree, not on each prefab.** `ParentUnit` is the base for all 13 unit variants
-    (`CatapultParentGreen` → `Demon`/`Kodo`, `DragonParentGreen` → `Bat`/`OrkMage`,
-    `_GolemParentGreen` → `Cyclop`/`OrkTank`/`Skeleton`, plus `BubkaBig`/`DragonBig`/`TankBig`), and
+    (`CatapultParentGreen` → `Demon`/`Kodo`/`HealingShroom`, `DragonParentGreen` → `Bat`/`OrkMage`/`Lizard`,
+    `_GolemParentGreen` → `Cyclop`/`OrkTank`/`Skeleton`/`Bulba`, plus `BubkaBig`), and
     `Player` is the base for all 6 avatars (via `EnemyAvatarParent`). Adding to `ParentUnit` alone
     gives all 13 the component by inheritance; adding it per-prefab instead creates redundant
     overrides, and once the base gets it too, `[DisallowMultipleComponent]` turns that into a

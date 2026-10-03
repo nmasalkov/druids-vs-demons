@@ -14,8 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: shock
   actionName: Shock
-  description: Stuns enemy creatures so they skip their turns. Fully blocked while the enemy shield stands.
-  cardSprite: {fileID: 21300000, guid: 0e88a911e8a24914c998e8dacc41ac9e, type: 3}
+  description: Stuns enemy creatures so they skip their turns. Fully blocked while
+    the enemy shield stands.
+  cardSprite: {fileID: 21300000, guid: 4e29857ba1552e8449d68f5a0a1d9983, type: 3}
   damagePerLevel:
   - 14
   - 30

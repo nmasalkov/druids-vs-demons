@@ -33,7 +33,7 @@ namespace Game._Scripts.Spells
             // then the creature-advantage penalty on top — a caster already ahead on board finds it
             // proportionally harder to steal. Deliberately applied after the clamp, so the penalty
             // bites even when the base chance had maxed out. See docs/ActionsAndSpells.md.
-            float chance = Mathf.Clamp01(RewardBonuses.ApplyBonuses(charmSO, charmSO.GetChanceForLevel(level)) * alive.Count);
+            float chance = Mathf.Clamp01(charmSO.GetChanceForLevel(level) * alive.Count);
             chance *= charmSO.GetCreatureAdvantageMultiplier(CountAlive(casterManager), alive.Count);
             bool success = Random.value < chance;
 
@@ -42,7 +42,18 @@ namespace Game._Scripts.Spells
                 Target = target,
                 DestinationSlot = destination,
                 Success = success,
+                ShockOnFail = !success && RollShockOnFail(caster),
             });
+        }
+
+        /// <summary>
+        /// Improved Charm (<see cref="CharmImprovementSO"/>, player only): a failed charm shocks its
+        /// target with shockOnFailChance. Rolled here so animated and instant paths agree.
+        /// </summary>
+        private static bool RollShockOnFail(Hero caster)
+        {
+            if (!IsImproved(caster, out CharmImprovementSO improvement)) return false;
+            return Random.value < improvement.shockOnFailChance;
         }
 
         /// <summary>

@@ -417,7 +417,7 @@ default's `levelStats` boosted ~15% (damage rounded up, health rounded to neares
 +50% critical strike, matching the Ghost trio (`docs/Battle.md`).
 
 The two that need a projectile deliberately avoid the only two the player can ever field (`ARC` on
-`Bubka`/`BubkaBig`, `LightningSoftGreenOBJ` on `Dragon`/`DragonBig` — both inherited from their type
+`Bubka`/`BubkaBig`, `LightningSoftGreenOBJ` on `Dragon` — both inherited from their type
 parent rather than overridden, so they're easy to collide with by accident): `DarkCatapult` uses
 `Skull` (shared with phase 1's `BossCatapult` — same boss, same role, never on screen at once) and
 `DarkMage` uses `MagicFire` (previously unused by any creature; its particles were already on the

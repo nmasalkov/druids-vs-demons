@@ -11,6 +11,17 @@ public struct AttackAssignment
     public float ResultHP;
     public bool FatalBlow;
     public bool IsCritical;
+
+    /// <summary>True for a counterattack (docs/Battle.md "Counterattacks"): Attacker is the
+    /// counter-tank, Target is the creature whose hit triggered it (or the Shield guarding that
+    /// creature's side, while it's up). Never animated on its own — it
+    /// plays from its trigger's hit callback.</summary>
+    public bool IsCounter;
+
+    /// <summary>True when this hit landed on a counter-tank and triggered a counter, stored at
+    /// <see cref="AttacksResolver.CounterAttacks"/>[<see cref="CounterIndex"/>].</summary>
+    public bool HasCounter;
+    public int CounterIndex;
 }
 
 public partial class AttacksResolver
@@ -18,6 +29,10 @@ public partial class AttacksResolver
     public List<AttackAssignment> PlayerAttacks { get; private set; }
     public List<AttackAssignment> EnemyAttacks { get; private set; }
     public List<AttackAssignment> AllAttacks { get; private set; }
+
+    /// <summary>Counterattacks, also present in <see cref="AllAttacks"/> (so XP, doomed targets and
+    /// the instant path treat them as ordinary hits); indexed by the trigger's CounterIndex.</summary>
+    public List<AttackAssignment> CounterAttacks { get; } = new();
 
     /// <summary>
     /// Set of targets that will die this battle (have at least one FatalBlow assignment).
@@ -40,12 +55,18 @@ public partial class AttacksResolver
         var enemySimHP = BuildSimulatedHP(enemyCreatures, enemyHero, enemyShield);
         var playerSimHP = BuildSimulatedHP(playerCreatures, playerHero, playerShield);
 
-        PlayerAttacks = ResolveTeam(playerCreatures, enemyCreatures, enemyHero, enemyShield, enemySimHP);
-        EnemyAttacks = ResolveTeam(enemyCreatures, playerCreatures, playerHero, playerShield, playerSimHP);
+        // Heals first (docs/Battle.md "Healing shots"): the damage passes below see healed HP.
+        ResolveHeals(playerCreatures, playerHero, playerSimHP, isPlayerSide: true);
+        ResolveHeals(enemyCreatures, enemyHero, enemySimHP, isPlayerSide: false);
+
+        PlayerAttacks = ResolveTeam(playerCreatures, enemyCreatures, enemyHero, enemyShield, enemySimHP, isPlayerSide: true);
+        EnemyAttacks = ResolveTeam(enemyCreatures, playerCreatures, playerHero, playerShield, playerSimHP, isPlayerSide: false);
 
         AllAttacks = new List<AttackAssignment>();
         AllAttacks.AddRange(PlayerAttacks);
         AllAttacks.AddRange(EnemyAttacks);
+
+        ResolveCounters(playerSimHP, enemySimHP, playerShield, enemyShield);
 
         BuildDoomedTargets();
         RegisterExperienceRewards();
@@ -95,12 +116,14 @@ public partial class AttacksResolver
     }
 
     /// <summary>
-    /// Instant path (rule 7): lands every planned hit immediately in resolve order — no
+    /// Instant path (rule 7): lands every planned heal, then every planned hit, immediately in resolve order — no
     /// animations, no delays. Gems don't spawn; the XP registered during
     /// <see cref="Resolve"/> is granted via <c>ExperienceManager.ResolveGemsInstant()</c>.
     /// </summary>
     public void ApplyAttacksInstant()
     {
+        foreach (var h in Heals)
+            h.Target.Health.Heal(h.Amount, clearsStatuses: false);
         foreach (var a in AllAttacks)
             a.Target.Health.TakeDamage(a.Damage);
     }

@@ -10,6 +10,7 @@ namespace Game._Scripts.Spells
         public ShieldSO Data;
         public UnitSlot Slot;
         public int Level;
+        public float MaxHp;
         public bool IsPlayer;
 
         public override void Apply()
@@ -18,7 +19,7 @@ namespace Game._Scripts.Spells
             var instance = Object.Instantiate(prefab, Slot.transform);
             Slot.Unit = instance;
             instance.Slot = Slot;
-            instance.Init(Level);
+            instance.Init(Level, MaxHp);
             instance.OnSummon();
         }
     }
@@ -27,10 +28,11 @@ namespace Game._Scripts.Spells
     public class ShieldPromoteShot : SpellShot
     {
         public int Level;
+        public float MaxHp;
 
         public override void Apply()
         {
-            ((Shield)Target).Promote(Level);
+            ((Shield)Target).Promote(Level, MaxHp);
         }
     }
 

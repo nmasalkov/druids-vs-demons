@@ -23,19 +23,49 @@ algorithm (`RewardDrawer`), and a small stat-boost hook (`RewardBonuses`) resolv
 - **`StatusRewardSO`** (abstract) — stacking, non-unique run modifiers. `IsOwned` always `false`.
   - **`HpBoostRewardSO`** — `bonusHp` (int, default 15). `Claim` appends `id` to
     `RunState.statusRewardIds` (duplicates allowed and expected — each claim stacks).
-- **`BonusEnergyRewardSO`** — `bonusEnergy` (int, default 50). `Claim` is a pure
+- **`BonusEnergyRewardSO`** — `bonusEnergy` (int; code default 50, the live `bonusenergy_50`
+  asset grants **20** despite its filename). `Claim` is a pure
   `run.currentEnergy += bonusEnergy` — uncapped by `RunState.energyCapacity`, same as
   a fight's guaranteed `FightSO.rewardAmount` (see "Energy grants are uncapped" below). Not unique,
   not tracked in any list — a pure one-time effect.
 - **`CreatureRewardSO`** — `creature` (`CreatureSO`). `Claim` appends `creature.id` to
-  `RunState.gatheredCreatureIds`; `IsOwned` checks that same list. Unique. Not yet consumable —
-  fielding a gathered creature into a loadout slot is a future follow-up (per the user request
-  this was scoped from — "for now it is not used").
-- **`BoostSO`** (abstract) — `action` (`ActionSO`), `percentage` (float, default `0.2`). `Claim`
-  appends `id` to `RunState.boostRewardIds`; `IsOwned` checks that same list. Unique.
-  - **`CreatureBoostRewardSO`** / **`NukeBoostRewardSO`** / **`SpellBoostRewardSO`** — empty
-    bodies, exist purely so `RewardDrawer`/asset menus can type-discriminate, exactly like
-    `ArcherSO`/`TankSO`/`MageSO` subclassing `CreatureSO` for the same reason.
+  `RunState.gatheredCreatureIds`; `IsOwned` checks that same list. Unique. A gathered creature
+  becomes pickable in the next pre-battle loadout picker (`LoadoutPickEncounter` reads
+  `gatheredCreatureIds`, `docs/Loadout.md`). Four creature rewards exist:
+  - `creature_bubka_big` (`BubkaBig`) has stats identical to its base creature (a Phase 2
+    follow-up).
+  - `creature_lizard` unlocks **Lizard** (plain `MageSO`, id `lizard`), a glass-cannon mage: 70% of
+    Dragon's HP, +28–32% base damage, and a 35% / +100% critical strike (`docs/Battle.md`
+    "Critical strike") — about 1.22x Dragon by expected damage x HP. Fires `_AcidSpit`. Lizard
+    replaced the old `DragonBig` placeholder (id `mage_big`), whose assets were deleted; a save
+    still holding `mage_big` falls back to the default mage in `ApplyLoadoutToG`.
+  - `creature_bulba` unlocks **Bulba** (`CounterTankSO`, id `bulba`), a tank that never attacks,
+    taunts (`preferredTarget`, enemy creature attacks hit it first), and counterattacks every hit
+    on it (`docs/Battle.md` "Counterattacks"). Bulba replaced the old
+    `TankBig` placeholder, whose assets were deleted.
+  - `creature_healing_shroom` unlocks **Healing Shroom** (`HealingArcherSO`, id `healing_shroom`).
+    It is a frail archer that, before each battle, fires a volley of heals at random wounded allies (never itself), then attacks normally (`docs/Battle.md`
+    "Healing shots").
+- **`BoostSO`** (abstract) — unique run-long upgrades. `Claim` appends `id` to
+  `RunState.boostRewardIds`; `IsOwned` checks that same list. **Every boost applies to the player
+  side only** — see "`RewardBonuses`" below. Three concrete shapes:
+  - **`CreatureClassBoostSO`** — nested `enum CreatureClass { Archer, Tank, Mage }` + `percentage`
+    (default 0.2). +percentage damage **and** HP for *every* player creature of that class (matches
+    by `ArcherSO`/`TankSO`/`MageSO` subtype, so Big variants and any future creature of the class
+    are covered). Assets: `boost_archer`/`boost_tank`/`boost_mage`.
+  - **`ActionStatBoostSO`** — `action` + `percentage`. Scales one nuke/spell's main number:
+    Fire Magic damage (`boost_firemagic`, 0.2), Shield HP and heal (`boost_shield`, 0.2), Battle
+    Cry's **bonus part only** (`boost_battlecry`, 0.6 — ×1.24 → `1 + 0.24 × 1.6` = ×1.384).
+  - **`ActionImprovementSO`** (abstract) — `action` (icon fallback only). Changes a mechanic
+    instead of a number; each concrete subclass is the key its resolver looks up and carries its own
+    tunables:
+    - **`ShockImprovementSO`** (`boost_shock`) — `shieldDamagePerBolt` (10). Shock bolts damage a
+      standing enemy shield instead of being blocked; leftover bolts after it breaks carry on to the
+      normal priority targets (`docs/ActionsAndSpells.md` 2c).
+    - **`StarfallImprovementSO`** (`boost_starfall`) — `extraStrikes` (1). After the main volley,
+      extra stars hit random enemies that survive it (`StarfallAnimation.extraStrikeDelay`, 0.5s).
+    - **`CharmImprovementSO`** (`boost_charm`) — `shockOnFailChance` (0.5). A failed Charm may shock
+      its target.
 
 ## `RewardListSO`
 
@@ -94,73 +124,79 @@ CurrentRun.maxHp + GetMaxHpBonus()`. `Hero.GetMaxHealth()`'s player branch reads
 instead of the raw `CurrentRun.maxHp` scalar — already re-evaluated fresh on every
 `GameManager.OnBattleRestart` → `InitHealth()`, so no new event wiring was needed.
 
-## `RewardBonuses` — the boost hook
+## `RewardBonuses` — the one boost reader (player side only)
+
+`_Global/_Campaign/RewardBonuses.cs` is the only code that reads `RunState.boostRewardIds`. Every
+query takes `bool isPlayer` and returns the base value / `false` for the enemy — **rewards never
+apply to the enemy**, even though both sides roll the same nuke/spell assets (`G.enemyNukes`/
+`enemySpells` point at the player's defaults in `BattleScene`):
 
 ```csharp
-public static class RewardBonuses
-{
-    public static float ApplyBonuses(ActionSO action, float baseValue)
-    {
-        float bonus = 0f;
-        foreach (var id in CampaignStateManager.Instance.CurrentRun.boostRewardIds)
-            if (G.RewardList.Find(id) is BoostSO boost && boost.action == action)
-                bonus += boost.percentage;
-        return baseValue * (1f + bonus);
-    }
-}
+public static float ApplyActionBonus(ActionSO action, float baseValue, bool isPlayer);   // ActionStatBoostSO
+public static float ActionBonusFraction(ActionSO action, bool isPlayer);                 // summed % (Battle Cry)
+public static float ApplyCreatureBonus(CreatureSO data, float baseValue, bool isPlayer); // CreatureClassBoostSO
+public static bool TryGetImprovement<T>(bool isPlayer, out T improvement) where T : ActionImprovementSO;
 ```
 
-Called explicitly at each resolver's balance-number read (not baked into the SOs' own accessor
-methods — keeps `ScriptableObject`s pure data per CLAUDE.md rule 13):
+Resolvers don't call it directly — `ActionResolver` (the Nuke/Spell resolver base) wraps it, with
+the side derived from the caster (`caster == G.PlayerHero`):
 
-- **Creature damage** — `AttacksResolver.Mechanics.cs`'s `ResolveTeam()`, wrapping `stats.damage`.
-  One generic site, covers all 3 default creatures automatically.
-- **Creature HP at spawn** — `Creature.GetMaxHealth()`, wrapping `Data.Stats(...).health`. This is
-  the "HP bonus for creatures applies when spawning" case, via `CreatureBoostRewardSO` — distinct
-  from `HpBoostRewardSO`, which boosts the player hero's max HP instead.
-- **Nuke damage** — `FireMagicResolver`/`StarfallResolver`, each wrapping their own
-  `source.GetDamageForLevel(level)` read.
-- **Charm chance** — `CharmResolver`, wrapping `charmSO.GetChanceForLevel(level)` before the
-  `* alive.Count` / `Clamp01`.
-- **Battle Cry buff** — `BattleCryResolver`, wrapping `GetBuffMultiplierForLevel(level)` (only the
-  buff side — the debuff dealt to the enemy stays unboosted).
-- **Shield HP** — `Shield.Init(int level)`/`Shield.Promote(int level)`, wrapping
-  `Data.GetHpForLevel(level)` (covers spawn, promote, *and* — via `ShieldResolver`'s
-  `ShieldHealShot` — heal).
+```csharp
+protected static bool IsPlayer(Hero caster);
+protected static bool IsImproved<T>(Hero caster, out T improvement) where T : ActionImprovementSO;
+protected static float Boosted(ActionSO source, Hero caster, float baseValue);
 
-**Known gap: `ShockResolver` has no boostable stat.** Shock deals no damage, only applies the
-Shocked status with a fixed duration — `Boost_Shock` (the 9th boost asset, created for full
-per-default-action coverage) is currently inert until Shock gains a numeric stat worth boosting.
+// usage, e.g. ShockResolver:
+if (IsImproved(caster, out ShockImprovementSO improvement)) { /* altered logic */ }
+```
 
-**Known gap shared with the loadout system (`docs/G.md`'s "No side flag anywhere" gotcha): boosts
-apply to both sides identically.** `RewardBonuses.ApplyBonuses` matches purely by `ActionSO`
-reference — since both sides already roll from the same shared `G.DefaultCreatures`/`DefaultNukes`/
-`DefaultSpells` pool "by design," a boosted creature/nuke/spell is stronger whichever side rolls it.
-Not a new limitation introduced here, just inherited from that existing, documented behavior.
+**Adding a new improvement:** subclass `ActionImprovementSO` (tunables + `[Tooltip]`s on it),
+create the asset in `_ScriptableObjects/_Campaign/_Rewards/`, add it to `RewardListSO.asset`, and
+branch on `IsImproved(caster, out YourImprovementSO imp)` inside that action's resolver. All data
+mutation still goes through shots (rule 7) — any RNG is rolled in the resolver.
+
+Call sites (all bonus reads live at the resolver/combat-resolution level, never in the SOs — rule 13):
+
+- **Creature damage** — `AttacksResolver.Mechanics.cs`'s `ResolveTeam(..., isPlayerSide)` wraps
+  `stats.damage` with `ApplyCreatureBonus` (before BattleCry/modifiers/crit); `EstimateFirepower`
+  mirrors it so AI estimates match.
+- **Creature HP at spawn** — `Creature.GetMaxHealth()`, `ApplyCreatureBonus(Data, health,
+  OwnerHero == G.PlayerHero)`. A creature the player charms from the enemy gets the damage bonus
+  while on the player's side (side is read per attack) but keeps its spawn-time HP.
+- **Fire Magic damage** — `FireMagicResolver`, `Boosted(...)`.
+- **Battle Cry buff** — `BattleCryResolver.BoostedBonusPart`: `1 + (m − 1) × (1 + fraction)`. The
+  debuff is never boosted.
+- **Shield HP / heal** — `ShieldResolver` computes `MaxHp` (spawn/promote shots → `Shield.Init/
+  Promote(level, maxHp)`) and `Heal` with `Boosted(...)`. `Shield` itself no longer reads bonuses.
+- **Improvements** — `ShockResolver`, `StarfallResolver`, `CharmResolver` via `IsImproved<T>`
+  (see `docs/ActionsAndSpells.md`).
+
+Old saves that claimed the pre-rework ids (`boost_bubka`/`boost_golem`/`boost_dragon`) just resolve
+to `null` in `RewardList.Find` and are ignored.
 
 ## Card-draw algorithm — `RewardDrawer.DrawThree`
 
 Pools, after excluding every `RewardSO` where `unique && IsOwned(run)`:
 
-- **hpOrEnergy** = `HpBoostRewardSO` ∪ `BonusEnergyRewardSO` (never filtered — not unique, always
-  has candidates)
+- **hpOrEnergy** = `HpBoostRewardSO` ∪ `BonusEnergyRewardSO` (never filtered — not unique)
 - **creature** = unowned `CreatureRewardSO`
-- **boost** = unowned `BoostSO` (all 3 subclasses)
+- **boost** = unowned `BoostSO` (all subclasses)
 
-Slot 1 is always drawn from `hpOrEnergy`. Slots 2 and 3 use a priority-with-cascade rule — try the
-preferred pool, fall through to the next if it has no unclaimed candidates left:
+Each slot tries its pools in order, skipping any card already shown in this draw (a `used` set —
+applies to non-unique cards too, so Vitality and Energy Cell never appear twice while the other
+one is available):
 
-- Slot 2: **creature → boost → hpOrEnergy**
+- Slot 1: **hpOrEnergy**
+- Slot 2: **creature → hpOrEnergy** (i.e. once every creature is claimed, slot 2 shows whichever of
+  Vitality/Energy Cell slot 1 didn't)
 - Slot 3: **boost → creature → hpOrEnergy**
 
-A picked unique reward can't repeat within the same draw (tracked via a `used` set, checked in
-`PickFrom`). This reproduces the exact behavior:
+If every pool is exhausted for a slot, it repeats a random card from its last pool (hpOrEnergy —
+always valid, never unique). Resulting draws:
 
-- Default draw: `[hpOrEnergy, creature, boost]`
-- All creature rewards claimed: `[hpOrEnergy, boost, boost]`
-- Creatures and boosts both claimed: `[hpOrEnergy, hpOrEnergy, hpOrEnergy]`
-- Boosts claimed, creatures still available (the one case not explicit in the original spec,
-  resolved by the same cascade in reverse): `[hpOrEnergy, creature, creature]`
+- Default: `[hpOrEnergy, creature, boost]`
+- All creatures claimed: `[Vitality|Energy, the other one, boost]`
+- Creatures and boosts all claimed: `[Vitality|Energy, the other one, repeat]`
 
 ## `RewardCard` / `RewardEncounter` flow
 
@@ -295,13 +331,29 @@ section (raw ids plus a resolve-to-assets button) that only covered the reward-s
 - **`RewardCard.prefab`'s animation is `RewardCardAnimator` (DOTween), not `MMF_Player`s** —
   auto-added via `[RequireComponent]`, default field values (`1.12` select scale, `15` move-up,
   `0.15s`/`0.2s` durations) are already tuned, nothing to wire manually.
-- **`HpBoostRewardSO`/`BonusEnergyRewardSO` have no icon assigned** — no linked `ActionSO` to
-  borrow `cardSprite` from (`FallbackIcon` stays `null` for these two), so they render with a
-  blank icon until placeholder art is assigned in the Inspector.
-- **All 14 reward assets live in `_ScriptableObjects/_Campaign/_Rewards/`**, referenced by
-  `RewardListSO.asset`. The 3 "Big" creature variants (`BubkaBig`/`TankBig`/`DragonBig`, ids
-  `archer_big`/`tank_big`/`mage_big`, 1.5x prefab scale) back the 3 `CreatureRewardSO`s and are
-  registered in `GameCatalog.asset`'s `allCreatures` alongside the originals.
+- **Icons:** action/creature art lives in `Assets/Game/_Sprites/_Slot_Cards/_Creatures|_Nukes|_Spells/`
+  (each `ActionSO.cardSprite`), reward-only art in `Assets/Game/_Sprites/_Rewards/`.
+  `hpboost_15`/`bonusenergy_50` use `health.png`/`energy.png` (plus already drawn in), the three
+  `CreatureClassBoostSO`s use `archer.png`/`tank.png`/`mage.png` as explicit `icon`s (no single
+  action to fall back to), and `ActionStatBoostSO`/`ActionImprovementSO` fall back to their action's
+  `cardSprite`. The Big creature unlocks still use placeholder art.
+- **Boost overlay:** `RewardCard.prefab` has a hidden `BoostOverlay` child ("++"), wired to
+  `RewardCard.boostOverlay`. `RewardCard.Init(RewardSO)` sets it active from
+  `RewardSO.ShowsBoostOverlay` — `true` for every `BoostSO` (class boosts, stat boosts,
+  improvements), `false` otherwise (Vitality/Energy Cell icons carry their own plus; creature
+  unlocks aren't upgrades). The loadout Comparison overload `Init(ActionSO, ...)` always hides it.
+- **Auditing:** the `validate-rewards` skill (`.claude/skills/validate-rewards/SKILL.md`) is the
+  checklist for a full functional/text/icon/reachability/balance audit of this system.
+- **Changing a reward asset's script type** (e.g. a boost moving to a new `BoostSO` subclass) by
+  editing its `m_Script` guid in YAML leaves an already-loaded `RewardListSO` holding a stale
+  `null` in the Editor until a domain reload / `Resources.UnloadAsset` — the serialized reference
+  is fine, only the in-memory list is stale.
+- **All 15 reward assets live in `_ScriptableObjects/_Campaign/_Rewards/`**, referenced by
+  `RewardListSO.asset`. The 4 reward creatures (`BubkaBig`, id `archer_big`, 1.5x prefab scale, plus
+  `Lizard`, id `lizard`, `Bulba`, id `bulba`, and `HealingShroom`, id `healing_shroom`) back the 4
+  `CreatureRewardSO`s. They're registered in
+  `GameCatalog.asset`'s `allCreatures` alongside the originals. The `setup-creature` skill's
+  "Player reward creature" branch is the checklist for adding or replacing one.
 - **`RewardEncounter.prefab`'s root GameObject carries both a `RewardEncounter` (backend) and a
   `RewardEncounterView` (UI) component** (CLAUDE.md rule 28). `cardSlots` (`CardSlot1`/`CardSlot2`/
   `CardSlot3`, each holding a disabled placeholder `RewardCard` for Inspector debugging — CLAUDE.md's
@@ -322,5 +374,5 @@ section (raw ids plus a resolve-to-assets button) that only covered the reward-s
   dispatch that instantiates it.
 - `docs/Campaign.md` — `RunState`, `CampaignProfileSO`, `CampaignDebugTool`, and the `ActionSO.id`/
   `GameCatalog` id-resolution pattern `RewardSO.id`/`RewardListSO` mirrors.
-- `docs/ActionsAndSpells.md`, `docs/Battle.md` — the resolvers `RewardBonuses.ApplyBonuses` is
-  called from.
+- `docs/ActionsAndSpells.md`, `docs/Battle.md` — the resolvers `RewardBonuses` is read from, and
+  the improved Shock/Starfall/Charm behavior.

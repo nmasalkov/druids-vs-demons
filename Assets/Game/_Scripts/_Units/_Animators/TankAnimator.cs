@@ -24,9 +24,9 @@ namespace _Scripts.Creatures
         private Vector3 originalPosition;
         private Targetable pendingTarget;
         private Action pendingOnHit;
-        private Creature ownerCreature;
+        protected Creature ownerCreature;
 
-        private void Awake()
+        protected virtual void Awake()
         {
             ownerCreature = GetComponent<Creature>();
         }

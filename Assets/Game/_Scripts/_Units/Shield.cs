@@ -22,22 +22,22 @@ namespace Game._Scripts.Creatures
 
         /// <summary>
         /// Configure HP for the given level and play the summon animation. Must be called
-        /// once right after instantiation (see <c>ShieldResolver</c>).
+        /// once right after instantiation (see <c>ShieldResolver</c>). <paramref name="maxHp"/> is
+        /// computed by the resolver (it owns reward boosts, player side only — docs/Rewards.md).
         /// </summary>
-        public void Init(int level)
+        public void Init(int level, float maxHp)
         {
             Level = level;
-            Health.Init(RewardBonuses.ApplyBonuses(Data, Data.GetHpForLevel(level)));
+            Health.Init(maxHp);
         }
 
         /// <summary>
         /// Increase shield level and fully refill HP. Called when the player rolls a higher
         /// shield level than the one currently on field.
         /// </summary>
-        public void Promote(int level)
+        public void Promote(int level, float maxHp)
         {
             Level = level;
-            float maxHp = RewardBonuses.ApplyBonuses(Data, Data.GetHpForLevel(level));
             Health.Init(maxHp);
             ShieldAnimator.PlayPromote();
         }

@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: baddeee814d7429cb1d8dc2d9ddde911, type: 3}
+  m_Name: Lizard
+  m_EditorClassIdentifier: 
+  id: lizard
+  actionName: Lizard
+  description: A fragile mage that spits acid. Each hit has a 35% chance to crit
+    for double damage.
+  cardSprite: {fileID: 1769036553957449704, guid: cf2cf92ebbfc90c4e81db3a51c267ba0, type: 3}
+  creaturePrefab: {fileID: 1149646255416165586, guid: 89b0290de4aacac4cb6efd3b701ebbef, type: 3}
+  levelStats:
+  - damage: 11.5
+    health: 17
+    numberOfAttacks: 1
+    nominalDamage: 0
+  - damage: 19
+    health: 20
+    numberOfAttacks: 1
+    nominalDamage: 0
+  - damage: 29
+    health: 22
+    numberOfAttacks: 1
+    nominalDamage: 0
+  - damage: 45
+    health: 29
+    numberOfAttacks: 1
+    nominalDamage: 0
+  specialDamageModifiers: []
+  critChancePercent: 35
+  critDamageBonusPercent: 100
+  experienceReward: 1e0000003c00000078000000f0000000
+  xpThresholds: 00000000780000004001000058020000
+  healAmounts:
+  - 3
+  - 7
+  - 10
+  - 24

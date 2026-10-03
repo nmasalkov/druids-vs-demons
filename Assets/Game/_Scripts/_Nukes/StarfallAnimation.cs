@@ -18,6 +18,9 @@ namespace Game._Scripts.Nukes
         [Tooltip("Delay between starting the cast and firing all stars (fired simultaneously).")]
         [SerializeField] private float castDelay = 0.2f;
 
+        [Tooltip("Improved Starfall: extra delay (on top of castDelay) before the bonus strike(s) fire, so they read as a second hit after the main volley.")]
+        [SerializeField] private float extraStrikeDelay = 0.5f;
+
         [Tooltip("Extra time held after the last impact before completing.")]
         [SerializeField] private float trailingDelay = 0.4f;
 
@@ -57,7 +60,8 @@ namespace Game._Scripts.Nukes
             for (int i = 0; i < shots.Count; i++)
             {
                 var shot = shots[i];
-                Utils.DoAfterDelay.Execute(() => FireShot(shot, onShotResolved), castDelay);
+                float delay = shot is StarfallShot { IsExtraStrike: true } ? castDelay + extraStrikeDelay : castDelay;
+                Utils.DoAfterDelay.Execute(() => FireShot(shot, onShotResolved), delay);
             }
         }
 

@@ -29,7 +29,7 @@ namespace Game._Scripts.Creatures
         protected override float GetMaxHealth()
         {
             var stats = Data.Stats(Experience.Level);
-            return RewardBonuses.ApplyBonuses(Data, stats.health);
+            return RewardBonuses.ApplyCreatureBonus(Data, stats.health, OwnerHero == G.PlayerHero);
         }
 
         /// <summary>

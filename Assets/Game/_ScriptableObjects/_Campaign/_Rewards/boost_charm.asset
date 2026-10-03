@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: boost_charm
   m_EditorClassIdentifier: 
   id: boost_charm
-  rewardName: Boost Charm
-  description: +20% to Charm's success chance.
+  rewardName: Improve Charm
+  description: A failed Charm has a 50% chance to shock its target.
   typeLabel: Boost
   icon: {fileID: 0}
   unique: 1
   action: {fileID: 11400000, guid: 42203bd9865269b40b0911f6362fb650, type: 2}
-  percentage: 0.2
+  shockOnFailChance: 0.5

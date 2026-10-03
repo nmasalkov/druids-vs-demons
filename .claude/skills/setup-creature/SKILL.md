@@ -1,6 +1,6 @@
 ---
 name: setup-creature
-description: Finish wiring hand-added creature prefabs (Mage/Tank/Archer) after the user has added their visual mesh and icon — links the type animator's Spine skeleton reference, the ShockedFeedback position-shaker target, any ranged projectile component present (MissileAnimator/BeamAnimator — not tied to a fixed Archer/Mage pairing), creates the matching balance CreatureSO (balance copied from the default creature of the same type in _DefaultCreatures.asset), registers it in GameCatalog, and — for an archer/tank/mage trio — sets up the enemy encounter that uses them (a per-fight CreaturesSO roster + a FightSO copied from the previous fight by default). Use whenever the user says new creature prefabs were added and need setup, asks to check/finish a creature's wiring before it's playable as an enemy, or asks for a new themed fight built around new creatures.
+description: Finish wiring hand-added creature prefabs (Mage/Tank/Archer) after the user has added their visual mesh and icon — links the type animator's Spine skeleton reference, the ShockedFeedback position-shaker target, any ranged projectile component present (MissileAnimator/BeamAnimator — not tied to a fixed Archer/Mage pairing), creates the matching balance CreatureSO (balance copied from the default creature of the same type in _DefaultCreatures.asset), registers it in GameCatalog, and — for an archer/tank/mage trio — sets up the enemy encounter that uses them (a per-fight CreaturesSO roster + a FightSO copied from the previous fight by default) — or, for a player reward creature, the CreatureRewardSO + RewardListSO entry (optionally replacing a placeholder). Use whenever the user says new creature prefabs were added and need setup, asks to check/finish a creature's wiring before it's playable as an enemy, or asks for a new themed fight built around new creatures.
 ---
 
 # Setup Creature
@@ -12,6 +12,9 @@ monster mesh under `Visual`, and add the matching card icon under
 `Assets/Game/_Sprites/_Creatures/`. Everything else — animator/Spine linking, status-feedback targets,
 projectile assignment, the balance `ScriptableObject`, catalog registration, and the encounter that
 uses the new creatures — is this skill's job.
+
+**Player reward creature.** If the creature is for the player (unlocked by a reward card, not an
+enemy roster), run steps 1–6, then **8b** instead of step 7.
 
 **Batch mode.** The user usually adds a themed trio at once (one Archer + one Tank + one Mage, e.g.
 `GhostArcher`/`GhostTank`/`GhostMage`). Treat that trio as one enemy roster: run steps 1–6 for each
@@ -72,7 +75,7 @@ This exact bug was found and fixed on 6 creatures (`Bat`, `OrkMage`, `Cyclop`, `
 `Kodo`) in one pass — always check it explicitly, don't assume a new creature got it right by copying an
 already-broken sibling.
 
-## 4. Projectile (skip entirely for Tank — it's melee, no such component)
+## 4. Projectile (skip for a plain melee Tank — but not for a counter-tank, which carries a `MissileAnimator`)
 
 **Don't assume "Archer → `MissileAnimator`, Mage → `BeamAnimator`" as a fixed rule** — that's just
 today's default pairing, not a strict constraint. A future creature may carry the other type's
@@ -107,6 +110,34 @@ hardcode a name (today it's `Bubka`/`Golem`/`Dragon`, but that pointer can chang
 exist yet, `duplicate_asset` that default into `_<Type>s/<Creature>.asset`. This gives a new enemy
 creature starter-level balance with no special rules baked in — a sibling like `Kodo` would silently
 drag along its own tuned stats and `specialDamageModifiers` (ShieldBreaker).
+
+**Mechanic subclass (e.g. `CounterTankSO : TankSO`).** When the creature needs a special SO subclass,
+`duplicate_asset` would give the wrong script type. Build it in one `execute_script` instead:
+1. `var so = ScriptableObject.CreateInstance<CounterTankSO>();`
+2. `JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(template), so);` copies every shared field.
+3. Set the subclass's own fields.
+4. `AssetDatabase.CreateAsset(so, path)`.
+
+If the subclass has a matching view subclass (e.g. `CounterTankAnimator : TankAnimator`), swap the
+inherited type animator on the variant. Inside `LoadPrefabContents`:
+1. `AddComponent` the subclass.
+2. `EditorJsonUtility.FromJsonOverwrite(EditorJsonUtility.ToJson(old), new)` copies the shared fields.
+3. **Repoint every serialized reference to the old component.** Walk every component's
+   `SerializedObject` for `objectReferenceValue == old`. `Health.animator` points at the type
+   animator.
+4. `DestroyImmediate(old)`. The variant records it under `m_RemovedComponents`.
+5. **Explicitly re-set `creatureVisual`** (the `Visual` child). The JSON copy silently dropped it to
+   null on Bulba.
+6. Wire the subclass's own fields.
+
+Existing pairs: `CounterTankSO` + `CounterTankAnimator` (Bulba), and `HealingArcherSO` +
+`SplitShotArcherAnimator` (HealingShroom). For the latter, wire both `missileAnimator` and
+`splitMissileAnimator`. They can be the same `MissileAnimator`. A new projectile for the creature
+comes from the `add-projectile` skill.
+
+For a non-attacker, set `levelStats[].damage = 0` and give `nominalDamage` the damage it should be
+estimated as (usually the default creature's `damage`), so firepower estimates still count it
+(`docs/Battle.md`).
 
 What to keep vs replace after duplicating:
 
@@ -234,14 +265,42 @@ fight), and swapping it is a one-field change the user will likely want.
 `docs/Encounters.md` lists the fight assets and which fights still fall back to `G.DefaultCreatures`
 (no roster). Update both whenever a fight is moved/created or gains a roster (CLAUDE.md rule 18).
 
-## 8. Do not touch player-visibility lists
+## 8. Player-visibility lists — only through the reward branch (8b)
 
-**Never** add the new SO to `_DefaultCreatures.asset` (the single starter-per-type pointer) or
-`RewardListSO.asset` (the reward-card unlock pool) as part of this skill — those decide whether a
-creature is player-usable, a separate decision from "is this creature wired correctly." Only touch them
-if explicitly told this specific creature should become player-obtainable. Same for the roster: a
-fight's `CreaturesSO` is enemy-only; never point `_DefaultCreatures`, `G`, or any `CampaignDebugTool`
-override at it (CLAUDE.md rule 29).
+**Never** add the new SO to `_DefaultCreatures.asset` (the single starter-per-type pointer). Only add it
+to `RewardListSO.asset` (the reward-card unlock pool) when the user says this creature is a player
+reward — then follow 8b. Those lists decide whether a creature is player-usable, which is a separate
+decision from "is this creature wired correctly." Same for the roster: a fight's `CreaturesSO` is
+enemy-only; never point `_DefaultCreatures`, `G`, or any `CampaignDebugTool` override at it (CLAUDE.md
+rule 29).
+
+## 8b. Player reward creature (non-default, unlocked via a reward card)
+
+Use this branch when the user says the creature is for the player / a reward (e.g. Bulba). Skip step 7:
+no encounter. Steps 1–6 still apply; step 6's GameCatalog registration matters here, because the
+loadout picker resolves `RunState.gatheredCreatureIds` through `GameCatalog`.
+
+1. **Reward asset**: `Assets/Game/_ScriptableObjects/_Campaign/_Rewards/creature_<id>.asset`, a
+   `CreatureRewardSO`.
+   - Create it with `ScriptableObject.CreateInstance<CreatureRewardSO>()` + `AssetDatabase.CreateAsset`.
+   - Fields: `id: creature_<id>`, `rewardName` = the creature's `actionName`.
+   - `description`: say what the creature does, not just "Unlocks X".
+   - `typeLabel: "Creature"`, `unique: true`, `creature` → the new SO.
+   - `icon` is not public; leave it null so the card falls back to the creature's `cardSprite`.
+2. **`RewardListSO.asset`** → add it to `allRewards`.
+3. **Never** add it to `_DefaultCreatures.asset`. That would make it a starter, not a reward.
+4. **Replacing a placeholder** (e.g. Bulba replaced `TankBig`):
+   - Swap the old entries for the new ones **in place** (same index) in `GameCatalog.allCreatures`
+     and `RewardListSO.allRewards`.
+   - Grep every old guid (the SO, the reward asset, the prefab and anything in its folder) across
+     `Assets/` for leftover references.
+   - Then `AssetDatabase.DeleteAsset` the old SO, the old reward asset, and the old prefab folder.
+   - Old saves holding the old creature id fall back to the default in `ApplyLoadoutToG`. Say so in
+     the report.
+5. **Docs**: update `docs/Rewards.md`'s list of creature rewards, and `CLAUDE.md` rule 15's variant
+   list if a prefab was added or removed.
+6. **Finish with the `validate-rewards` skill** — it checks text, icon and reachability for the new
+   card.
 
 ## 9. Compare against the type parent / a known-good sibling
 

@@ -80,6 +80,10 @@ namespace Game._Scripts.Nukes
             projectile.Launch(targetPos, projectileSpeed, () =>
             {
                 shot.Apply();
+                // Improved Shock damages shields — show the hit like any other damage nuke. Same
+                // null guard as StarfallAnimation: the shield can be destroyed by this very hit.
+                if (shot is ShockShot { ShieldDamage: > 0f } && shot.Target != null)
+                    shot.Target.HitFeedback.PlayHitFeedbacks(false);
                 onResolved?.Invoke();
             });
         }

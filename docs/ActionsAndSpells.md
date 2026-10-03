@@ -93,6 +93,14 @@ Ordering is load-bearing for Shock specifically, because a shield blocks Shock o
 last means a damage nuke in the same roll gets its chance to break the shield *before* Shock checks
 for one.
 
+## 2b'. Shock prefers unshocked creatures (`ShockResolver.UnshockedFirst`)
+
+Shocked is a plain on/off flag (`StatusesManager.ApplyShock` is a no-op on an already-shocked unit),
+so a bolt into a shocked creature is wasted. `ShockResolver.AddShockShots` stably reorders the
+`BuildPriorityTargets` list before picking: unshocked creatures first (still Mage → Tank → Archer),
+then already-shocked creatures, then the Hero. E.g. shocked Tank + unshocked Archer vs a level-1
+Shock → the Archer gets shocked. Applies to the improved-Shock leftover bolts too.
+
 ## 2c. A standing shield blocks Shock completely (`ShockResolver`)
 
 **Rule: while the target side has a live `Shield`, Shock shocks nothing. Not at level 1, not at 2,
@@ -129,6 +137,27 @@ The AI already agrees with this rule: `ShockAIScorer.Score()` opens with
 `if (PlayerHasShield) return 0;`, so the AI won't spend a roll shocking into a shield
 (`docs/AI.md`).
 
+**Exception — improved Shock (`ShockImprovementSO`, a player-only reward, `docs/Rewards.md`).**
+When the caster owns it, the shield branch becomes `AddShieldBreakingShots`: bolts target the shield
+with `ShockShot.ShieldDamage = shieldDamagePerBolt` (10) while its *simulated* HP (live HP minus
+bolts planned so far) is above 0; the bolts left once it hits 0 go to
+`BuildPriorityTargets(..., ignoresShield: true)` in order. E.g. a 14 HP shield vs a level-3 Shock:
+2 bolts hit the shield (breaking it), the 3rd shocks the top-priority creature. `ShockShot.Apply()`
+damages a `Shield` target by `ShieldDamage` (0 for unimproved bolts, so they stay inert), and
+`ShockAnimation` plays the target's hit feedback for those damaging bolts. The enemy never gets
+this — its Shock into a player shield is still fully blocked.
+
+### Reward improvements in resolvers (uniform pattern)
+
+Mechanic-changing rewards are checked in resolvers through the shared `ActionResolver` helpers —
+`if (IsImproved(caster, out ShockImprovementSO improvement)) { … }` and `Boosted(source, caster,
+baseValue)` for percentage stat boosts. Both are player-only (`caster == G.PlayerHero`). Current
+users: Shock (above), Starfall (`StarfallImprovementSO` — `extraStrikes` extra `StarfallShot`s with
+`IsExtraStrike`, each at a random target whose simulated HP survives the main volley;
+`StarfallAnimation` fires them `extraStrikeDelay` (0.5s) after the volley), Charm
+(`CharmImprovementSO` — see 3c), and `Boosted` in Fire Magic / Shield / Battle Cry. Full list and
+how to add one: `docs/Rewards.md`.
+
 ## 3. Worked examples
 
 ### 3a. FireMagic (Nuke) — single damage pool, priority targets
@@ -160,8 +189,9 @@ The AI already agrees with this rule: `ShockAIScorer.Score()` opens with
 2. `ShieldResolver.Resolve(...)` (`_Spells/ShieldResolver.cs`) branches on `casterView.Shield`
    (`HeroView.Shield => shieldSlot.Unit as Shield`):
    - no shield yet → `ShieldSpawnShot` (instantiate `Data.GetPrefab(isPlayer)` into
-     `casterView.ShieldSlot`, `Slot.Unit = instance`, `instance.Init(level)`, `instance.OnSummon()`)
-   - rolled level higher than existing → `ShieldPromoteShot` (`((Shield)Target).Promote(level)`,
+     `casterView.ShieldSlot`, `Slot.Unit = instance`, `instance.Init(level, maxHp)`, `instance.OnSummon()`; `MaxHp` is computed by the resolver,
+     including the player-only Shield reward boost)
+   - rolled level higher than existing → `ShieldPromoteShot` (`((Shield)Target).Promote(level, maxHp)`,
      full HP refill at the new level)
    - rolled level ≤ existing → `ShieldHealShot` (flat `Target.Health.Heal(...)`)
 3. `ShieldSpellAnimation.Execute(...)` (`_Spells/ShieldSpellAnimation.cs`) is a minimal host: calls
@@ -183,8 +213,7 @@ on success/failure.
 
 **Success chance, in two stages — order matters:**
 
-1. Base odds: `chancePerLevel[level-1] * aliveCount` (of the side being charmed), run through
-   `RewardBonuses.ApplyBonuses` and **clamped to 1**.
+1. Base odds: `chancePerLevel[level-1] * aliveCount` (of the side being charmed), **clamped to 1**.
 2. **Creature-advantage penalty**, applied *after* that clamp:
    `chance *= CharmSO.GetCreatureAdvantageMultiplier(casterAlive, charmedSideAlive)`, which is
    `max(0, 1 - chancePenaltyPerExtraCreature * max(0, casterAlive - charmedSideAlive))`.
@@ -210,7 +239,11 @@ slot, reparents its transform under the destination charm slot, updates `Creatur
 `UnitSlot.Unit` both ways, and toggles `StatusesManager.IsCharmed` (charming a normal creature marks
 it; charming an already-charmed one clears the mark — a creature only ever changes sides via Charm,
 and once it leaves its native slot it never returns to one). If `Success` is false, `Apply()` is a
-no-op — a failed charm attempt still consumes the roll but changes nothing.
+no-op — a failed charm attempt still consumes the roll but changes nothing — **unless**
+`ShockOnFail` is set: with the player-only `CharmImprovementSO` reward, `CharmResolver.RollShockOnFail`
+rolls `shockOnFailChance` (0.5) once on a failed charm, and `Apply()` then shocks the target.
+`CharmAnimation`'s fail branch calls `shot.Apply()` right after `PlayCharmFail()` so the animated
+path matches the instant one.
 
 **`Apply()` also clears any BattleCry status (`StatusesManager.ClearBattleCry()`) on every successful
 side change, in both directions.** BattleCry's buff/debuff (see §3d) is computed relative to whichever

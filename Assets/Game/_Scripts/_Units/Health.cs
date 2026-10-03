@@ -78,12 +78,18 @@ public class Health : MonoBehaviour
         PostponeDeath = false;
         onDeath?.Invoke();
     }
-    public void Heal(float amount)
+    /// <summary>
+    /// Restores HP (capped at max) and plays the heal feedback. <paramref name="clearsStatuses"/> false
+    /// skips <see cref="onHealed"/> — which StatusesManager uses to clear Shock etc. — so a healing
+    /// archer's shot (docs/Battle.md "Healing shots") heals without curing statuses, unlike the
+    /// repeat-summon heal.
+    /// </summary>
+    public void Heal(float amount, bool clearsStatuses = true)
     {
         if (IsDead() || amount <= 0f) return;
         currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
         RefreshDisplays();
-        onHealed?.Invoke();
+        if (clearsStatuses) onHealed?.Invoke();
         if (healFeedback != null) healFeedback.PlayFeedbacks();
     }
     public float CurrentHealth => currentHealth;

@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: bonusenergy_50
   rewardName: Energy Cell
-  description: +50 reroll energy, once.
+  description: +20 reroll energy, once.
   typeLabel: Status
-  icon: {fileID: 21300000, guid: 4e379f5a8ef10ec44bc31c6c8fa9b27a, type: 3}
+  icon: {fileID: 21300000, guid: 434265cd49b607e44a0c6e9d33dc8f0d, type: 3}
   unique: 0
   bonusEnergy: 20

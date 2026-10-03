@@ -5,8 +5,8 @@ description: Put every renderer of every projectile effect (the SimpleProjectile
 
 # Set Projectile Layer / Order
 
-Units draw on the `Default` sorting layer (`DepthSortingOrder` gives each one a y-derived order; hero
-avatars sit at 177). Anything a projectile spawns on `Default` with a small order (0–3, typical for
+Units draw on the `Default` sorting layer (`DepthSortingOrder` gives each one a y-derived order, hero
+avatars included). Anything a projectile spawns on `Default` with a small order (0–3, typical for
 Epic Toon FX effects) therefore draws **behind** the creature or avatar it hits. The fix is to render
 projectile effects on the **`Shield`** sorting layer, which is above `Default` and below `UI`
 (layers: `Background` < `Default` < `Shield` < `UI`). The project uses URP's 2D Renderer, so sorting

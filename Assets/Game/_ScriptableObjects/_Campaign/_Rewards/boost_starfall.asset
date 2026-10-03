@@ -9,14 +9,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ca1d90d0e2e0b52469d28c3dfcad329c, type: 3}
+  m_Script: {fileID: 11500000, guid: 8af47b18f53e3db48a7edbdf2ba8b5a9, type: 3}
   m_Name: boost_starfall
   m_EditorClassIdentifier: 
   id: boost_starfall
-  rewardName: Boost Starfall
-  description: +20% to Starfall's damage.
+  rewardName: Improve Starfall
+  description: Starfall strikes one extra time at a random surviving enemy.
   typeLabel: Boost
   icon: {fileID: 0}
   unique: 1
   action: {fileID: 11400000, guid: 988e3335e256a5e499c8cf3688afcf9e, type: 2}
-  percentage: 0.2
+  extraStrikes: 1

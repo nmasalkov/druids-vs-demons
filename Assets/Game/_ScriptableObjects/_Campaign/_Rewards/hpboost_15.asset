@@ -16,6 +16,6 @@ MonoBehaviour:
   rewardName: Vitality
   description: +15 Max HP for the rest of this run.
   typeLabel: Status
-  icon: {fileID: 21300000, guid: d75f8b1d41b93e048b7ee957a4099e9b, type: 3}
+  icon: {fileID: 21300000, guid: c55a371e85baae04a8647373452b252a, type: 3}
   unique: 0
   bonusHp: 15

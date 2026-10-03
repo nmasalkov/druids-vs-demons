@@ -9,12 +9,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 94d8b9afffa0f6342b3037b29819d7c7, type: 3}
+  m_Script: {fileID: 11500000, guid: ca1d90d0e2e0b52469d28c3dfcad329c, type: 3}
   m_Name: boost_shield
   m_EditorClassIdentifier: 
   id: boost_shield
   rewardName: Boost Shield
-  description: +20% to Shield's HP.
+  description: +20% Shield HP and healing (15 / 27 / 56 HP becomes 18 / 32 / 67).
   typeLabel: Boost
   icon: {fileID: 0}
   unique: 1

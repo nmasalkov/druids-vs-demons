@@ -29,6 +29,7 @@ namespace Game._Scripts.Spells
                     Data = shieldSO,
                     Slot = slot,
                     Level = level,
+                    MaxHp = Boosted(shieldSO, caster, shieldSO.GetHpForLevel(level)),
                     IsPlayer = isPlayer,
                 });
                 return;
@@ -40,6 +41,7 @@ namespace Game._Scripts.Spells
                 {
                     Target = existing,
                     Level = level,
+                    MaxHp = Boosted(shieldSO, caster, shieldSO.GetHpForLevel(level)),
                 });
                 return;
             }
@@ -47,7 +49,7 @@ namespace Game._Scripts.Spells
             Shots.Add(new ShieldHealShot
             {
                 Target = existing,
-                Heal = RewardBonuses.ApplyBonuses(shieldSO, shieldSO.GetHealForLevel(level)),
+                Heal = Boosted(shieldSO, caster, shieldSO.GetHealForLevel(level)),
             });
         }
     }

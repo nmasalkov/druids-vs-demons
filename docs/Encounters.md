@@ -23,26 +23,73 @@ layer naming only, unrelated to the per-turn `BattleState`/`RunBattle()` combat-
 which keeps its own "Battle" naming).
 
 **Sequencing, per node:**
-- On `MapScene`, arriving at the current node: if `hasLoadoutPick` is false, the point plays its
-  fight-arrival shake directly and `BattleScene` loads. If true, the point plays the plain "you've
-  arrived" yoyo/punch instead, the loadout picker shows in place (no index change), and only once
-  it's confirmed — after a short pause — does the fight-arrival shake play and `BattleScene` load.
+- On `MapScene`, right after the progress frontier advances, the next node is *discovered*: its path
+  draws in, then its enemy icon (`FightSO.enemyIcon`) pops in. If that fight has no loadout pick
+  (today only Fight 1), it auto-starts: fight-arrival shake, then `BattleScene`. Otherwise the map
+  enters its **"reached encounter"** state. Every discovered node (frontier and every beaten one)
+  pulses and is clickable, and nothing starts by itself.
+- Clicking a discovered node selects it (`CampaignManager.SelectNode`). A node with `hasLoadoutPick`
+  plays the "you've arrived" yoyo, then the loadout picker in place. Once that's confirmed, after a
+  short pause, the fight-arrival shake plays and `BattleScene` loads. A node without a loadout pick
+  goes straight to the shake and `BattleScene`. Clicking a beaten node is a **replay**.
 - On victory in `BattleScene`: if `hasReward` is false, the campaign completes/advances immediately.
-  If true, the reward picker shows **as an overlay inside `BattleScene` itself** (not `MapScene` —
-  right there on the game-over screen, after the round loop has already permanently halted); only
-  once it's confirmed does the campaign actually advance and transition to `MapScene`, which then
-  plays its normal gradual-progress reveal to the next node.
+  If true, the reward picker shows **as an overlay inside `BattleScene` itself**. Only once it's
+  confirmed does the campaign advance and transition to `MapScene`, which plays the discovery
+  reveal. **A replay win** gets the same full reward pick but never advances: it returns to the map
+  in its "reached encounter" state (`CampaignManager.ReturnToMap()`).
+- On defeat: after the 4s result delay the pause panel shows **locked** (no unpause). The player
+  picks Restart or Go to map. See `docs/GameLoop.md`'s "Pause".
 
-`GameOverState` drives `CampaignManager`'s API automatically at the end of a fight: victory (after a
-delay) either shows the reward pick or advances/completes the campaign; defeat reloads the current
-encounter — see "Fight results" below.
+`GameOverState` drives `CampaignManager`'s API automatically at the end of a fight — see "Fight
+results" below.
+
+## Selected encounter vs. progress frontier
+
+`CampaignManager` keeps two indices apart so a beaten fight can be replayed:
+
+- **`ProgressEncounterIndex`** = `RunState.currentEncounterIndex`, the saved **frontier** (the
+  furthest node reached). Only `AdvanceToNextEncounter()`/`StartNewRun()` move it, and it's the only
+  index ever saved. `ProgressNodeIndex` is its map node, and every node up to and including it is
+  discovered/clickable.
+- **`_selectedEncounterIndex`** is session-only and never saved: the fight actually being played,
+  set by `SelectNode(node)` when a map point is clicked. `-1` means "no selection", so
+  **`CurrentEncounterIndex`** (and through it `CurrentFight`, `NextPhase`, `RevertToEncounterFight`)
+  falls back to the frontier. That's one value with a fallback, not a synced copy (rule 22).
+  `AdvanceToNextEncounter`/`StartNewRun`/`ReturnToMap` and the debug index overrides clear it.
+- **`IsReplay`** = the selected node is behind the frontier node. `CompleteCurrentEncounter()`
+  checks it first: a replay returns to the map, never advances.
+- `HasNextEncounter`/`NextNodeStartIndex()` are computed from the **frontier**.
+- **Boss phases ride on the selection**: `AdvanceToBossPhase()` bumps `_selectedEncounterIndex`, and
+  `RewindToNodeStart()` rewinds it. `RunState` is never touched mid-boss, so "a phase is never saved"
+  is structural rather than a convention.
+
+**`MapEntry` — how MapScene presents itself.** `CampaignManager.MapEntry { Boot, Reveal, Return }`
+is a pending, session-only flag that `MapManager.EnterMap()` consumes via `ConsumeMapEntry()`. Each
+read resets it to `Return`.
+- `Boot` is the field default: MapScene is the session's first scene, i.e. a saved run resuming. No
+  reveal plays; the map lands in "reached encounter", or auto-starts a frontier fight that has no
+  loadout pick.
+- `Reveal` is set by `AdvanceToNextEncounter()`/`StartNewRun()` and plays the discovery animation.
+- `Return` is set by `ReturnToMap()` (Go to map, replay win). The map lands in "reached encounter",
+  never auto-starts.
+
+**`ReturnToMap()` vs `AbandonEncounter()`.** `ReturnToMap()` clears the selection, sets `Return`,
+resets `Time.timeScale` and loads `MapScene`. `AbandonEncounter()` (the pause menu's Go to map) first
+refunds the attempt's reroll energy (`EnergyController.RevertToEncounterStart()`, `docs/Energy.md`),
+then calls `ReturnToMap()`. The replay-win path must not refund, since its reward energy was just
+granted.
+
+Known edge, deliberately unhandled: pressing Escape → Go to map while the post-victory reward
+overlay is open abandons the fight. Progress isn't advanced, and in memory the energy is reverted
+to its encounter-start value, although `RewardEncounter.Play()` has already saved the grant.
 
 ## Key files
 
 - `_Global/_Campaign/FightSO.cs` — the sole `EncounterListSO` entry type (renamed from `BattleSO`,
   `[MovedFrom]`-guarded so the existing asset files kept resolving through the rename). `fightId`
   (string, `[FormerlySerializedAs("battleId")]`), `isTutorial` (bool, still inert — forward-looking),
-  `enemyData` (`EnemyData`), `hasLoadoutPick` (bool), `hasReward` (bool), `rewardAmount` (int — the
+  `enemyData` (`EnemyData`), `enemyIcon` (`Sprite` — the boss icon on this fight's map point, from
+  `_Sprites/_EnemyAvatars/FightN.png`; unused on boss phases, which have no point), `hasLoadoutPick` (bool), `hasReward` (bool), `rewardAmount` (int — the
   guaranteed energy grant, only meaningful when `hasReward` is true),
   `continuesPreviousFight` (bool — marks this entry as a later phase of the fight before it rather
   than a campaign node of its own, see "Multi-phase fights" below),
@@ -125,9 +172,9 @@ encounter — see "Fight results" below.
   `BattleScene` is entered, applies both energy and enemy avatar/HP — see `docs/Campaign.md`'s "Load
   → resolve → apply flow").
 - `_Units/Hero.cs` — `GetMaxHealth()` gained a symmetric enemy-side branch.
-- `_UI/PauseMenuController.cs` — `HandleRestartClicked()` calls
-  `CampaignManager.Instance.ResetCurrentEncounter()` instead of calling
-  `GameManager.RestartBattle()` directly.
+- `_UI/PauseMenuController.cs` — Restart calls `CampaignManager.Instance.ResetCurrentEncounter()`.
+  Go to map calls `CampaignManager.Instance.AbandonEncounter()`. It shows the panel locked on
+  `CampaignManager.OnDefeatResolved` — see `docs/GameLoop.md`'s "Pause".
 - `_Global/_GameManager/GameOverState.cs` — no longer a pure dead end; calls
   `CampaignManager.Instance.ResolveVictory()`/`ResolveDefeat()` after logging. See
   "Fight results" below.
@@ -382,9 +429,10 @@ live in `docs/GameLoop.md` — this section is just the campaign-layer contract:
     instead of treating that phase as one more encounter. `AdvanceToNextEncounter()` jumps to the
     next *node*, never landing on a phase.
   - `NodeStartIndex()` walks back over phases to the fight that opens the node.
-- **The phase advance is never saved.** `CampaignManager.AdvanceToBossPhase()` bumps
-  `currentEncounterIndex` but calls neither `Save()` nor `LoadCurrentEncounter()` — no scene load,
-  no persistence. Both phases therefore have to be won in one session: quitting or losing in phase 2
+- **The phase advance is never saved.** `CampaignManager.AdvanceToBossPhase()` bumps the
+  session-only selected encounter index (see "Selected encounter vs. progress frontier"), never
+  `RunState.currentEncounterIndex`. It calls neither `Save()` nor `LoadCurrentEncounter()`: no scene
+  load, no persistence. Both phases therefore have to be won in one session: quitting or losing in phase 2
   resumes at the fight's first phase, never halfway through the boss.
 - **Restart/defeat rewinds off the phase.** `CampaignManager.ResetCurrentEncounter()` calls
   `RewindToNodeStart()` (index back to `NodeStartIndex`) *before*
@@ -417,7 +465,7 @@ default's `levelStats` boosted ~15% (damage rounded up, health rounded to neares
 +50% critical strike, matching the Ghost trio (`docs/Battle.md`).
 
 The two that need a projectile deliberately avoid the only two the player can ever field (`ARC` on
-`Bubka`/`BubkaBig`, `LightningSoftGreenOBJ` on `Dragon` — both inherited from their type
+`Bubka`, `LightningSoftGreenOBJ` on `Dragon` — both inherited from their type
 parent rather than overridden, so they're easy to collide with by accident): `DarkCatapult` uses
 `Skull` (shared with phase 1's `BossCatapult` — same boss, same role, never on screen at once) and
 `DarkMage` uses `MagicFire` (previously unused by any creature; its particles were already on the
@@ -434,7 +482,7 @@ when the player is already sitting in `BattleScene` and just wants to restart. `
 private void LoadCurrentEncounter()
 {
     if (SceneManager.GetActiveScene().name == SceneNames.MapScene)
-        MapManager.Instance.RefreshForCurrentEncounter();
+        MapManager.Instance.EnterMap();
     else
         SceneManager.LoadScene(SceneNames.MapScene);
 }
@@ -544,16 +592,23 @@ public void ResolveDefeat()
     DoAfterDelay.Execute(() =>
     {
         if (GameManager.IsStale(generation)) return;
-        ResetCurrentEncounter();
+        OnDefeatResolved?.Invoke();   // PauseMenuController shows the locked pause panel
     }, BattleResultDelaySeconds);
 }
 
 public void CompleteCurrentEncounter()
 {
+    if (IsReplay) { ReturnToMap(); return; }
     if (HasNextEncounter) AdvanceToNextEncounter();
     else CompleteCampaign();
 }
 ```
+
+- **Defeat no longer restarts automatically.** `ResolveDefeat()` fires the static
+  `CampaignManager.OnDefeatResolved`, and `PauseMenuController` shows its panel locked (Restart / Go
+  to map only — see `docs/GameLoop.md`'s "Pause").
+- **A replay win** (`IsReplay`) still gets the full reward pick if `hasReward`, then
+  `CompleteCurrentEncounter()` returns to the map without advancing.
 
 - **Victory grants a reward only if the fight's `hasReward` flag is set.** If it is,
   `ResolveVictory()` calls `BattleRewardPresenter.Instance.ShowReward(CurrentFight)`, which
@@ -578,7 +633,7 @@ public void CompleteCurrentEncounter()
   distinct from `GameOverState`'s old silent freeze. `Time.timeScale = 0f` doesn't disable
   `PauseMenuController` (`Update()` still runs, so Escape/Restart still work) — revisit once a real
   end screen exists.
-- **`ResetCurrentEncounter()` (defeat path) never touches `RunState` at all** — no reward, no index
+- **`ResetCurrentEncounter()` (pause menu Restart, incl. after a defeat) never touches `RunState` at all** — no reward, no index
   change — satisfying "restarting must not duplicate rewards or advance campaign progress" and
   "restarting must not reset the entire run" directly: it's the exact same method the pause menu
   and debug tool already use for a plain mid-battle restart.
@@ -668,10 +723,10 @@ yet.** Both `LoadoutPickEncounter` and `RewardEncounter` are fully headless-driv
 bare `GameObject`, `AddComponent<LoadoutPickEncounter>()`/`AddComponent<RewardEncounter>()`,
 `Headless = true`, `Play()` + their respective methods called directly, no prefab/UI/dispatcher
 involved at all — see `docs/Loadout.md`'s and `docs/Rewards.md`'s verification steps. On top of that,
-`MapManager.ResolveCurrentPointInstant()` and `BattleRewardPresenter.ShowRewardInstant(FightSO)` (new,
+`MapManager.ResolvePointInstant(int node)` and `BattleRewardPresenter.ShowRewardInstant(FightSO)` (new,
 CLAUDE.md rule 7 — matching how `BattleState.ResolveBattleInstant()`/`NukeState.ResolveNukesInstant()`
 etc. currently have no real caller either) collapse the *sequencing* around those backends to zero
-animation delay: `ResolveCurrentPointInstant()` marks the point current, headlessly confirms the
+animation delay: `ResolvePointInstant(node)` selects the node, headlessly confirms the
 loadout pick unchanged (if any), and loads `BattleScene` immediately; `ShowRewardInstant()` auto-picks
 the first drawn reward and confirms immediately, chaining into `CompleteCurrentEncounter()` the same
 way the real UI path does. What's still an accepted gap: nothing yet composes these into a full
@@ -802,6 +857,15 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
   with an `MMF_Player` (an `MMF_PositionShake` feedback targeting that `MMPositionShaker`), and an
   `ArriveRegularFeedback` child with an `MMF_Player` (an `MMF_Scale` feedback, `AnimateScaleTarget` set
   to `CurrentEncounterVisual`'s transform — its default punch-shaped curve already reads as a yoyo pop).
+  The prefab also needs:
+  - `enemyIcon` → the `EnemyIcon` child `SpriteRenderer`, inactive by default.
+  - `MapEncounterPointAnimator` on the root (required by `MapEncounterPoint`).
+  - A `CircleCollider2D` on the root sized to the visuals, as the click target.
+- `MapScene.unity`'s `Main Camera` needs a `Physics2DRaycaster`. Map points are world-space sprites,
+  so clicks reach `MapEncounterPoint.OnPointerClick` through the scene's `EventSystem` +
+  `InputSystemUIInputModule` (rule 8), not through a UI raycaster.
+- `BattleScene.unity`'s `PauseMenuCanvas/PausePanel` has `GoToMapButton` (a `RestartButton` duplicate,
+  directly below it), wired to `PauseMenuController.goToMapButton`.
 - `MapScene.unity`'s `MapManager` GameObject's `points` array needs one entry per placed
   `MapEncounterPoint` instance, **in the same order as `EncounterListSO.fights`** —
   `AssignEncounters()` maps them positionally, not by any per-instance reference, so array order is the
@@ -889,9 +953,9 @@ against an unassigned/empty `encounterList` with a help box instead of throwing.
 there, in place at the current node (the same `LoadoutEncounter.prefab` asset — see `docs/Loadout.md`
 — this system doesn't change its presentation, only where/when it's shown), and it's the scene that
 visually shows campaign progress as points on a path. The post-battle reward pick, by contrast, now
-plays in `BattleScene` — see "Encounter dispatch" above. Campaign navigation still isn't player-driven
-choice yet — `EncounterListSO` stays a flat linear list, walked in order; `MapScene` visualizes that
-order rather than letting the player pick a branch. `CampaignManager`/`CampaignStateManager` both work
+plays in `BattleScene` — see "Encounter dispatch" above. `EncounterListSO` stays a flat linear list,
+progressed in order — there are no branches. The player chooses *when* to fight: the frontier node,
+or a replay of any beaten one (see "Selected encounter vs. progress frontier"). `CampaignManager`/`CampaignStateManager` both work
 from it exactly as designed for (they're cross-scene by construction — see "Two cross-scene-persistent
 managers" above): the same root-level `CampaignProgress` GameObject (same components, same
 `encounterList`/`catalog`/`rewardList` references) is placed in `MapScene.unity` too, so either scene
@@ -899,72 +963,84 @@ can be the session's first-loaded scene under the existing duplicate-guard singl
 
 ### `MapEncounterPoint` and `MapManager`
 
-- **`_Global/_Map/MapEncounterPoint.cs`** — one fight's point on the map, three visual states
-  (`futureEncounterVisual`/`currentEncounterVisual`/`completeEncounterVisual`, exactly one active at a
-  time — `SetFuture()`/`SetCurrent()`/`SetComplete()`, visuals only, no path side effects). Path
-  visibility is separate and explicit: `HidePaths()`/`ShowPathIn()`/`ShowPathOut()`, each null-checked
-  (`pathIn`/`pathOut` are optional `SplineContainer` references — today just toggled active/inactive,
-  no actual spline-draw-in animation yet; see the `MapManager` TODO below). Two feedbacks, both
-  `MMF_Player`s per CLAUDE.md rule 15: `arriveFightFeedback` (an `MMF_PositionShake` + sibling
-  `MMPositionShaker`, played via `PlayArriveFightFeedback()` right before the fight actually starts —
-  either immediately on arrival if the fight has no loadout-pick phase, or after that phase is
-  confirmed) and `arriveRegularFeedback` (an `MMF_Scale` punch, played via `PlayArriveRegularFeedback()`
-  when the point first becomes current, only if it has a loadout-pick phase to show before the fight —
-  a distinct "yoyo" pop instead of the fight's shake). Which `FightSO` a point represents (`Fight`
-  getter) is **not** wired per-instance in the Inspector anymore — `SetFight(...)` is called once by
-  `MapManager.AssignEncounters()` (see below), positionally against `CampaignManager.EncounterList`.
-  `fight` itself stays `[SerializeField]` even though nothing authors it directly (CLAUDE.md rule 19 —
-  load-bearing runtime state stays visible in the Inspector by default, not hidden behind a debugger);
-  any value seen on it in Edit mode is stale and gets overwritten the instant Play mode starts.
-- **`_Global/_Map/MapManager.cs`** — `MapScene`'s orchestrator, singleton (`Instance`). Holds a
-  serialized `MapEncounterPoint[] points` — one entry per fight in `EncounterList`, same order;
-  `AssignEncounters()` (called once from `Start()`, before the first `RefreshForCurrentEncounter()`)
-  walks `EncounterList.fights` and calls `points[i].SetFight(fights[i])` for each index —
-  **throws** if `points.Length < fights.Count` (a scene-setup/content-authoring mismatch that
-  should surface immediately, not fail silently or wrap around). Purely driven by explicit calls
-  (`Start()`, and `CampaignManager.LoadCurrentEncounter()`'s direct call when already in
-  `MapScene`) — there is no `GameManager`/`OnBattleRestart` in `MapScene` to subscribe to.
-  `RefreshForCurrentEncounter()` is a gradual, step-by-step reveal — every step visible, nothing jumps
-  straight to its end state, and is only ever called when moving to a genuinely new node (run start, or
-  after the campaign actually advances past a fight+reward — never mid-node for a loadout pick):
-  1. Every point's paths are hidden first — a clean slate, since a point's leftover path state from a
-     previous refresh isn't trustworthy (e.g. a debug override jumping the index backward).
-  2. Every already-passed point (`index < CurrentEncounterIndex`) snaps to `SetComplete()` with both
-     paths shown — old history, nothing new to animate about it. (This is also where the point that was
-     current a moment ago — the "previous" point — visually flips to Complete; there's nothing special
-     about it once its index is behind the new current one.)
-  3. The current point's `PathIn` is revealed, then a pause (`revealDelaySeconds`) — "the player has
-     walked up to it." If `CurrentEncounterIndex` is `0` there's no earlier point at all, so step 2 is a
-     no-op and this is the only path shown.
-  4. `RevealCurrentPoint()`: the current point flips `SetFuture() -> SetCurrent()`. If
-     `CurrentFight.hasLoadoutPick` is false: `PlayArriveFightFeedback()` (shake), pause
-     (`arriveFeedbackDuration`), then `StartFight()` loads `BattleScene` — done, exactly like a plain
-     fight always worked. If true: `PlayArriveRegularFeedback()` (yoyo) instead, pause
-     (`arriveFeedbackDuration`), then `StartLoadoutPick()` instantiates `loadoutEncounterPrefab` in
-     place and calls `Play()`.
-  5. (Only when the fight has a loadout-pick phase) Once the loadout pick's `OnCompleted` fires
-     (`HandleLoadoutPickCompleted()`): destroy it, pause again (`postLoadoutPauseSeconds` — the "wait a
-     bit" beat before the fight actually starts), then `ArriveAtFightAfterLoadout()` plays
-     `PlayArriveFightFeedback()` (the shake, now happening right before the fight rather than on
-     arrival), pauses `arriveFeedbackDuration` again, then `StartFight()` loads `BattleScene`.
+- **`_Global/_Map/MapEncounterPoint.cs`** — one fight's point on the map.
+  - **Three visual states**: `futureEncounterVisual`/`currentEncounterVisual`/
+    `completeEncounterVisual`, exactly one active at a time via `SetFuture()`/`SetCurrent()`/
+    `SetComplete()`. These are visuals only, with no path side effects.
+  - **Paths**: `HidePaths()`/`ShowPathIn()`/`ShowPathOut()`/`RevealPathOutGradually(duration)` (dot by
+    dot), each null-checked, since `pathIn`/`pathOut` are optional `SplineContainer`s.
+  - **Two `MMF_Player` feedbacks** (rule 15): `arriveFightFeedback` is the shake right before the fight
+    loads. `arriveRegularFeedback` is the yoyo pop when a node with a loadout pick is discovered or
+    clicked.
+  - **Enemy icon**: `enemyIcon` (`SpriteRenderer`, hidden in `Awake()`) gets `FightSO.enemyIcon` in
+    `SetFight()`. It's shown via `HideEnemyIcon()`/`ShowEnemyIconInstant()`/`RevealEnemyIcon()`, the
+    last one with a pop from zero to full size.
+  - **Pulse**: `StartPulse(magnitude, halfPeriod)`/`StopPulse()`, delegating to the sibling
+    `MapEncounterPointAnimator`.
+  - **Clicks**: implements `IPointerClickHandler` and raises `OnClicked`. The point has no idea whether
+    it's clickable right now; `MapManager` decides.
+  - **Fight assignment**: which `FightSO` a point represents (`Fight`) is assigned once by
+    `MapManager.AssignEncounters()` via `SetFight(...)`, positionally. `fight` stays `[SerializeField]`
+    for Inspector visibility only (rule 19). Edit-mode values are stale.
+- **`_Global/_Map/MapEncounterPointAnimator.cs`** — DOTween tweens for a point (rule 27, the same shape
+  as `RewardCardAnimator`):
+  - `PlayIconAppear()`: the icon scales 0 → its authored scale with `Ease.OutBack` (overshoot and
+    settle). Tunables: `iconAppearDuration`, `iconAppearEase`.
+  - `StartPulse()`: a yoyo loop of the point root between its authored scale and `× (1 + magnitude)`.
+  - `StopPulse()`: kills the loop and settles back to the authored scale in `pulseStopDuration`.
+  - Every call kills the active tween first and targets absolute scales cached in `Awake()`/`Init()`.
+  - Pulsing the root is safe because the spline paths are separate scene objects.
+- **`_Global/_Map/MapManager.cs`** — `MapScene`'s orchestrator, singleton (`Instance`).
+  - **Points**: holds `MapEncounterPoint[] points`, one per campaign node, in order.
+    `AssignEncounters()` maps them positionally at `Start()` and **throws** if there are too few.
+    `Start()` also subscribes every point's `OnClicked`.
+  - **Tunables**: `revealDelaySeconds`, `arriveFeedbackDuration`, `postLoadoutPauseSeconds`, plus the
+    **clickable pulse** — `pulseMagnitude` (fraction of scale, default 0.08), `pulseHalfPeriod` (s per
+    grow or shrink), and `pulseStartDelay` (pause after a discovery before pulsing begins).
+  - **State**: `MapState { Revealing, AwaitingSelection, InLoadoutPick, StartingFight }`, shown live by
+    `MapManagerEditor`.
 
-  Completing the loadout pick **does not** call `CampaignManager.Instance.CompleteCurrentEncounter()`
-  — unlike the old design (where a pick screen was its own list entry and completing it advanced the
-  index), it just continues into the same node's fight. The campaign only actually advances once the
-  fight is won and any reward pick (in `BattleScene`, see "Encounter dispatch" above) is confirmed.
+  `EnterMap()` (from `Start()`, or from `CampaignManager.LoadCurrentEncounter()` when already in
+  `MapScene`) consumes `CampaignManager.ConsumeMapEntry()`:
+  - **Reveal** (frontier just advanced / new run) → `PlayFrontierReveal()`:
+    1. `DrawHistory(frontier)`:
+       - every path hidden and every pulse stopped (a clean slate);
+       - past nodes `SetComplete()` with paths shown and their enemy icon — a defeated node shows **both** `CompleteEncounterVisual` and its icon (icon on sorting order 1, above the marker), pulsing together with the root;
+       - later nodes `SetFuture()`, iconless.
+    2. The frontier's `PathIn` shows, and the previous node's `PathOut` draws in dot by dot over
+       `revealDelaySeconds`. Nothing pulses meanwhile.
+    3. `DiscoverFrontier()` sets the frontier to `SetCurrent()` and pops its icon in
+       (`RevealEnemyIcon()`).
+    4. If the frontier fight has no loadout pick, it auto-starts (`AutoStartFrontier()`). Otherwise it
+       plays `PlayArriveRegularFeedback()`, waits `pulseStartDelay`, then calls `AwaitSelection()`.
+  - **Boot** (MapScene is the session's first scene, a resumed save) → `DrawDiscovered(frontier)` (the
+    same end state with the frontier's icon shown instantly, no animation). It then auto-starts if the
+    frontier has no loadout pick, otherwise calls `AwaitSelection()`.
+  - **Return** (Go to map, replay win) → `DrawDiscovered(frontier)`, then `AwaitSelection()`. It never
+    auto-starts, so Fight 1 can't trap the player in a loop.
 
-  **TODO, not yet built**: step 2's path reveal is instant for every point, including the one that just
-  became history — the ask was for that one specifically to reveal knot-by-knot along the spline
-  (imitating the hero steadily walking it) once path *rendering* exists (`SplineContainer`s are data-only
-  today, no visual component). Instant-enable is the interim behavior.
+  `AwaitSelection()` is the **"reached encounter"** state. Every node ≤ frontier pulses, and a click
+  on one of them (`SelectPoint`, ignored in any other state or on an undiscovered node) does this:
+  1. Stops all pulses and calls `CampaignManager.SelectNode(node)`.
+  2. If the node has a loadout pick: `OpenLoadoutPick()` plays the yoyo, waits
+     `arriveFeedbackDuration`, then `StartLoadoutPick()`. When it completes, it waits
+     `postLoadoutPauseSeconds`.
+  3. Then `StartFightFromPoint()` plays the shake, waits `arriveFeedbackDuration`, and
+     `StartFight()` loads `BattleScene`.
+  Auto-start takes the same path via `SelectNode(frontier)` → `StartFightFromPoint()`.
 
-  No re-entrancy guard and no staleness/`Generation` guard — normal gameplay only ever calls this again
-  after the previous call's full sequence has resolved (calls never overlap); `CampaignProgressTool`'s
-  Play-mode buttons are the one exception that could call in mid-sequence, left unguarded as debug-only
-  exposure (YAGNI).
-- **`_Global/_Map/Editor/MapManagerEditor.cs`** — rule-19 read-only live Inspector view (mirrors
-  `CampaignManagerEditor`): the resolved current `MapEncounterPoint` and current encounter
-  index/asset.
+  Completing the loadout pick **does not** advance the campaign. It just continues into the selected
+  node's fight. The campaign advances only when a frontier fight is won and any reward pick is
+  confirmed.
+
+  No re-entrancy guard: only `CampaignProgressTool`'s Play-mode buttons can call in mid-sequence
+  (debug-only, YAGNI).
+- **`_Global/_Map/Editor/MapManagerEditor.cs`** — rule-19 read-only live view:
+  - `MapState`;
+  - the entry mode it was entered with;
+  - the frontier node;
+  - the selected encounter index/asset/map point;
+  - `IsReplay`.
 
 ### `SceneNames`
 

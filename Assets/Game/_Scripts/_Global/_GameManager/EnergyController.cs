@@ -145,8 +145,18 @@ public class EnergyController : MonoBehaviour
     /// </summary>
     private void ResetForRestart()
     {
+        RevertToEncounterStart();
+        ResetRerollCost();
+    }
+
+    /// <summary>
+    /// Puts RunState.currentEnergy back to the encounter-start snapshot, undoing every reroll
+    /// spend/triple grant of this attempt. Used by ResetForRestart() and by
+    /// CampaignManager.AbandonEncounter() (pause menu → Go to map). See docs/Energy.md.
+    /// </summary>
+    public void RevertToEncounterStart()
+    {
         CampaignStateManager.Instance.CurrentRun.currentEnergy = _encounterStartEnergy;
         OnEnergyChanged?.Invoke(CurrentEnergy);
-        ResetRerollCost();
     }
 }

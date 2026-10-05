@@ -40,7 +40,10 @@ public class CampaignManagerEditor : Editor
 
         using (new EditorGUI.DisabledScope(true))
         {
-            EditorGUILayout.IntField("Encounter Index", manager.CurrentEncounterIndex);
+            EditorGUILayout.IntField("Encounter Index (playing)", manager.CurrentEncounterIndex);
+            EditorGUILayout.IntField("Progress Frontier Index", manager.ProgressEncounterIndex);
+            EditorGUILayout.Toggle("Is Replay", manager.IsReplay);
+            EditorGUILayout.EnumPopup("Pending Map Entry", manager.PendingMapEntry);
 
             var current = manager.CurrentFight;
             EditorGUILayout.ObjectField("Current Encounter", current, typeof(FightSO), false);

@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using MoreMountains.Feedbacks;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Serialization;
 using UnityEngine.Splines;
 using Utils;
@@ -10,17 +12,24 @@ using Utils;
 /// the spline paths leading in/out of it, and plays a short "arrived" feedback when it becomes the
 /// current fight (PlayArriveFightFeedback for the fight-about-to-start shake, PlayArriveRegularFeedback
 /// for the plain "you've arrived here" yoyo/punch, played instead when the fight has a loadout-pick
-/// phase to show first — see MapManager). Which FightSO this point represents is assigned once by
+/// phase to show first — see MapManager). Also owns the boss icon (FightSO.enemyIcon, hidden until
+/// discovered) and raises OnClicked for MapManager; the icon pop and clickable pulse tweens live on
+/// the sibling MapEncounterPointAnimator. Which FightSO this point represents is assigned once by
 /// MapManager.AssignEncounters() (positional against EncounterListSO), not wired per-instance in the
 /// Inspector. See MapManager and docs/Encounters.md.
 /// </summary>
-public class MapEncounterPoint : MonoBehaviour
+[RequireComponent(typeof(MapEncounterPointAnimator))]
+public class MapEncounterPoint : MonoBehaviour, IPointerClickHandler
 {
     // Serialized (not just an auto-property) so it's visible in the Inspector even though it's
     // runtime-assigned — CLAUDE.md rule 19: load-bearing runtime state stays visible by default,
     // not buried in a private field only a debugger can see.
     [SerializeField] private FightSO fight;
     public FightSO Fight => fight;
+
+    [Tooltip("The boss icon shown once this node is discovered. Its sprite comes from FightSO.enemyIcon " +
+             "(assigned in SetFight); hidden until MapManager reveals it.")]
+    [SerializeField] private SpriteRenderer enemyIcon;
 
     [SerializeField] private GameObject futureEncounterVisual;
     [SerializeField] private GameObject currentEncounterVisual;
@@ -38,7 +47,47 @@ public class MapEncounterPoint : MonoBehaviour
     [FormerlySerializedAs("arriveFeedback")]
     [SerializeField] private MMF_Player arriveRegularFeedback;
 
-    public void SetFight(FightSO f) => fight = f;
+    /// <summary>
+    /// Raised on any click on this point's collider (via EventSystem + the camera's
+    /// Physics2DRaycaster). The point doesn't know whether it's clickable right now — MapManager
+    /// decides whether to act on it.
+    /// </summary>
+    public event Action<MapEncounterPoint> OnClicked;
+
+    private MapEncounterPointAnimator _animator;
+
+    void Awake()
+    {
+        _animator = GetComponent<MapEncounterPointAnimator>();
+        _animator.Init(enemyIcon.transform);
+        enemyIcon.gameObject.SetActive(false);
+    }
+
+    public void SetFight(FightSO f)
+    {
+        fight = f;
+        enemyIcon.sprite = f.enemyIcon;
+    }
+
+    public void HideEnemyIcon() => enemyIcon.gameObject.SetActive(false);
+
+    public void ShowEnemyIconInstant()
+    {
+        enemyIcon.gameObject.SetActive(true);
+        _animator.SetIconFullSize();
+    }
+
+    /// <summary>Shows the enemy icon with a pop from tiny to full size — the "enemy discovered" beat.</summary>
+    public void RevealEnemyIcon()
+    {
+        enemyIcon.gameObject.SetActive(true);
+        _animator.PlayIconAppear();
+    }
+
+    public void StartPulse(float magnitude, float halfPeriod) => _animator.StartPulse(magnitude, halfPeriod);
+    public void StopPulse() => _animator.StopPulse();
+
+    public void OnPointerClick(PointerEventData eventData) => OnClicked?.Invoke(this);
 
     public void SetFuture()
     {

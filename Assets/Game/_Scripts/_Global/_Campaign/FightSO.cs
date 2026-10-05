@@ -56,6 +56,11 @@ public class FightSO : ScriptableObject
     public bool isTutorial;
     [Tooltip("The enemy side's data for this fight — avatar, HP, creature pool, AI tuning.")]
     public EnemyData enemyData;
+    [Tooltip("Boss icon shown on this fight's MapEncounterPoint (its EnemyIcon SpriteRenderer) once " +
+             "the node is discovered — popped in when first reached, shown instantly on later map " +
+             "visits. Boss phases (continuesPreviousFight) have no map point, so it's unused there. " +
+             "See docs/Encounters.md.")]
+    public Sprite enemyIcon;
 
     [Tooltip("If true, a loadout-pick phase plays in MapScene, in place at this node, before advancing into the fight.")]
     public bool hasLoadoutPick;

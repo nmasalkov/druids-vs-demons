@@ -43,5 +43,6 @@ public partial class CampaignManager
                              $"(valid 0..{encounterList.fights.Count - 1}) — clamped to {clamped}.");
 
         CampaignStateManager.Instance.ApplySessionEncounterIndexOverride(clamped);
+        ClearSelection();
     }
 }

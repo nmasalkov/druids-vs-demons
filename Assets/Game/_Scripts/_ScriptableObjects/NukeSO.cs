@@ -24,8 +24,8 @@ public class NukeSO : ActionSO
              "resolves first; equal values keep the order they were rolled in. Matters because a " +
              "standing enemy shield changes what a nuke can reach: it's the top priority target " +
              "for any nuke that doesn't ignore it (see NukeResolver.BuildPriorityTargets), and it " +
-             "blocks Shock completely (see ShockResolver). Running damage first (FireMagic 10, " +
-             "Starfall 20) and Shock last (30) gives the damage a chance to break the shield, " +
+             "blocks Shock completely (see ShockResolver). Running damage first (Starfall 10, " +
+             "FireMagic 20) and Shock last (30) gives the damage a chance to break the shield, " +
              "after which Shock can reach the creatures behind it. Leave gaps when authoring a new " +
              "nuke so it can be slotted between two existing ones. See docs/ActionsAndSpells.md.")]
     [SerializeField] private int resolutionOrder = 10;

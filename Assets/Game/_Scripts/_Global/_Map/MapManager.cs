@@ -6,36 +6,57 @@ using UnityEngine.Serialization;
 using Utils;
 
 /// <summary>
-/// MapScene's orchestrator: reveals completed/current fight points, then either shows the current
-/// fight's loadout-pick phase in place (if FightSO.hasLoadoutPick) before handing off to BattleScene,
-/// or hands off directly — after a gradual, step-by-step reveal. Driven purely by explicit calls
-/// (Start(), and CampaignManager.LoadCurrentEncounter() while already in MapScene) — there is no
+/// MapScene's orchestrator. Draws every discovered node (each with its boss icon), plays the
+/// "next encounter discovered" reveal right after the progress frontier advances, then waits for
+/// the player to click any discovered node — the frontier or a replay of a beaten one. A clicked
+/// node plays its loadout-pick phase in place (if FightSO.hasLoadoutPick) before handing off to
+/// BattleScene, or hands off directly. A frontier fight with no loadout pick auto-starts after
+/// being discovered (or on boot). Driven purely by explicit calls (Start(), and
+/// CampaignManager.LoadCurrentEncounter() while already in MapScene) — there is no
 /// GameManager/OnBattleRestart in MapScene to subscribe to. See docs/Encounters.md.
 /// </summary>
 public class MapManager : MonoBehaviour
 {
+    public enum MapState { Revealing, AwaitingSelection, InLoadoutPick, StartingFight }
+
     public static MapManager Instance { get; private set; }
 
-    [Tooltip("One entry per fight in CampaignManager.EncounterList, same order — " +
-        "AssignEncounters() maps them positionally at Start().")]
+    [Tooltip("One entry per campaign node (non-boss-phase fight) in CampaignManager.EncounterList, " +
+        "same order — AssignEncounters() maps them positionally at Start().")]
     [SerializeField] private MapEncounterPoint[] points;
 
     [SerializeField] private Transform encounterParent;
     [SerializeField] private LoadoutPickEncounter loadoutEncounterPrefab;
 
-    [Tooltip("Pause after the path leading to the current point is revealed, before it flips to Current.")]
+    [Tooltip("Pause after the path leading to the newly discovered point is revealed, before its enemy icon pops in.")]
     [SerializeField] private float revealDelaySeconds = 1f;
-    [Tooltip("Pause after the current point's arrive feedback plays, before the fight/loadout pick actually starts.")]
+    [Tooltip("Pause after a point's arrive feedback plays, before the fight/loadout pick actually starts.")]
     [FormerlySerializedAs("reachFeedbackDuration")]
     [SerializeField] private float arriveFeedbackDuration = 0.5f;
     [Tooltip("Pause after a loadout pick completes, before the fight-arrival shake feedback plays.")]
     [SerializeField] private float postLoadoutPauseSeconds = 0.5f;
 
+    [Header("Clickable pulse")]
+    [Tooltip("How much bigger a clickable (discovered) point grows at the peak of its pulse, as a " +
+             "fraction of its authored scale (0.08 = +8%).")]
+    [SerializeField] private float pulseMagnitude = 0.08f;
+    [Tooltip("Seconds for one half of the pulse (grow or shrink) — a full pulse is twice this.")]
+    [SerializeField] private float pulseHalfPeriod = 0.6f;
+    [Tooltip("Pause after a newly discovered enemy icon pops in, before every clickable point starts pulsing.")]
+    [SerializeField] private float pulseStartDelay = 0.6f;
+
     private Encounter _activeEncounter;
-    private MapEncounterPoint _currentPoint;
+    private MapEncounterPoint _selectedPoint;
 
     /// <summary>Read-only for MapManagerEditor's live Inspector view (CLAUDE.md rule 19).</summary>
     public IReadOnlyList<MapEncounterPoint> Points => points;
+    public MapState State { get; private set; }
+    public CampaignManager.MapEntry LastEntry { get; private set; }
+    public MapEncounterPoint SelectedPoint => _selectedPoint;
+
+    private static int FrontierNode => CampaignManager.Instance.ProgressNodeIndex;
+    private static FightSO FrontierFight => CampaignManager.Instance.EncounterList.fights[
+        CampaignManager.Instance.EncounterIndexOfNode(FrontierNode)];
 
     void Awake()
     {
@@ -45,7 +66,13 @@ public class MapManager : MonoBehaviour
     void Start()
     {
         AssignEncounters();
-        RefreshForCurrentEncounter();
+        foreach (var point in points) point.OnClicked += SelectPoint;
+        EnterMap();
+    }
+
+    void OnDestroy()
+    {
+        foreach (var point in points) point.OnClicked -= SelectPoint;
     }
 
     /// <summary>
@@ -76,86 +103,152 @@ public class MapManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Re-derives the map's visual state from CampaignManager.CurrentFight as a gradual,
-    /// step-by-step reveal (every step visible, nothing jumps straight to its end state):
-    /// 1. Hide every point's paths (clean slate — a point's path state from a previous refresh isn't
-    ///    trustworthy, e.g. after a debug override jumps the index backward).
-    /// 2. Every already-passed point (index &lt; current) snaps to Complete with both paths shown —
-    ///    old history, nothing new to animate about it.
-    /// 3. The current point's incoming path is revealed, then a short pause
-    ///    (revealDelaySeconds) — this is "the player has walked up to it."
-    /// 4. The current point flips Future -&gt; Current via RevealCurrentPoint(). If the fight has no
-    ///    loadout-pick phase, this plays the fight-arrival shake directly and, after a pause
-    ///    (arriveFeedbackDuration), loads BattleScene. If it does, this plays the plain arrival
-    ///    yoyo/punch instead and, after the same pause, shows the loadout pick in place — only once
-    ///    that's confirmed (and a further postLoadoutPauseSeconds pause) does the fight-arrival shake
-    ///    play and BattleScene load.
-    ///
-    /// Called once from Start() and again directly by CampaignManager.LoadCurrentEncounter()
-    /// whenever a transition lands on a new current fight while already in MapScene (e.g. after a
-    /// reward pick completes in BattleScene and the campaign advances). Never re-entered mid-node —
-    /// completing a loadout pick continues into the same node's fight, it doesn't loop back here.
-    ///
-    /// No re-entrancy guard: normal gameplay only ever calls this again after the previous call's
-    /// full sequence has resolved, so calls never overlap. CampaignProgressTool's Play-mode debug
-    /// buttons are the one exception that could call in mid-sequence — debug-only exposure, left
-    /// unguarded per YAGNI.
+    /// Presents the map for however it was entered (CampaignManager.ConsumeMapEntry()):
+    /// - Reveal (frontier just advanced / new run): animate the walk to the new frontier and pop its
+    ///   enemy icon, then auto-start it if it has no loadout pick, else wait for a click.
+    /// - Boot (MapScene is the session's first scene): show the discovered nodes as-is, then
+    ///   auto-start the frontier if it has no loadout pick, else wait for a click.
+    /// - Return (Go to map, replay win): show the discovered nodes as-is and wait for a click.
+    /// Called from Start() and directly by CampaignManager.LoadCurrentEncounter() when already in
+    /// MapScene. No re-entrancy guard — only CampaignProgressTool's debug buttons can call in
+    /// mid-sequence (YAGNI).
     /// </summary>
-    public void RefreshForCurrentEncounter()
+    public void EnterMap()
     {
         DestroyActiveEncounter();
+        LastEntry = CampaignManager.Instance.ConsumeMapEntry();
 
-        // Node index, not raw encounter index: boss phases have no point of their own, so one
-        // reached via a debug profile resolves back to the node it continues.
-        int currentIndex = CampaignManager.Instance.NodeIndexOf(CampaignManager.Instance.CurrentEncounterIndex);
+        if (IsRevealEntry()) { PlayFrontierReveal(); return; }
+
+        DrawDiscovered(FrontierNode);
+        if (AutoStartsOnBoot()) { AutoStartFrontier(); return; }
+        AwaitSelection();
+    }
+
+    private bool IsRevealEntry() => LastEntry == CampaignManager.MapEntry.Reveal;
+
+    // Resuming a save on a frontier with nothing to pick (today only Fight 1) goes straight into
+    // the fight, same as discovering it would. Never on Return — that would trap the player.
+    private bool AutoStartsOnBoot() =>
+        LastEntry == CampaignManager.MapEntry.Boot && !FrontierFight.hasLoadoutPick;
+
+    /// <summary>
+    /// Static end-state for nodes 0..frontier: past ones Complete with both paths, the frontier
+    /// Current with its incoming path, every discovered enemy icon visible at full size (defeated ones alongside CompleteEncounterVisual), the rest
+    /// Future with no icon. Nothing animated.
+    /// </summary>
+    private void DrawDiscovered(int frontier)
+    {
+        DrawHistory(frontier);
+        var frontierPoint = points[frontier];
+        frontierPoint.ShowPathIn();
+        frontierPoint.SetCurrent();
+        frontierPoint.ShowEnemyIconInstant();
+        if (frontier > 0) points[frontier - 1].ShowPathOut();
+    }
+
+    /// <summary>
+    /// Everything except the frontier itself: hide every path (clean slate — leftover path state
+    /// isn't trustworthy, e.g. after a debug override jumps the index backward), stop pulsing,
+    /// past points Complete with icon and paths shown, the rest Future and iconless.
+    /// </summary>
+    private void DrawHistory(int frontier)
+    {
+        State = MapState.Revealing;
         int nodeCount = CampaignManager.Instance.NodeCount;
 
-        foreach (var point in points) point.HidePaths();
+        foreach (var point in points)
+        {
+            point.HidePaths();
+            point.StopPulse();
+            point.HideEnemyIcon();
+        }
 
         for (int i = 0; i < nodeCount; i++)
         {
-            if (i < currentIndex) points[i].SetComplete();
+            if (i < frontier) points[i].SetComplete();
             else points[i].SetFuture();
         }
 
-        // Everything older than the point immediately before current is already-walked history from
-        // an earlier refresh — both its paths are shown at once, no animation.
-        for (int i = 0; i < currentIndex - 1; i++)
+        // Defeated nodes show BOTH CompleteEncounterVisual and their enemy icon (they pulse together
+        // with the root once the map awaits a selection).
+        for (int i = 0; i < frontier; i++)
         {
+            points[i].ShowEnemyIconInstant();
             points[i].ShowPathIn();
-            points[i].ShowPathOut();
+            if (i < frontier - 1) points[i].ShowPathOut();
         }
-
-        _currentPoint = points[currentIndex];
-        _currentPoint.ShowPathIn();
-
-        // The point immediately before current is the one transition that's actually new this call —
-        // its pathOut gets the gradual dot-by-dot reveal (imitates the hero steadily walking it),
-        // paced to finish right as revealDelaySeconds' wait below ends.
-        if (currentIndex > 0)
-        {
-            var previousPoint = points[currentIndex - 1];
-            previousPoint.ShowPathIn();
-            previousPoint.RevealPathOutGradually(revealDelaySeconds);
-        }
-
-        DoAfterDelay.Execute(RevealCurrentPoint, revealDelaySeconds);
     }
 
-    private void RevealCurrentPoint()
+    /// <summary>
+    /// The "next encounter discovered" beat: nothing pulses, the path from the previous point
+    /// draws in dot by dot across revealDelaySeconds, then the frontier flips to Current and its
+    /// enemy icon pops in.
+    /// </summary>
+    private void PlayFrontierReveal()
     {
-        _currentPoint.SetCurrent();
+        int frontier = FrontierNode;
+        DrawHistory(frontier);
+        points[frontier].ShowPathIn();
 
-        if (CampaignManager.Instance.CurrentFight.hasLoadoutPick)
-        {
-            _currentPoint.PlayArriveRegularFeedback();
-            DoAfterDelay.Execute(StartLoadoutPick, arriveFeedbackDuration);
-        }
-        else
-        {
-            _currentPoint.PlayArriveFightFeedback();
-            DoAfterDelay.Execute(StartFight, arriveFeedbackDuration);
-        }
+        if (frontier > 0) points[frontier - 1].RevealPathOutGradually(revealDelaySeconds);
+
+        DoAfterDelay.Execute(DiscoverFrontier, revealDelaySeconds);
+    }
+
+    private void DiscoverFrontier()
+    {
+        var frontierPoint = points[FrontierNode];
+        frontierPoint.SetCurrent();
+        frontierPoint.RevealEnemyIcon();
+
+        if (!FrontierFight.hasLoadoutPick) { AutoStartFrontier(); return; }
+
+        frontierPoint.PlayArriveRegularFeedback();
+        DoAfterDelay.Execute(AwaitSelection, pulseStartDelay);
+    }
+
+    /// <summary>The "reached encounter" state: every discovered point pulses and is clickable.</summary>
+    private void AwaitSelection()
+    {
+        State = MapState.AwaitingSelection;
+        for (int i = 0; i <= FrontierNode; i++)
+            points[i].StartPulse(pulseMagnitude, pulseHalfPeriod);
+    }
+
+    private void AutoStartFrontier()
+    {
+        CampaignManager.Instance.SelectNode(FrontierNode);
+        _selectedPoint = points[FrontierNode];
+        StartFightFromPoint();
+    }
+
+    /// <summary>Click handler for every point — ignored unless waiting for a choice and the point is discovered.</summary>
+    private void SelectPoint(MapEncounterPoint point)
+    {
+        if (!IsSelectable(point)) return;
+
+        StopAllPulses();
+        _selectedPoint = point;
+        CampaignManager.Instance.SelectNode(Array.IndexOf(points, point));
+
+        if (point.Fight.hasLoadoutPick) OpenLoadoutPick();
+        else StartFightFromPoint();
+    }
+
+    private bool IsSelectable(MapEncounterPoint point) =>
+        State == MapState.AwaitingSelection && Array.IndexOf(points, point) <= FrontierNode;
+
+    private void StopAllPulses()
+    {
+        foreach (var point in points) point.StopPulse();
+    }
+
+    private void OpenLoadoutPick()
+    {
+        State = MapState.InLoadoutPick;
+        _selectedPoint.PlayArriveRegularFeedback();
+        DoAfterDelay.Execute(StartLoadoutPick, arriveFeedbackDuration);
     }
 
     private void StartLoadoutPick()
@@ -169,31 +262,30 @@ public class MapManager : MonoBehaviour
     private void HandleLoadoutPickCompleted()
     {
         DestroyActiveEncounter();
-        DoAfterDelay.Execute(ArriveAtFightAfterLoadout, postLoadoutPauseSeconds);
+        DoAfterDelay.Execute(StartFightFromPoint, postLoadoutPauseSeconds);
     }
 
-    private void ArriveAtFightAfterLoadout()
+    private void StartFightFromPoint()
     {
-        _currentPoint.PlayArriveFightFeedback();
+        State = MapState.StartingFight;
+        _selectedPoint.PlayArriveFightFeedback();
         DoAfterDelay.Execute(StartFight, arriveFeedbackDuration);
     }
 
     private void StartFight() => SceneManager.LoadScene(SceneNames.BattleScene);
 
     /// <summary>
-    /// Instant-resolve counterpart of the current node's full sequence (CLAUDE.md rule 7) — for a
-    /// future automated test harness, not called anywhere in the normal flow yet, matching how
+    /// Instant-resolve counterpart of clicking a node (CLAUDE.md rule 7) — for a future automated
+    /// test harness, not called anywhere in the normal flow yet, matching how
     /// BattleState.ResolveBattleInstant()/NukeState.ResolveNukesInstant() etc. currently have no
-    /// caller either. Marks the point current with zero animation, headlessly confirms the loadout
-    /// pick unchanged (if any) via a bare, view-less LoadoutPickEncounter instance, then loads
+    /// caller either. Selects the node with zero animation, headlessly confirms its loadout pick
+    /// unchanged (if any) via a bare, view-less LoadoutPickEncounter instance, then loads
     /// BattleScene immediately.
     /// </summary>
-    public void ResolveCurrentPointInstant()
+    public void ResolvePointInstant(int nodeIndex)
     {
         DestroyActiveEncounter();
-
-        int currentIndex = CampaignManager.Instance.CurrentEncounterIndex;
-        points[currentIndex].SetCurrent();
+        CampaignManager.Instance.SelectNode(nodeIndex);
 
         if (CampaignManager.Instance.CurrentFight.hasLoadoutPick)
         {

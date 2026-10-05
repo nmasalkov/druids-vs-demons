@@ -1,3 +1,4 @@
+using System;
 using Game._Scripts.Global;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -24,13 +25,52 @@ public partial class CampaignManager : MonoBehaviour
     // transition (advance/reload/complete, or the post-victory reward pick) actually happens.
     private const float BattleResultDelaySeconds = 4f;
 
+    /// <summary>
+    /// How MapScene should present itself the next time MapManager enters it — consumed (and reset
+    /// to Return) by <see cref="ConsumeMapEntry"/>. Boot: MapScene is the session's first scene
+    /// (resume a save straight at "pick who to fight"). Reveal: the frontier just advanced (or a
+    /// new run started) — play the discovery animation. Return: back from a battle without
+    /// progressing (Go to map, or a replay win). See docs/Encounters.md.
+    /// </summary>
+    public enum MapEntry { Boot, Reveal, Return }
+
+    /// <summary>
+    /// Fired once a defeat (or draw) has been on screen for BattleResultDelaySeconds. Replaces the
+    /// old automatic restart — PauseMenuController subscribes and shows the pause panel locked
+    /// (no unpause), so the player picks Restart or Go to map. See docs/Encounters.md.
+    /// </summary>
+    public static event Action OnDefeatResolved;
+
     [SerializeField] private EncounterListSO encounterList;
+
+    // Session-only: the encounter the player picked on the map (a replay of a beaten node, or the
+    // frontier), or -1 to fall back to the saved frontier. Never persisted — a reload always
+    // resumes at the frontier. Also carries boss-phase advances, so a phase never touches RunState.
+    private int _selectedEncounterIndex = -1;
+
+    private MapEntry _pendingMapEntry = MapEntry.Boot;
 
     public EncounterListSO EncounterList => encounterList;
 
     public FightSO CurrentFight => encounterList.fights[ClampIndex(CurrentEncounterIndex)];
 
-    public int CurrentEncounterIndex => CampaignStateManager.Instance.CurrentRun.currentEncounterIndex;
+    /// <summary>
+    /// The encounter actually being played: the map selection if one was made this session, else
+    /// the saved progress frontier. One value with a fallback, not a synced copy (rule 22).
+    /// </summary>
+    public int CurrentEncounterIndex => _selectedEncounterIndex >= 0 ? _selectedEncounterIndex : ProgressEncounterIndex;
+
+    /// <summary>The saved progress frontier — the furthest node reached (RunState.currentEncounterIndex).</summary>
+    public int ProgressEncounterIndex => CampaignStateManager.Instance.CurrentRun.currentEncounterIndex;
+
+    /// <summary>Map node of the progress frontier — every node up to and including it is discovered/clickable.</summary>
+    public int ProgressNodeIndex => NodeIndexOf(ProgressEncounterIndex);
+
+    /// <summary>True while replaying a node the player has already beaten (behind the frontier).</summary>
+    public bool IsReplay => NodeIndexOf(CurrentEncounterIndex) < ProgressNodeIndex;
+
+    /// <summary>Read-only peek at the pending map entry, for CampaignManagerEditor (rule 19).</summary>
+    public MapEntry PendingMapEntry => _pendingMapEntry;
 
     /// <summary>
     /// Whether another campaign *node* follows the current one. Boss phases
@@ -81,6 +121,22 @@ public partial class CampaignManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Inverse of <see cref="NodeIndexOf"/>: the encounter index that opens map node
+    /// <paramref name="nodeIndex"/>.
+    /// </summary>
+    public int EncounterIndexOfNode(int nodeIndex)
+    {
+        int node = 0;
+        for (int i = 0; i < encounterList.fights.Count; i++)
+        {
+            if (encounterList.fights[i].continuesPreviousFight) continue;
+            if (node == nodeIndex) return i;
+            node++;
+        }
+        throw new ArgumentOutOfRangeException(nameof(nodeIndex), $"CampaignManager: no campaign node {nodeIndex}.");
+    }
+
+    /// <summary>
     /// The current fight's next phase, or null if it's a one-phase fight. Derived purely from list
     /// order — the entry right after this one, if it's flagged as a continuation — so there's a
     /// single source of truth for "what comes next" (rule 22) rather than a separate per-fight
@@ -96,10 +152,10 @@ public partial class CampaignManager : MonoBehaviour
         }
     }
 
-    /// <summary>Index of the next campaign node after the current encounter, or -1 if there is none.</summary>
+    /// <summary>Index of the next campaign node after the progress frontier, or -1 if there is none.</summary>
     private int NextNodeStartIndex()
     {
-        for (int i = CurrentEncounterIndex + 1; i < encounterList.fights.Count; i++)
+        for (int i = ProgressEncounterIndex + 1; i < encounterList.fights.Count; i++)
             if (!encounterList.fights[i].continuesPreviousFight) return i;
         return -1;
     }
@@ -134,8 +190,26 @@ public partial class CampaignManager : MonoBehaviour
     {
         CampaignStateManager.Instance.ReplaceRunState(CampaignStateManager.CreateFreshRunState());
         CampaignStateManager.Instance.Save();
+        ClearSelection();
+        _pendingMapEntry = MapEntry.Reveal;
         LoadCurrentEncounter();
     }
+
+    /// <summary>
+    /// Called by MapManager when the player clicks a discovered map point: makes that node's
+    /// opening fight the one BattleScene plays. Session-only — never saved.
+    /// </summary>
+    public void SelectNode(int nodeIndex) => _selectedEncounterIndex = EncounterIndexOfNode(nodeIndex);
+
+    /// <summary>Returns how MapScene should present itself this time, and resets it to Return.</summary>
+    public MapEntry ConsumeMapEntry()
+    {
+        var entry = _pendingMapEntry;
+        _pendingMapEntry = MapEntry.Return;
+        return entry;
+    }
+
+    private void ClearSelection() => _selectedEncounterIndex = -1;
 
     /// <summary>
     /// Restarts the fight in place. Rewinds the encounter index off any boss phase and reverts the
@@ -163,7 +237,7 @@ public partial class CampaignManager : MonoBehaviour
     /// </summary>
     public void AdvanceToBossPhase()
     {
-        CampaignStateManager.Instance.CurrentRun.currentEncounterIndex++;
+        _selectedEncounterIndex = CurrentEncounterIndex + 1;
     }
 
     /// <summary>
@@ -172,8 +246,7 @@ public partial class CampaignManager : MonoBehaviour
     /// </summary>
     private void RewindToNodeStart()
     {
-        var run = CampaignStateManager.Instance.CurrentRun;
-        run.currentEncounterIndex = NodeStartIndex(run.currentEncounterIndex);
+        _selectedEncounterIndex = NodeStartIndex(CurrentEncounterIndex);
     }
 
     /// <summary>
@@ -192,6 +265,8 @@ public partial class CampaignManager : MonoBehaviour
         CampaignStateManager.Instance.CurrentRun.currentEncounterIndex = next;
         CampaignStateManager.Instance.Save();
 
+        ClearSelection();
+        _pendingMapEntry = MapEntry.Reveal;
         LoadCurrentEncounter();
     }
 
@@ -225,14 +300,40 @@ public partial class CampaignManager : MonoBehaviour
     /// </summary>
     public void CompleteCurrentEncounter()
     {
+        if (IsReplay) { ReturnToMap(); return; }
         if (HasNextEncounter) AdvanceToNextEncounter();
         else CompleteCampaign();
     }
 
     /// <summary>
-    /// Called by GameOverState on defeat (or a draw): reloads the current encounter after a
-    /// delay. No RunState changes — energy/progress stay exactly where they were before this
-    /// battle started. See docs/Encounters.md.
+    /// Leaves BattleScene for the map without progressing: clears the map selection (so the
+    /// current encounter falls back to the frontier) and has MapManager land straight in its
+    /// "pick who to fight" state. Used after a replay win (rewards already claimed) and by
+    /// AbandonEncounter(). See docs/Encounters.md.
+    /// </summary>
+    public void ReturnToMap()
+    {
+        ClearSelection();
+        _pendingMapEntry = MapEntry.Return;
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneNames.MapScene);
+    }
+
+    /// <summary>
+    /// Pause menu's "Go to map": quits the fight mid-way. Refunds this attempt's reroll spend
+    /// exactly like a restart would, then returns to the map. Kept separate from ReturnToMap()
+    /// because the replay-win path must keep the reward energy it just granted.
+    /// </summary>
+    public void AbandonEncounter()
+    {
+        EnergyController.Instance.RevertToEncounterStart();
+        ReturnToMap();
+    }
+
+    /// <summary>
+    /// Called by GameOverState on defeat (or a draw): after a delay, fires OnDefeatResolved so the
+    /// pause menu shows locked (Restart / Go to map only). No RunState changes — the player's
+    /// choice there decides what happens next. See docs/Encounters.md.
     /// </summary>
     public void ResolveDefeat()
     {
@@ -240,7 +341,7 @@ public partial class CampaignManager : MonoBehaviour
         DoAfterDelay.Execute(() =>
         {
             if (GameManager.IsStale(generation)) return;
-            ResetCurrentEncounter();
+            OnDefeatResolved?.Invoke();
         }, BattleResultDelaySeconds);
     }
 
@@ -265,7 +366,7 @@ public partial class CampaignManager : MonoBehaviour
     private void LoadCurrentEncounter()
     {
         if (SceneManager.GetActiveScene().name == SceneNames.MapScene)
-            MapManager.Instance.RefreshForCurrentEncounter();
+            MapManager.Instance.EnterMap();
         else
             SceneManager.LoadScene(SceneNames.MapScene);
     }

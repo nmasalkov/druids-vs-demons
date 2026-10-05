@@ -144,7 +144,8 @@ against an already-reset manager.
 
 ## Battle restart architecture
 
-`GameManager.RestartBattle()` (public, called by `PauseMenuController.HandleRestartClicked()`):
+`GameManager.RestartBattle()` (public, called via `CampaignManager.ResetCurrentEncounter()` from the
+pause menu's Restart button):
 
 ```csharp
 public void RestartBattle()
@@ -182,6 +183,7 @@ more):
 | `_SlotMachine/SlotMachineRigger.cs` | `ResetForRestart` | Re-applies the fight's authored triple indices and clears per-turn rigging state. Also subscribes to `CampaignStateManager.OnCurrentFightChanged` for the same reason — see "Boss phase transition" below. |
 | `_Global/_Campaign/BattleRewardPresenter.cs` | `DestroyActiveReward` | Tears down a reward overlay left open when the player restarts from the pause menu. See `docs/Encounters.md`. |
 | `_Global/_Balance/BalanceTool.cs` | `ResetTimer` | Resets the debug HUD's fight timer. |
+| `_UI/PauseMenuController.cs` | `Hide` | Unlocks and hides the pause panel (clears the defeat lock — see "Pause" below). |
 
 Because subscribers are independent (none of them read another subscriber's post-reset state),
 firing order among them doesn't matter — `OnBattleRestart?.Invoke()` runs all of them
@@ -299,8 +301,25 @@ animation, pause or feedback.
 ## Pause
 
 `PauseMenuController` toggles pause on Escape (`Keyboard.current.escapeKey.wasPressedThisFrame`,
-the project's standard new-Input-System polling pattern) and on the Restart button. Pausing sets
-`Time.timeScale = 0f`; unpausing (or restarting) sets it back to `1f`.
+the project's standard new-Input-System polling pattern). Pausing sets `Time.timeScale = 0f`;
+unpausing (or restarting) sets it back to `1f`. The panel has two buttons:
+
+- **Restart** → `CampaignManager.ResetCurrentEncounter()` (→ `RestartBattle()`).
+- **Go to map** (`goToMapButton`) → `CampaignManager.AbandonEncounter()`: refunds this attempt's
+  reroll energy (`EnergyController.RevertToEncounterStart()`) and loads `MapScene` in its "pick who
+  to fight" state. See `docs/Encounters.md`.
+
+**Defeat lock.** There is no automatic restart on defeat anymore. `CampaignManager.ResolveDefeat()`
+waits its 4s result delay and fires the static `CampaignManager.OnDefeatResolved`;
+`PauseMenuController.ShowLocked()` shows the same panel with `_isLocked` set, so Escape can't
+dismiss it — the player must pick Restart or Go to map. `PauseMenuController` also subscribes to
+`OnBattleRestart` (`Hide`), so any restart — the button, `CampaignProgressTool` — unlocks and hides
+the panel.
+
+**Delayed closures outlive `BattleScene`.** `DoAfterDelay`'s runner is `DontDestroyOnLoad`, so a
+closure scheduled in `BattleScene` (e.g. `ResolveVictory`'s 4s delay) still fires after Go to map
+loads `MapScene`. `GameManager.IsStale(gen)` therefore also returns true when `GameManager.Instance`
+is null (destroyed with the scene), so every existing `IsStale` guard covers scene exits too.
 
 This is a **real freeze**, not just an input-blocking overlay, because `Utils.DoAfterDelay` was
 changed from `WaitForSecondsRealtime` to `WaitForSeconds` — the *only* timing mechanism in the
@@ -343,7 +362,7 @@ freeze correctly under `timeScale = 0`. `PauseMenuController.OnDestroy()` also r
 - **`GameOverState` never calls `CompleteState()`, but is no longer a silent dead end** — it hands
   off to `CampaignManager` (see above), which schedules a real transition. `RestartBattle()`
   itself doesn't care what state the game was frozen in and remains the only way the round loop
-  resumes, whether triggered manually (pause menu) or by that scheduled transition.
+  resumes. On defeat that's now always a player choice from the locked pause panel (see "Pause").
 - **Rule 7 (instant-resolve) relationship:** `RestartBattle()` itself doesn't need an instant-resolve
   counterpart — it's a UI-triggered meta action, already synchronous by construction, not an
   animated game mechanic whose *outcome* needs to be reproducible headlessly. The instant-resolve

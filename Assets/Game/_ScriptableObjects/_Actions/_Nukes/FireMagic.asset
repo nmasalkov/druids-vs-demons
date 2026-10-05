@@ -22,4 +22,4 @@ MonoBehaviour:
   - 60
   animationPrefab: {fileID: 6183719907680269550, guid: 21b8a2f232a9f8643882656ccfa2c773, type: 3}
   ignoresShield: 0
-  resolutionOrder: 10
+  resolutionOrder: 20

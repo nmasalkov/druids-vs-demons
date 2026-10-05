@@ -102,7 +102,7 @@ here — this list is added to over time and can lag behind the actual `docs/` f
 | XP/leveling, gem pickups | [`docs/Experience.md`](docs/Experience.md) | `ExperienceManager`, `Experience`, `ExpirienceGem` |
 | Reroll energy/cost | [`docs/Energy.md`](docs/Energy.md) | `EnergyController`, `EnergyDisplay`, `SlotColumn`'s reroll cost gate |
 | Campaign/meta progression, run-state save data | [`docs/Campaign.md`](docs/Campaign.md) | `RunState`, `GameCatalog`, `CampaignStateManager`, `CampaignDebugTool`, `ActionSO.id` |
-| Encounters, campaign progress/navigation | [`docs/Encounters.md`](docs/Encounters.md) | `EncounterSO`/`FightSO`/`EncounterListSO`, `Encounter`/`EncounterPlayer`, `CampaignManager`, `CampaignProgressTool`, `HeroView.ReplaceHeroAvatar`, `LoadoutPickEncounter`, `FightSO.secondPhase` (multi-phase fights) |
+| Encounters, campaign progress/navigation | [`docs/Encounters.md`](docs/Encounters.md) | `EncounterSO`/`FightSO`/`EncounterListSO`, `Encounter`/`EncounterPlayer`, `CampaignManager`, `CampaignProgressTool`, `HeroView.ReplaceHeroAvatar`, `LoadoutPickEncounter`, `FightSO.secondPhase` (multi-phase fights), `MapManager`/`MapEncounterPoint` (map reveal, click-to-fight, replays, `MapEntry`), selected-vs-frontier encounter index |
 | Reward cards, boost rewards | [`docs/Rewards.md`](docs/Rewards.md) | `RewardSO`/`RewardListSO`, `RewardDrawer`, `RewardBonuses`, `RewardCard`/`RewardEncounter`/`RewardEncounterView` |
 | Pre-battle loadout picker | [`docs/Loadout.md`](docs/Loadout.md) | `LoadoutPickEncounter`, `LoadoutPickEncounterView`, `MiniCard`, `SlotKind`/`SlotRef` |
 | Enemy AI decision-making | [`docs/AI.md`](docs/AI.md) | `AIController`, `_AI/_Decisions/*`, `_AI/_Scoring/*`, `AIDegrade`, the fight-wide reroll pool, `RollState`'s AI orchestration |
@@ -305,11 +305,11 @@ them for any new/modified game code under `Assets/Game`:
     parts, use the `add-projectile` skill (it creates the `_Projectiles/_<Name>/` folder with local copies).
 
     **The character prefabs are a variant tree, so a component wanted on every unit goes on the
-    root of that tree, not on each prefab.** `ParentUnit` is the base for all 13 unit variants
+    root of that tree, not on each prefab.** `ParentUnit` is the base for all 12 unit variants
     (`CatapultParentGreen` → `Demon`/`Kodo`/`HealingShroom`, `DragonParentGreen` → `Bat`/`OrkMage`/`Lizard`,
-    `_GolemParentGreen` → `Cyclop`/`OrkTank`/`Skeleton`/`Bulba`, plus `BubkaBig`), and
+    `_GolemParentGreen` → `Cyclop`/`OrkTank`/`Skeleton`/`Bulba`), and
     `Player` is the base for all 6 avatars (via `EnemyAvatarParent`). Adding to `ParentUnit` alone
-    gives all 13 the component by inheritance; adding it per-prefab instead creates redundant
+    gives all 12 the component by inheritance; adding it per-prefab instead creates redundant
     overrides, and once the base gets it too, `[DisallowMultipleComponent]` turns that into a
     conflict. Check `PrefabUtility.GetCorrespondingObjectFromSource` before bulk-adding anything to
     these prefabs — the folder layout does not hint at the inheritance at all.

@@ -31,9 +31,7 @@ algorithm (`RewardDrawer`), and a small stat-boost hook (`RewardBonuses`) resolv
 - **`CreatureRewardSO`** — `creature` (`CreatureSO`). `Claim` appends `creature.id` to
   `RunState.gatheredCreatureIds`; `IsOwned` checks that same list. Unique. A gathered creature
   becomes pickable in the next pre-battle loadout picker (`LoadoutPickEncounter` reads
-  `gatheredCreatureIds`, `docs/Loadout.md`). Four creature rewards exist:
-  - `creature_bubka_big` (`BubkaBig`) has stats identical to its base creature (a Phase 2
-    follow-up).
+  `gatheredCreatureIds`, `docs/Loadout.md`). Three creature rewards exist:
   - `creature_lizard` unlocks **Lizard** (plain `MageSO`, id `lizard`), a glass-cannon mage: 70% of
     Dragon's HP, +28–32% base damage, and a 35% / +100% critical strike (`docs/Battle.md`
     "Critical strike") — about 1.22x Dragon by expected damage x HP. Fires `_AcidSpit`. Lizard
@@ -45,7 +43,9 @@ algorithm (`RewardDrawer`), and a small stat-boost hook (`RewardBonuses`) resolv
     `TankBig` placeholder, whose assets were deleted.
   - `creature_healing_shroom` unlocks **Healing Shroom** (`HealingArcherSO`, id `healing_shroom`).
     It is a frail archer that, before each battle, fires a volley of heals at random wounded allies (never itself), then attacks normally (`docs/Battle.md`
-    "Healing shots").
+    "Healing shots"). Healing Shroom replaced the old `BubkaBig` placeholder (id `archer_big`),
+    whose assets were deleted; a save still holding `archer_big` falls back to the default archer
+    in `ApplyLoadoutToG`.
 - **`BoostSO`** (abstract) — unique run-long upgrades. `Claim` appends `id` to
   `RunState.boostRewardIds`; `IsOwned` checks that same list. **Every boost applies to the player
   side only** — see "`RewardBonuses`" below. Three concrete shapes:
@@ -348,10 +348,9 @@ section (raw ids plus a resolve-to-assets button) that only covered the reward-s
   editing its `m_Script` guid in YAML leaves an already-loaded `RewardListSO` holding a stale
   `null` in the Editor until a domain reload / `Resources.UnloadAsset` — the serialized reference
   is fine, only the in-memory list is stale.
-- **All 15 reward assets live in `_ScriptableObjects/_Campaign/_Rewards/`**, referenced by
-  `RewardListSO.asset`. The 4 reward creatures (`BubkaBig`, id `archer_big`, 1.5x prefab scale, plus
-  `Lizard`, id `lizard`, `Bulba`, id `bulba`, and `HealingShroom`, id `healing_shroom`) back the 4
-  `CreatureRewardSO`s. They're registered in
+- **All 14 reward assets live in `_ScriptableObjects/_Campaign/_Rewards/`**, referenced by
+  `RewardListSO.asset`. The 3 reward creatures (`Lizard`, id `lizard`, `Bulba`, id `bulba`, and
+  `HealingShroom`, id `healing_shroom`) back the 3 `CreatureRewardSO`s. They're registered in
   `GameCatalog.asset`'s `allCreatures` alongside the originals. The `setup-creature` skill's
   "Player reward creature" branch is the checklist for adding or replacing one.
 - **`RewardEncounter.prefab`'s root GameObject carries both a `RewardEncounter` (backend) and a

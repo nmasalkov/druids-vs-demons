@@ -99,15 +99,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1132243522336630142, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
       propertyPath: m_AnchorMax.x
-      value: 0
+      value: 0.825
       objectReference: {fileID: 0}
     - target: {fileID: 1132243522336630142, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1132243522336630142, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
       propertyPath: m_AnchorMin.x
-      value: 0
+      value: 0.825
       objectReference: {fileID: 0}
     - target: {fileID: 1872679886176264211, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
       propertyPath: m_Name
@@ -205,13 +205,17 @@ PrefabInstance:
       propertyPath: skeletonAnimation
       value: 
       objectReference: {fileID: 5664007293342833366}
-    - target: {fileID: 8896885524806565423, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
-      propertyPath: m_AnchorMax.x
+    - target: {fileID: 5194012990404643855, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
+      propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8896885524806565423, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0.825
+      objectReference: {fileID: 0}
+    - target: {fileID: 8896885524806565423, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:

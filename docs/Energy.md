@@ -75,6 +75,15 @@ to this knob, since it replaces `RunState` wholesale rather than going through e
   cost unconditionally on both sides' roll-finish is still harmless and avoids tracking whose turn
   it was.
 
+## Abandoning a fight (Go to map)
+
+`EnergyController.RevertToEncounterStart()` (public) puts `RunState.currentEnergy` back to
+`_encounterStartEnergy`. The restart handler (`ResetForRestart`) calls it before resetting the cost.
+`CampaignManager.AbandonEncounter()` (the pause menu's Go to map) calls it too, so quitting a fight
+refunds that attempt's rerolls and drops its triple income, exactly like a restart. The replay-win
+path (`CampaignManager.ReturnToMap()` after a reward pick) deliberately does **not** revert — the
+reward energy it just granted must stay. See `docs/Encounters.md`.
+
 ## Triple income
 
 Every time one of the **player's** rolls lands a triple (any roll type — creature, nuke or spell),

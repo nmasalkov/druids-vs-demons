@@ -22,6 +22,7 @@ MonoBehaviour:
     criticalFailureChance: 30
     rerollsAmount: 6
     lowHpStupidityBypassThreshold: 0.15
+  enemyIcon: {fileID: 5547777758291268696, guid: e5417bc0e36b0e043a9169ca6f8a46e1, type: 3}
   hasLoadoutPick: 0
   hasReward: 1
   rewardAmount: 10

@@ -23,12 +23,13 @@ a mechanics or balance change instead of hand-editing this file.*
 9. [Heroes, Health & Win Condition](#9-heroes-health--win-condition)
 10. [Reroll Energy](#10-reroll-energy)
 11. [The Enemy AI](#11-the-enemy-ai)
-12. [Campaign Structure](#12-campaign-structure)
-13. [Pre-Battle Loadout](#13-pre-battle-loadout)
-14. [Post-Battle Rewards](#14-post-battle-rewards)
-15. [What Persists Across a Run](#15-what-persists-across-a-run)
-16. [Balance Reference](#16-balance-reference)
-17. [Current Scope & Known Gaps](#17-current-scope--known-gaps)
+12. [Campaign Structure & the Map](#12-campaign-structure--the-map)
+13. [Multi-Phase Boss Fights](#13-multi-phase-boss-fights)
+14. [Pre-Battle Loadout](#14-pre-battle-loadout)
+15. [Post-Battle Rewards](#15-post-battle-rewards)
+16. [What Persists Across a Run](#16-what-persists-across-a-run)
+17. [Balance Reference](#17-balance-reference)
+18. [Current Scope & Known Gaps](#18-current-scope--known-gaps)
 
 ---
 
@@ -37,86 +38,81 @@ a mechanics or balance change instead of hand-editing this file.*
 Druids vs Demons is a 2D turn-based auto-battler. The player and an AI-controlled enemy each command
 a Hero and up to three summoned creatures. Every turn, instead of picking an action from a menu, the
 active side spins a 3-reel slot machine — the reels decide whether that turn summons/upgrades a
-creature, or fires off an offensive Nuke, or casts a support Spell, and how strong it lands. Once
-both sides have acted, whatever creatures are on the field fight automatically. Play continues,
-round after round, until one Hero's health reaches zero.
+creature, fires an offensive Nuke, or casts a support Spell, and how strong it lands. Once a side has
+acted, every creature on the field fights automatically. Play continues, round after round, until
+one Hero's health reaches zero.
 
-Outside of any single battle, the player is playing a **run**: a fixed sequence of battles against
-progressively tougher, themed enemy rosters. A persistent loadout (one Tank, one Archer, one Mage,
-three Nukes, three Spells), a growing Max HP pool, and a reroll-energy currency all carry from fight
-to fight, strengthened by reward cards earned after each win.
+Outside of any single battle, the player is playing a **run**: a fixed sequence of five battles
+against progressively tougher, themed enemy rosters, ending in a two-phase final boss. A persistent
+loadout (one Tank, one Archer, one Mage, three Nukes, three Spells), a growing Max HP pool, and a
+reroll-energy currency all carry from fight to fight, strengthened by reward cards earned after each
+win.
 
 ---
 
 ## 2. Session Structure
 
-A **run** is the top-level container: start to finish, it's a straight line through a fixed list of
-fights (5 today, ending in a "Final Boss"). There is no branching path to choose between — the player
-advances through fights in a fixed order on a map screen shown between battles.
+A **run** is the top-level container: a straight line through a fixed list of 5 fights, the last
+being a two-phase Final Boss. There is no branching route — fights unlock in a fixed order on a map
+screen shown between battles — but the player chooses *when* to fight: the newest unlocked fight, or
+a **replay** of any fight already beaten.
 
-Each fight, independently, may be wrapped by up to two optional sub-phases:
+Each fight may be wrapped by up to two optional sub-phases:
 
-- **A loadout-pick phase before it** — if present, the player reviews and can swap their equipped
-  loadout before the fight begins (see [§13](#13-pre-battle-loadout)).
-- **A reward phase after it**, on victory only — if present, the player receives guaranteed reroll
-  energy and picks one of three reward cards before the run advances (see [§14](#14-post-battle-rewards)).
+- **A loadout-pick phase before it** — the player reviews and can swap their equipped loadout before
+  the fight begins (see [§14](#14-pre-battle-loadout)). Every fight except the first has one.
+- **A reward phase after it**, on victory only — the player receives guaranteed reroll energy and
+  picks one of three reward cards (see [§15](#15-post-battle-rewards)). Every fight except the final
+  boss has one.
 
-A fight with neither phase just plays straight through with no interruption. Losing a fight instead
-retries that same fight from its start — same enemy, same starting stats for both sides — without
-touching any run progress: no loadout re-pick, no reward, no rewind of fights already won. Any reroll
-energy spent *or earned* during the failed attempt is reverted, so retrying costs nothing but time.
+**Winning** the newest fight (and confirming any reward) advances the run to the next fight and
+returns to the map, which reveals it. **Winning a replay** grants the full reward pick again but never
+advances progress; it returns the player to the map.
 
-Completing the last fight in the sequence ends the run. (Today this is a simple stopping point — see
-[§17](#17-current-scope--known-gaps).)
+**Losing** does not restart automatically. After a short pause a locked menu appears with two choices:
+**Restart** (retry the same fight from its beginning — same enemy, same starting stats for both sides)
+or **Go to map** (leave the fight and pick again from the map). Either way, nothing about the run
+changes: no loadout re-pick, no reward, no rewind of fights already won, and any reroll energy spent
+*or earned* during the failed attempt is reverted. Retrying costs nothing but time.
 
-A run's state — loadout, Max HP, reroll energy, unlocked items, claimed rewards, current fight —
-autosaves at well-defined points (a new run starting, entering each new fight, claiming a reward) so
-a session can be closed and resumed without losing progress.
+Completing the last fight ends the run (today a simple stop — see [§18](#18-current-scope--known-gaps)).
 
-### The map between fights
-
-Between fights the player sees a map: one point per fight in the run, connected along a path. Points
-show one of three states — future, current, complete. On arriving at a new point, the map reveals the
-path leading into it, pauses, then the point becomes current:
-
-- If the fight has **no** loadout phase, the point plays a "you've arrived, here we go" shake and the
-  battle loads.
-- If it **does**, the point plays a softer arrival pop instead, the loadout picker opens right there
-  on the map, and only after the player confirms it — following another short pause — does the fight
-  shake play and the battle load.
-
-Completing a loadout pick does not by itself advance run progress; only winning the fight (and
-confirming any reward that follows) moves the player to the next point.
+A run's state — loadout, Max HP, reroll energy, unlocked items, claimed rewards, furthest fight
+reached — autosaves at well-defined points (a new run starting, advancing to each new fight, the
+reward energy being granted, claiming a reward card), so a session can be closed and resumed without
+losing progress. Resuming lands on the map.
 
 ---
 
 ## 3. The Battle: Round & Turn Flow
 
-A battle is a sequence of **rounds**. One round is the player's turn followed by the enemy's turn.
+A battle opens with a short intro beat, then runs as a sequence of **rounds**. One round is the
+player's turn followed by the enemy's turn.
 
 Each side's turn, in order:
 
 1. **Roll** — the active side spins the slot machine and settles on three results.
-2. **Resolve** — depending on which of the three action types was rolled, the turn either summons/
-   upgrades creatures, fires Nukes, or casts Spells.
+2. **Resolve** — depending on the action type rolled, the turn summons/upgrades creatures, fires
+   Nukes, or casts Spells.
 3. **Battle** — every creature on both sides attacks automatically (see [§6](#6-combat-resolution)).
 4. **Cleanup** — dead bodies are removed, Battle Cry effects expire, and XP gems fly to the creatures
    that earned them.
 
 **Round 1 is special: the player's turn is not followed by a battle phase.** The player summons their
-opening creatures and is not immediately attacked for it. The enemy's turn always ends in a battle
+opening creatures and isn't immediately attacked for it. The enemy's turn always ends in a battle
 phase, including in round 1.
 
 **Landing a triple grants a bonus turn.** If all three reels land the same result, the acting side
-immediately takes another full turn — roll, resolve — before play passes on. This can chain: a bonus
-turn that also lands a triple grants another. A triple's bonus turn does *not* advance the round
-counter; the round only ticks over once both sides have finished acting. **A player triple also pays
-out 1 reroll energy** (see [§10](#10-reroll-energy)); the enemy gets no such payout.
+immediately rolls and resolves again before play passes on. This can chain. A bonus turn does *not*
+advance the round counter. **A player triple also pays out 1 reroll energy** (see
+[§10](#10-reroll-energy)); the enemy gets no such payout.
 
 The battle ends the instant either Hero's health reaches zero — see [§9](#9-heroes-health--win-condition).
+The one exception is a boss with a second phase, which rises again instead (see [§13](#13-multi-phase-boss-fights)).
 
-A battle can be paused at any time, which genuinely freezes everything (animations, timers, pending
-effects), and restarted in place from the pause menu.
+Escape pauses the battle at any time, genuinely freezing everything (animations, timers, pending
+effects). The pause menu offers **Restart** (retry this fight) and **Go to map** (abandon it, refunding
+this attempt's energy).
 
 ---
 
@@ -125,269 +121,267 @@ effects), and restarted in place from the pause menu.
 The heart of the game. Three reels, and — before spinning — a choice of which of three **action
 types** to roll:
 
-- **Creature** — the three reels show the side's Tank, Archer, and Mage.
-- **Nuke** — the three reels show the side's three equipped Nukes.
-- **Spell** — the three reels show the side's three equipped Spells.
+- **Creature** — the reels show the side's Tank, Archer, and Mage.
+- **Nuke** — the reels show the side's three equipped Nukes.
+- **Spell** — the reels show the side's three equipped Spells.
 
 The action type can only be switched before the first spin of a turn. Once the reels are spinning,
-the choice is locked for that turn.
+the choice is locked.
 
 ### How a roll resolves into strength
 
 After the reels land, identical results are grouped. Each distinct result produces one action, and
 **how many reels showed it becomes that action's strength level** (1, 2, or 3):
 
-- **One reel** → that action fires at level 1.
+- **One reel** → level 1.
 - **Two reels** → level 2, noticeably stronger.
-- **Three reels (a triple)** → level 3, the strongest version — *and* the acting side gets a bonus
-  turn (plus 1 reroll energy, if it's the player).
+- **Three reels (a triple)** → level 3, the strongest version — *and* a bonus turn (plus 1 reroll
+  energy, if it's the player).
 
-A mixed roll fires several actions at once. Rolling Fire Magic, Fire Magic, Starfall means a level-2
-Fire Magic *and* a level-1 Starfall both resolve this turn.
-
-For Creature rolls, the level is the level the creature is summoned or promoted **to** — rolling two
-Tanks puts a level-2 Tank on the board directly.
+A mixed roll fires several actions at once: Fire Magic, Fire Magic, Starfall resolves a level-2 Fire
+Magic *and* a level-1 Starfall. For Creature rolls, the level is the level the creature is summoned or
+promoted **to** — rolling two Tanks puts a level-2 Tank on the board directly.
 
 ### Rerolling
 
 Once all three reels land — unless it's already a triple — the player may reroll individual reels,
-paying energy each time (see [§10](#10-reroll-energy)), then hit Finish to lock the result in. A
-triple skips this entirely: it auto-finishes, with no reroll opportunity. A reroll that completes a
-triple also auto-finishes the roll immediately.
+paying energy each time (see [§10](#10-reroll-energy)), then press Finish to lock the result in. A
+triple auto-finishes with no reroll opportunity, and a reroll that completes a triple also
+auto-finishes immediately.
 
 ### Triple odds are tuned, not flat
 
-The odds of getting a triple are deliberately rigged, per side, and shift over the course of a fight.
-Two separate dials govern it, both on a **0–200 scale where 100 is neutral**: 0 means "never," 100
-means genuinely unbiased (a real 1-in-3), 200 means "always." The scale is not linear across its whole
-range — it passes through three fixed points: 0 → 0%, 100 → 33.3%, 200 → 100%.
+The odds of a triple are deliberately rigged, per side, and shift over the course of a fight. Two
+dials govern it, both on a **0–200 scale where 100 is neutral**. The scale passes through three fixed
+points: 0 → never, 100 → a genuine 1-in-3, 200 → always (linear between them).
 
-- **The clean-triple dial** is checked once per fresh spin, before the reels are decided at all. If it
-  succeeds, the roll short-circuits straight into an all-three-matching triple. If it fails, the first
-  two decided reels are forced to differ, so a fresh spin can never produce a triple *by accident* —
-  every triple on a fresh spin comes from this deliberate check.
-- **The dirty-triple dial** governs the other route: when two reels already match and a third is being
-  decided (which in practice means a reroll), this dial sets the odds that third one completes the
-  triple.
+- **The clean-triple dial** is checked once per fresh spin, before the reels are decided at all. On
+  success the spin lands an instant triple. On failure the spin is forced to *not* be a triple, so
+  every fresh-spin triple comes from this deliberate check.
+- **The dirty-triple dial** governs the other route: when two reels already match and the third is
+  being decided (in practice, a reroll), it sets the odds that third reel completes the triple.
 
-Which physical reel ends up being "the one that completes it" is randomized every roll, so no single
-reel is ever visibly the decider.
-
-Both dials are re-derived at the start of every fresh turn, and both are per-side and per-fight tuned.
+Which physical reel ends up "completing" a triple is randomized every roll, so no reel is ever visibly
+the decider. Both dials are recomputed at the start of every fresh turn, per side, per fight.
 
 ### Comeback assistance
 
-Both dials get the same **comeback adjustment** added to them at the start of each side's turn — the
-mechanic that quietly helps whoever is losing. Each fight defines a ladder of comeback rules per side,
-and each rule has three parts:
+At the start of each side's turn, both dials get the same **comeback adjustment** — the mechanic that
+quietly helps whoever is losing. Each fight defines a ladder of comeback rules per side, each rule
+with three parts:
 
 1. **An HP threshold** — "this side's Hero is at or below X% health."
-2. **A firepower-advantage threshold** — "the opponent out-guns this side by at least N points."
-3. **A triple adjustment** — the number added to both dials when the rule applies.
+2. **A firepower-disadvantage threshold** — "the opponent out-guns this side by at least N points"
+   (0 = ignore firepower, pure health rule).
+3. **A triple adjustment** — the amount added to both dials.
 
-A rule fires if **either** of its two conditions is met — low health *or* being out-gunned is enough
-on its own. A rule with its advantage threshold left at zero is a pure health rule. Of every rule that
-fires, **the largest adjustment wins** (they never stack). Adjustments can be negative, which is how
-the game *punishes* a side that's comfortably ahead: the top rung of every fight's ladder is a flat
-−20 that applies at any health, and it only stops being the winning rule once a lower rung actually
-fires.
-
-The net effect of the shipped ladders (identical in shape across all fights, see
-[§16](#16-balance-reference) for the per-fight numbers):
+A rule fires if **either** condition is met. Of all rules that fire, **the largest adjustment wins**
+(they never stack). Adjustments can be negative, which is how a side that's comfortably ahead is
+*punished*: the top rung of every ladder applies at any health with a negative value, and only stops
+winning once a lower rung fires. With the standard ladder shape used by every fight:
 
 | This side's health | No firepower disadvantage | Out-gunned by 30+ | by 40+ | by 50+ |
 |---|---|---|---|---|
-| 100% – 61% | −20 (harder triples) | tier-1 bonus | tier-2 bonus | tier-3 bonus |
-| 60% – 26% | 0 (neutral) | tier-1 bonus | tier-2 bonus | tier-3 bonus |
+| 100% – 61% | punish (rung 1) | tier-1 bonus | tier-2 bonus | tier-3 bonus |
+| 60% – 26% | rung 2 (0 in most fights) | tier-1 bonus | tier-2 bonus | tier-3 bonus |
 | 25% – 16% | tier-1 bonus | tier-1 bonus | tier-2 bonus | tier-3 bonus |
 | 15% – 11% | tier-2 bonus | tier-2 bonus | tier-2 bonus | tier-3 bonus |
 | 10% – 0% | tier-3 bonus | tier-3 bonus | tier-3 bonus | tier-3 bonus |
 
-**"Firepower" means expected total damage output per battle phase** — for each side, the sum over
-all its creatures of damage-per-hit × hits-per-turn (including any active Battle Cry multiplier),
-with stunned creatures counting as zero. **Critical strikes count at their average value**: a creature
-with a 20% chance of +50% damage counts as dealing 10% more. **The opposing barrier is then
-subtracted**: a Shield standing in a side's way absorbs damage before anything else, so its health is
-deducted from that side's effective firepower, floored at zero. A side facing a barrier bigger than
-its whole offense reads as zero firepower, not negative. "Advantage" is simply the difference between
-the two sides' effective firepower.
+Per-fight values are in [§17](#17-balance-reference).
 
-One consequence worth knowing: shield-breaking creatures (which deal 1.5× to barriers) are *not*
-counted at their bonus rate in this estimate, because no target has been picked when it's computed —
-so a shield-breaking roster looks slightly weaker than it really is, and earns its opponent slightly
-less comeback help than it strictly should. (Crits don't have this problem — they don't depend on the
-target.)
+**"Firepower" means expected total damage per battle phase**: for each side, the sum over all its
+creatures of damage-per-hit × hits-per-turn (including reward boosts and any active Battle Cry),
+with stunned creatures counting as zero. **Critical strikes count at their average value** (20% for
++50% counts as +10%). A creature that never attacks (Bulba) counts at a nominal value equal to a
+standard tank's damage. **The opposing barrier is then subtracted**: a Shield standing in a side's way
+absorbs damage first, so its health is deducted from that side's firepower, floored at zero.
+"Advantage" is the difference between the two sides' effective firepower.
 
-**A comeback bonus decays as it works.** Every time a side lands a triple and takes another bonus
-turn, a *positive* comeback adjustment is divided by a per-fight divisor (3 in every fight), and both
-dials drop by the same amount — 50 → 16 → 5 → 1. So a big comeback boost helps land the turn's
-*first* triple without fuelling an endless streak off it. A *negative* adjustment (the high-health
-punish) never decays and stays for
-the whole turn — otherwise landing a triple would soften your own penalty. The whole thing is
-recomputed from scratch on the side's next fresh turn.
+Shield-breaking (×1.5 vs barriers) is *not* counted, since no target is known when this is estimated —
+a shield-breaking roster reads slightly weaker than it really is.
 
-**A comeback bonus that worked is weaker next time.** If a side started a turn with comeback help and
-landed a triple during it, its *next* turn's comeback bonus drops one rung down its ladder — e.g. a
-+50 it would have earned becomes +37, and the smallest bonus rung becomes no bonus at all (never a
-penalty). This lasts one turn only and doesn't stack; it re-applies only if that weaker-boosted turn
-triples again. It applies to both sides, so a player or enemy on low health can't count on a boosted
-triple every single turn.
+**A comeback bonus decays as it works.** Each time a side lands a triple and takes a bonus turn, a
+*positive* adjustment is divided by 3 (every fight), and both dials drop by the same amount — 50 → 16
+→ 5 → 1. A *negative* adjustment never decays within the turn.
+
+**A comeback bonus that worked is weaker next time.** If a side started a turn with positive comeback
+help and landed a triple during it, its *next* turn's bonus drops one rung down its ladder (e.g. +50 →
++37; the smallest positive rung → 0, never into a penalty). Next turn only, no stacking; it re-arms
+only if that weakened turn triples again. Applies to both sides.
 
 **Round 1 ignores comeback assistance entirely** — both dials are forced to fixed per-fight opening
 values for both sides' first turns.
 
-### Two further tuning levers
+### Further tuning levers
 
-- **Streak stabilization** — each time a side chains another bonus turn off a triple, its dials can be
-  pushed back down by a per-fight amount, so a hot streak can't run forever. This applies on top of
-  (and after) comeback decay, and resets on the side's next fresh turn.
+- **Streak stabilization** — each bonus turn chained off a triple can push a side's dials back down
+  by a per-fight amount, applied after comeback decay, reset on the next fresh turn. Today only the
+  enemy's clean-triple dial uses this (−25 or −50 per bonus turn, depending on the fight).
 - **Reroll pity ("ludo progress")** — during a side's *first* roll phase of a turn only, every reroll
-  nudges the dirty-triple dial upward by a per-fight amount, making a triple progressively likelier
-  the more the player fishes for one. It's undone completely the moment that roll phase ends, and is
-  switched off for the rest of a turn once that side has already landed one triple. The amount can be
-  tuned per round number.
+  nudges the dirty-triple dial up by a per-fight amount (tunable per round number), so fishing for a
+  triple gets progressively likelier. Undone the moment that roll phase ends, and off for the rest of
+  a turn once that side has already tripled. Only the Tutorial uses it (+50 per reroll, rounds 1–3).
 
 ---
 
 ## 5. Creatures
 
 Each side fields up to **three creatures of its own** — one Tank, one Archer, one Mage — in three
-dedicated slots. There are additionally two "stolen" slots per class, which only ever fill via the
-Charm spell (see [§8](#8-spells)).
+dedicated slots. There are additionally two "stolen" slots per class, which only fill via the Charm
+spell (see [§8](#8-spells)).
 
 The three archetypes:
 
-- **Tank** — highest health, lowest damage, single attack, and the only melee attacker: it physically
-  runs at its target, strikes, and leaps back.
+- **Tank** — highest health, low damage, one attack, and the only melee attacker: it runs at its
+  target, strikes, and leaps back.
 - **Archer** — moderate health and low damage per hit, but **multiple attacks per turn**, re-picking
-  its target after each hit. This lets an Archer finish off a weakened target and immediately move on
-  to the next.
+  its target after each hit, so it can finish off a weakened target and move on.
 - **Mage** — lowest health, highest single-hit damage, one attack per turn.
 
 ### Creature traits
 
-On top of its archetype stats, a creature can carry traits that change how its hits land (see
-[§6](#6-combat-resolution) for the exact order they apply in):
+On top of archetype stats, a creature can carry traits (exact order of application in
+[§6](#6-combat-resolution)):
 
-- **Shield-breaking** — 1.5× damage against barriers only. Carried by the ork roster.
-- **Critical strike** — a per-hit chance to deal bonus damage, both as percentages (e.g. 20% chance of
-  +50%). Every creature has the stat; it's 0% for all but the ghost roster.
+- **Shield-breaking** — 1.5× damage against barriers only. The ork roster.
+- **Critical strike** — a per-hit chance to deal bonus damage (e.g. 20% chance of +50%). Ghost roster
+  and the final boss's second-phase roster (20% / +50%), and the player-unlockable Lizard (35% / +100%).
+- **Taunt** — enemy creature attacks target this creature before any other creature (still behind a
+  standing barrier). Nukes ignore taunt. Bulba only.
+
+### Special creatures (player unlocks)
+
+- **Bulba (counter-tank)** — never attacks on its own. It taunts, and **every regular creature hit
+  that lands on it is answered with a ranged counterattack** for a fixed fraction of that hit's final
+  damage (50/60/70/80% by level). The counter goes at the barrier guarding the attacker's side if one
+  still stands after the battle's planned hits, otherwise at the attacker itself. Details:
+  - A shocked Bulba doesn't counter.
+  - A counter is skipped if its target would already be dead by the end of the battle anyway.
+  - The killing blow on Bulba is still countered.
+  - Counter damage is flat: reward boosts and Battle Cry on Bulba's side, crits, and shield-breaking
+    never change it. A Battle Cry on the *attacker's* side does make it bigger, since the hit itself is
+    bigger.
+  - Nukes never trigger counters.
+  - A counter kill grants Bulba the normal kill XP; a counter on a barrier grants none.
+- **Healing Shroom (healer archer)** — frail archer that **shoots twice per battle**. First, a support
+  volley *before* any attack lands: each of its shots heals one random wounded ally (another creature
+  or its Hero — never itself, never a barrier) for 75% of its current per-hit damage (reward boost and
+  Battle Cry included, so Shock/Energy Drain cancel it). Repeats on the same ally are allowed; a shot
+  with no wounded ally heals nothing. These heals don't cure Shock. Then the regular battle plays out,
+  in which it attacks like any archer.
+- **Lizard (glass-cannon mage)** — ~70% of a Dragon's health, ~30% more damage, 35% chance to crit for
+  double damage.
 
 ### Summoning and promotion
 
-Rolling a creature type either summons it (if that slot is empty) or, if one is already there,
+Rolling a creature type either summons it (if its slot is empty) or, if one is already there,
 **promotes it to the rolled level** if that's higher — or **heals it** by a fixed amount if it isn't.
-Promotion fully refills health at the new level's maximum; it doesn't just raise the ceiling.
+Promotion fully refills health at the new level's maximum. Creatures of the same class sitting in your
+stolen slots are healed (never promoted) by the same roll.
 
-Both promotion and healing **clear a creature's stun**, which makes re-rolling your own creature type
-a legitimate way to un-stun it.
+Both promotion and healing **clear a creature's stun**, so re-rolling your own creature type is a
+legitimate way to un-stun it.
 
 ### Levels and experience
 
-Creatures level from 1 to 4, either by being rolled at a higher level directly or by earning enough
-experience in combat. Damage, health, and attack count all scale with level.
+Creatures level from 1 to 4, either by being rolled at a higher level or by earning experience in
+combat. Damage, health, and attack count all scale with level. Leveling up also fully heals.
 
-Experience is earned during battle and paid out afterward as gems that visibly fly from the kill
-location to the creature that earned it:
+Experience is earned during battle and paid out afterward as gems that fly from the hit location to
+the creature that earned them:
 
-- **Killing a creature** grants experience based on the *victim's* level, awarded once per attacker
-  that landed on that kill.
-- **Hitting a Hero** grants experience worth 10× the damage dealt, on every hit, kill or not — so a
-  critical hit on a Hero also grants more experience.
+- **Killing a creature** grants XP based on the *victim's* level, once per attacker that hit it in the
+  killing battle.
+- **Hitting a Hero** grants 10× the damage dealt, on every hit (crits included).
 - **Hitting a barrier grants nothing.**
 
-If a creature dies before its gem lands, that experience is simply lost — it isn't redistributed.
+If a creature dies before its gem lands, that XP is lost.
 
 ### Death splashes onto your own Hero
 
-**Whenever a creature dies, its own side's Hero takes damage equal to 20% of that creature's maximum
-health, rounded down.** This applies to both sides, and to any cause of death. It's based on maximum
-health, so it costs the same whether the creature died on its last point of health or was massively
-overkilled — losing a big creature genuinely hurts.
+**Whenever a creature dies in play, its own side's Hero takes damage equal to 20% of that creature's
+maximum health, rounded down.** Both sides, any cause of death, regardless of overkill. (The scripted
+board wipe during a boss's phase change is the one exception — see [§13](#13-multi-phase-boss-fights).)
 
 ---
 
 ## 6. Combat Resolution
 
 After a side's turn resolves, every creature on the field attacks, both sides at once. The whole
-exchange is planned up front against a snapshot of everyone's health — including every critical-hit
-roll — then played out, so the outcome is fixed the moment the battle starts, and the animation is
-just presentation.
+exchange — every target, every crit roll, every heal and counter — is decided up front against a
+snapshot of everyone's health, then played out. The animation is just presentation.
 
 ### Targeting priority
 
-Every attacker picks its target by the same rule, re-evaluated for each individual hit:
+Every attacker picks its target by the same rule, re-evaluated for each hit:
 
-1. **The opposing barrier**, if one is up and alive — always first.
-2. Otherwise the highest-priority living opposing **creature**, in the fixed order **Mage → Archer →
-   Tank**.
-3. Otherwise the opposing **Hero**.
+1. **The opposing barrier**, if one is up — always first.
+2. Otherwise a **taunting** creature (Bulba), if any.
+3. Otherwise the highest-priority living opposing creature, in the fixed order **Mage → Archer → Tank**.
+4. Otherwise the opposing **Hero**.
 
-A Hero is never attacked while any of its creatures still live, and a barrier always takes priority
-over both. That same Mage → Archer → Tank order also decides which attacker acts first.
+A Hero is never attacked while any of its creatures still live. The Mage → Archer → Tank order also
+decides which attacker acts first.
+
+### Order of events within a battle
+
+1. **Support volleys** — any Healing Shroom heals land first.
+2. **Regular attacks** — both sides.
+3. **Counterattacks** — Bulba's answers to the hits it took, played as each triggering hit lands.
 
 ### Per-attacker rules
 
 - A **stunned** creature skips its turn entirely.
 - An attacker fires its full attack count, re-picking a target for each hit.
 - **Each hit's damage is built in a fixed order:**
-  1. The creature's level damage.
-  2. × any active **Battle Cry** buff or debuff. If a debuff reduces damage to zero or less, the
-     attacker skips its turn (nothing below can bring it back).
+  1. The creature's level damage, × the player's class reward boost if any.
+  2. × any active **Battle Cry** buff or debuff. If a debuff reduces damage to zero, the attacker skips
+     its turn (nothing below can bring it back).
   3. × any **target-dependent traits** — today only shield-breaking (×1.5 against a barrier).
-  4. × the **critical strike**, always last: the hit rolls against the creature's crit chance, and on
-     success deals its crit bonus on top (+50% → ×1.5). Rolled separately for every hit, so a
-     multi-hit Archer can crit some hits and not others.
+  4. × the **critical strike**, always last, rolled separately for every hit.
 
-  Example: a level-1 Kodo (3 damage) under a doubled Battle Cry hits a barrier for 3 × 2 × 1.5 = 9. A
-  3-damage hit with all four steps active — doubled Battle Cry, shield-breaking against a barrier,
-  and a +50% crit — would land for 3 × 2 × 1.5 × 1.5 = 13.5.
+  Example: a 3-damage hit under a doubled Battle Cry, shield-breaking against a barrier, with a +50%
+  crit lands for 3 × 2 × 1.5 × 1.5 = 13.5.
 
 ### Choreography
 
-Ranged attackers all fire simultaneously from their slots. Tanks are handled specially, because they
-physically travel to their target:
+Ranged attackers fire simultaneously from their slots. Tanks physically travel to their target:
 
-- **Two tanks targeting each other** duel: one runs in and attacks, and the other launches its own
-  attack as the first arrives.
-- **Multiple tanks sharing one target** take turns in a queue, each waiting for the previous one to
-  leap back, so they don't pile onto the same spot at once.
+- **Two tanks targeting each other** duel: one runs in, the other launches as the first arrives.
+- **Multiple tanks sharing a target** queue, each waiting for the previous one to leap back.
+- **Barrier first, then the Hero behind it**: if one tank breaks a barrier and another goes for the
+  Hero behind it, the second visibly waits for the break.
 
-A target killed mid-attack defers its death animation until the attack finishes, so a tank isn't left
-swinging at a corpse.
+A target killed mid-attack defers its death animation until the attack finishes.
 
-**A critical hit gives a small screen shake** the moment it lands, on whatever it hit (creature,
-Hero, or barrier). Normal hits have no screen shake.
-
-Ballistic projectiles (thrown axes, hurled rocks) arc toward their target, and can be set to tumble
-end over end in flight — the ghost archer's axe spins twice per second. Purely visual.
+**A critical hit gives a small screen shake** the moment it lands. Normal hits have no generic hit
+feedback; the final boss plays a hurt animation on every hit. Ballistic projectiles (thrown axes,
+rocks) arc to their target and can tumble in flight — purely visual.
 
 ---
 
 ## 7. Nukes
 
-Nukes are the offensive action type. A side equips three. Rolling them fires them at the levels the
-roll produced.
+Nukes are the offensive action type. A side equips three. Rolling them fires them at the rolled
+levels. Nukes never critically strike and never trigger counterattacks.
 
-- **Fire Magic** — a single damage pool spread down a priority list: the barrier first (unless the
-  Nuke ignores barriers), then all living Mages, then Tanks, then Archers, then the Hero. Each target
-  absorbs up to its remaining health, and the pool moves on until it's spent.
-- **Shock** — stuns instead of damaging. A stunned creature skips its combat turn until it's healed,
-  promoted, or killed. **A barrier stops Shock completely** — while the target side has a barrier
-  standing, no creature behind it is stunned at any level, not even on a triple; the bolts break
-  harmlessly against the barrier without damaging it. Raising a barrier is the counter to Shock.
-  (Its damage numbers exist in the game's data but aren't used — see
-  [§17](#17-current-scope--known-gaps).)
-- **Starfall** — **ignores the barrier entirely** and strikes past it. Much lower raw damage than the
-  others, but it can't be blocked.
+- **Fire Magic** — one damage pool spread down a priority list: the barrier first, then every living
+  Mage, then Tanks, then Archers, then the Hero. Each target absorbs up to its remaining health and the
+  rest moves on until the pool is spent.
+- **Starfall** — **ignores the barrier entirely** and strikes **every** living enemy creature *and*
+  the enemy Hero for the same flat damage. Low per-target damage, but unblockable and board-wide.
+- **Shock** — stuns instead of damaging: one bolt per level, each stunning one creature, chosen
+  Mage → Tank → Archer, **preferring creatures that aren't already stunned**. A stunned creature skips
+  its combat turn until it's healed, promoted, or killed. Heroes can't be stunned. **A barrier stops
+  Shock completely** — while the target side has a barrier up, the bolts fizzle harmlessly against it
+  at every level, even on a triple. Raising a barrier is the counter to Shock.
 
-When one roll lands several different Nukes, they always fire in the same order — **Fire Magic →
-Starfall → Shock** — regardless of which columns landed them. Shock going last is deliberate: the
-damage Nukes get their chance to break the barrier first, and only then does Shock check for one, so
-a roll of Fire Magic + Shock can break through and stun in the same turn.
-- **Fireball** — a fourth Nuke in the game's data with no way to obtain it in a run today.
+When one roll lands several different Nukes, they always fire **Starfall → Fire Magic → Shock**,
+regardless of reel position. Shock going last is deliberate: a Fire Magic in the same roll gets the
+chance to break the barrier before Shock checks for one.
 
-Nukes never critically strike — crits are a creature-attack trait only.
+Player-only reward cards can change how Starfall and Shock behave — see [§15](#15-post-battle-rewards).
 
 ---
 
@@ -395,174 +389,202 @@ Nukes never critically strike — crits are a creature-attack trait only.
 
 Spells are the support action type. A side equips three.
 
-- **Shield** — raises a barrier in front of the caster's Hero. It's a separate object that absorbs
-  everything aimed at that side (highest targeting priority) and grants no experience when hit or
-  killed. Starfall is the one Nuke that ignores it; Shock is the opposite extreme — a standing
-  barrier blocks Shock entirely, at every level (see [§7](#7-nukes)). Rolling Shield again behaves three ways: **no barrier up** → summon one at the rolled level;
-  **rolled level higher than the current one** → promote and fully refill it; **rolled level equal or
-  lower** → heal it by a flat amount. Once destroyed, the slot frees immediately so a new barrier can
-  be raised the next turn.
-- **Charm** (the "hack" mechanic) — a chance to steal an enemy creature and turn it to fight for you.
-  It picks one living enemy creature whose class has a free stolen-slot on your board, ranks the
-  candidates by a strength score (current health plus 100 per level), and targets the **weakest** at
-  level 1, the **median** at level 2, and the **strongest** at level 3. Success is rolled once, at a
-  chance scaled by how many enemy creatures are alive (base chance × living count, capped at
-  certainty). A failed Charm consumes the roll and does nothing. Charming an already-charmed creature
-  steals it back. A creature only ever changes sides through Charm, and once it leaves its home slot
-  it never returns to one. Any Battle Cry effect on it is cleared whenever it changes sides, since
-  that effect was computed for the side it just left. A stolen creature keeps its own traits
-  (shield-breaking, crit) and uses them for its new side.
-- **Battle Cry** — buffs every creature on the caster's board and debuffs every enemy creature, both
-  as flat damage multipliers lasting the rest of the battle phase. At level 3 the debuff is a total
-  "energy drain": enemy creatures deal zero and skip their turns entirely. A creature summoned later
-  in the same turn still joins an active buff.
+- **Shield** — raises a barrier in front of the caster's Hero. It absorbs everything aimed at that side
+  (highest targeting priority), grants no XP when hit or broken, and fully blocks Shock. Starfall
+  ignores it. Rolling Shield again: **no barrier up** → summon one at the rolled level; **rolled level
+  higher** → promote and fully refill it; **equal or lower** → heal it by a flat amount. Once destroyed,
+  a new one can be raised the next turn.
+- **Charm** (the "hack") — a chance to steal an enemy creature. It picks one living enemy creature
+  whose class has a free stolen-slot on your board, ranks candidates by strength (current health plus
+  100 per level), and targets the **weakest** at level 1, the **median** at level 2, the **strongest**
+  at level 3. Success is rolled once:
+  1. Base chance × number of living enemy creatures, capped at certain.
+  2. Then a **creature-lead penalty**: −25 percentage points of that chance (multiplicatively) for each
+     creature the caster *out-numbers* the target side by. Being behind gives no bonus; a 4-creature
+     lead makes Charm impossible. This applies even when step 1 was already capped, so a side far ahead
+     can't charm at a guaranteed 100%.
+
+  A failed Charm consumes the roll and does nothing (unless improved — see [§15](#15-post-battle-rewards)).
+  Charming an already-charmed creature steals it back. A stolen creature never returns to its home slot,
+  keeps its own traits, and has any Battle Cry effect cleared whenever it changes sides.
+- **Battle Cry** — buffs every creature on the caster's board and debuffs every enemy creature, both as
+  damage multipliers lasting the rest of the battle phase. At level 3 the debuff is a total "energy
+  drain": enemy creatures deal zero and skip their turns. A creature summoned later in the same turn
+  still joins an active buff.
 
 ---
 
 ## 9. Heroes, Health & Win Condition
 
 Each side has one Hero with a health pool. The player's Hero starts every fight at their run's Max HP
-(base 100, plus any claimed Vitality rewards). The enemy Hero's max health — and its avatar — are
-defined per fight.
+(base 100, plus any claimed Vitality cards). The enemy Hero's max health and avatar are defined per
+fight.
 
-Heroes take damage from three sources:
+Heroes take damage from:
 
-1. Attacks that get through — only once that side has no living creatures and no barrier (critical
-   hits included).
-2. Nukes aimed past the front line (notably Starfall, which ignores barriers outright).
-3. **Their own creatures dying** — 20% of the dead creature's maximum health, every time (see
-   [§5](#5-creatures)).
+1. Creature attacks — only once that side has no living creatures and no barrier.
+2. Nukes — Fire Magic once everything ahead of the Hero is spent, and Starfall every time.
+3. **Their own creatures dying** — 20% of the dead creature's max health.
+
+Healing Shrooms can heal their own Hero.
 
 **The battle ends the moment either Hero reaches zero health**, regardless of what creatures are still
-standing. Each fight's enemy Hero is effectively the boss: kill it and the fight is won immediately.
+standing (unless that Hero is a boss with another phase).
 
-- **Victory** → after a short pause, either the reward phase opens (if this fight has one) or the run
-  advances straight to the next fight.
-- **Defeat** → after the same pause, the current fight restarts from the beginning.
-- **A double knockout is treated as a defeat.**
+- **Victory** → after a short pause, the reward phase opens (if this fight has one), otherwise the run
+  advances.
+- **Defeat** → after the same pause, the locked Restart / Go to map menu appears.
+- **A double knockout counts as a defeat.**
 
 ---
 
 ## 10. Reroll Energy
 
-Energy is the player's currency for rerolling individual reels. It is **not** per-battle — it's a
-single run-long pool that carries from fight to fight.
+Energy is the player's currency for rerolling individual reels. It is a single run-long pool that
+carries from fight to fight, shown on the battle HUD.
 
 - A new run starts with **50** energy.
-- **The first reroll of a roll phase costs 2**, and **each subsequent reroll doubles the cost** — 2,
-  4, 8, 16, and so on.
-- The cost **resets to 2 whenever a roll phase ends**, so the escalation is per roll phase, not per
-  battle or per run. A triple's bonus turn is a new roll phase, so it starts cheap again too.
-- If the player can't afford the next reroll, the reroll button is simply unavailable.
+- **The first reroll of a roll phase costs 2**, and **each further reroll doubles the cost** — 2, 4,
+  8, 16…
+- The cost **resets to 2 whenever a roll phase ends** (a triple's bonus turn is a new roll phase).
+- If the player can't afford the next reroll, the reroll buttons are disabled.
 
-Energy is earned three ways, **none of them capped** — the pool can climb indefinitely:
+Energy is earned three ways, **none capped**:
 
-1. **Triples, mid-battle** — every player triple (any action type: creature, Nuke or Spell) grants
-   **+1 energy** the moment the roll finishes, with a pop on the energy counter. A reroll that lands
-   the triple counts too, so fishing for a triple partially refunds itself.
-2. **The fight's reward phase** — a guaranteed per-fight amount on victory.
-3. **The Energy Cell reward card.**
+1. **Triples** — every player triple (any action type) grants **+1** the moment the roll finishes,
+   including a triple landed by a reroll.
+2. **The fight's reward phase** — a guaranteed per-fight amount on victory (replays included).
+3. **The Energy Cell reward card** (+20).
 
-**A failed attempt costs nothing — and keeps nothing.** Losing (or manually restarting) a fight
-reverts energy to exactly what the player had when that fight began, undoing both rerolls spent and
-triple energy earned during the attempt. Winning carries both forward as normal.
+**A failed or abandoned attempt costs nothing — and keeps nothing.** Losing, restarting, or leaving via
+Go to map reverts energy to exactly what the player had when that fight began. Winning carries both
+spending and triple income forward.
 
-The enemy does not use energy and earns none from triples — it rerolls from its own separate budget
-(see [§11](#11-the-enemy-ai)).
+The enemy doesn't use energy — it rerolls from its own per-fight budget, also shown on the HUD (see
+[§11](#11-the-enemy-ai)).
 
 ---
 
 ## 11. The Enemy AI
 
-The enemy plays the same game by the same rules, with a deliberately imperfect decision-maker.
+The enemy plays the same game by the same rules, with a deliberately imperfect decision-maker. It
+rolls from its own fight-specific creature roster, and the standard Nukes (Fire Magic, Starfall, Shock)
+and Spells (Battle Cry, Charm, Shield). Player reward boosts never apply to it.
 
 ### Stupidity and critical failure
 
-Two per-fight percentages make the AI miss its own best move:
+Two per-fight percentages make the AI miss its best move:
 
 - **Stupidity** — the chance the AI does *not* take its top-ranked option. When it triggers, the AI
-  drops one step down its ranked list and rolls again, so a bad streak can degrade it several steps.
-- **Critical failure** — rolled only *after* stupidity triggers. If it also triggers, the AI abandons
-  ranking entirely and picks a completely random option.
+  drops one step down its ranked list and rolls again, so a bad streak can degrade several steps.
+- **Critical failure** — rolled only after stupidity triggers. If it also triggers, the AI picks a
+  completely random option.
 
-Binary choices (summon or not, reroll or not) model this as a two-item list, so a stupidity trigger
-simply flips the decision.
-
-A few decisions deliberately bypass stupidity, because they're certainties rather than preferences:
-the "always summon on the first turn" rule, and the "board is full, nothing to summon" rule.
+Yes/no choices (summon or not, reroll or not) are a two-item list, so stupidity simply flips them.
+Two certainties bypass stupidity: "always summon on the first turn" and "board full, nothing to summon."
 
 ### What the AI decides each turn
 
 1. **Summon creatures, or cast something?**
-   - Turn 1: always summon.
-   - If any of its own creatures are **stunned**, repairing them takes priority over everything —
-     including a full board, since repairing needs no free slot. It targets the healthiest stunned
-     creature. Desire scales with how many are stunned: 3 stunned → always; 2 → 80%; exactly 1 →
-     depends on that creature's level (level 4 → 80%, level 3 → 50%, levels 1–2 → never).
-   - Otherwise: a full board means no summon. Else desire is keyed to creature count — 0 creatures →
-     always; 1 creature and behind the player → 60%; 2 and behind → 40%; anything else → 15%.
-2. **Which creature type?** Ranked: a stunned creature it decided to repair → Tank (if it has none at
-   all) → Archer (if any player creature is under 30% health) → Mage (if the player Hero is under 30%
-   health) → anything else it doesn't already own.
-3. **Which Nuke or Spell?** All six of its equipped actions are scored against the current board and
-   ranked. Each action scores itself on things like whether the player has a barrier, how many enemies
-   are hurt, and how low the player Hero is.
-4. **After a triple, it never chases the same action twice.** The bonus roll excludes whatever just
-   tripled.
+   - Round 1: always summon.
+   - If any of its own creatures are **stunned**, repairing them takes priority over everything, even
+     a full board. It targets the healthiest stunned creature. Desire: 3 stunned → always; 2 → 80%;
+     exactly 1 → by that creature's level (level 4 → 80%, level 3 → 50%, levels 1–2 → never).
+   - Otherwise: a full board means no summon. Else by creature count — 0 → always; 1 and behind the
+     player on creature count → 60%; 2 and behind → 40%; otherwise 15%.
+2. **Which creature type?** Ranked: the stunned creature it decided to repair → Tank (if it has no
+   creatures) → Archer (if any player creature is under 30% health) → Mage (if the player Hero is under
+   30% health) → anything else it doesn't own.
+3. **Which Nuke or Spell?** All six are scored against the current board and ranked. Scores react to
+   things like whether the player has a barrier (it never shocks into one), how many enemies are hurt,
+   how low the player Hero is. Charm's appetite scales with the same creature-lead penalty its real odds
+   use.
+4. **After a triple, it never chases the same action again** on the bonus roll (a *different* action
+   of the same type is fine).
 
 ### Rerolls
 
-The AI's rerolls come from a **fight-wide budget**, not per-turn energy. It depletes as the AI rerolls
-and only refills when the fight restarts. The AI never gains rerolls from its triples.
+The AI's rerolls come from a **per-fight budget** that depletes as it rerolls and refills only when the
+fight restarts (or a boss changes phase). It never gains rerolls from triples.
 
-Its per-turn allowance is a formula, not a fixed number: the AI reserves roughly one reroll per 10
-points of its own current Hero health, and spends the rest. So it conserves at full health and opens
-up as it gets hurt. It can also earn **one extra reroll per turn** the moment it sees it has completed
-its desired action's pair while chasing it.
+Its per-turn allowance is a formula: it **reserves one reroll per 10 points of "effective health"** and
+may spend the rest (always at least 1, never more than what's left). Effective health is its Hero's
+current HP **minus the player's firepower lead** (if the player is ahead) — so it conserves when
+healthy and winning, and opens up when hurt *or* out-gunned. It can earn **one extra reroll per turn**
+the moment it completes a pair of the action it wanted.
 
-Within a turn, the AI runs a small one-way state machine:
+Within a turn, it follows a one-way plan:
 
-- **Open** — if any pair exists among the three reels (desired or not), chase it by rerolling the odd
-  reel; the instant that chase reroll fires, the turn locks into chasing that pair. Otherwise, if it
-  has more than one reroll available, fish for its desired action instead — and lock into that.
+- **Open** — if any pair exists, chase it by rerolling the odd reel; once that reroll fires, it's
+  committed to that pair. Otherwise, if it has more than one reroll, fish for its desired action
+  instead, committing to that.
 - **Chasing a pair** — keep rerolling the odd reel until the triple lands or the budget runs out. It
-  never goes back to fishing, and it won't spare the odd reel even if that reel happens to be showing
-  its desired action: a triple is worth more.
-- **Chasing a desired action** — if the desired action has a pair, chase it exactly like above (and
-  collect the one-time bonus reroll). Otherwise keep fishing, deliberately ignoring any incidental
-  pair it happens to form.
+  never goes back to fishing, even if the odd reel shows its desired action — a triple is worth more.
+- **Chasing a desired action** — if the desired action has a pair, chase it (and collect the bonus
+  reroll). Otherwise keep fishing, ignoring incidental pairs.
 
-**Below a per-fight desperation threshold of its own Hero health, the AI stops rolling stupidity for
-rerolls at all** — "it rolls for its life" — and also stops caring about its specific desired action,
-chasing *any* pair it finds instead.
+**Below a per-fight desperation threshold of its own health, it stops rolling stupidity for rerolls
+entirely** — it "rolls for its life" — and chases *any* pair rather than its preferred action.
 
 ---
 
-## 12. Campaign Structure
+## 12. Campaign Structure & the Map
 
-A run walks a fixed list of 5 fights in order. Each fight defines:
+A run walks a fixed list of 5 fights. Each fight defines:
 
-- The enemy Hero's avatar and maximum health.
-- The enemy's creature roster — its own Tank, Archer, and Mage, each fight built around a theme
-  (demons, skeletons, orks, ghosts). **Player and enemy roll from entirely separate pools**: the
-  player's comes from their run loadout, the enemy's from the fight's own roster. (A fight with no
-  roster of its own falls back to mirroring the player's — which is what fight 5 currently does.)
-- Whether a loadout phase precedes it, and whether a reward phase follows it (and how much guaranteed
-  energy that reward grants).
-- The AI's stupidity, critical-failure, reroll budget and desperation threshold.
-- All of the triple-rigging tuning from [§4](#4-the-slot-machine): the neutral and opening dial values,
-  both sides' comeback ladders, streak stabilization, and reroll pity.
+- The enemy Hero's avatar, map icon, and maximum health.
+- The enemy's creature roster — its own themed Tank, Archer, and Mage (demons, skeletons, orks, ghosts,
+  the boss's undead). **Player and enemy roll from entirely separate pools.**
+- Whether a loadout phase precedes it, whether a reward phase follows it, and the reward's guaranteed
+  energy.
+- The AI's stupidity, critical failure, reroll budget and desperation threshold.
+- All the triple-rigging tuning from [§4](#4-the-slot-machine).
 
-A roster's creatures carry their own traits into the fight — the orks break shields, the ghosts crit —
-so each theme plays differently even where raw stats match.
+Each roster's traits make it play differently even where raw stats are close — the orks break
+shields, the ghosts crit, the demons are fragile.
 
-Progress advances only on winning a fight *and* confirming any reward that follows. Losing, or
-restarting from the pause menu, never advances progress, never re-grants a reward, and never resets
-the wider run.
+### The map
+
+Between fights the player sees a map: one point per fight along a path. Points show future, current,
+or complete, and reached points show their enemy's icon.
+
+- **After a win that advances the run**, the map draws the path to the new point dot by dot, then the
+  point becomes current and its enemy icon pops in.
+- **Every reached point (current and beaten) pulses and is clickable.** Nothing starts on its own —
+  except the very first fight, which has no loadout phase and starts automatically when first revealed
+  or when resuming a fresh save.
+- **Clicking a point** with a loadout phase plays an arrival pop, opens the loadout picker right on the
+  map, and after it's confirmed plays a "here we go" shake and loads the battle. A point without a
+  loadout phase goes straight to the shake and the battle.
+- **Clicking a beaten point is a replay**: full fight, full reward pick, no progress change.
+- Returning to the map via Go to map or after a replay never auto-starts anything.
+
+Progress advances only on winning the newest fight *and* confirming any reward. Losing, restarting,
+leaving, or replaying never advances progress or resets the wider run.
 
 ---
 
-## 13. Pre-Battle Loadout
+## 13. Multi-Phase Boss Fights
+
+The Final Boss (the Skeleton Warlock) has a second phase. When his health hits zero:
+
+1. His creatures die with him.
+2. After a short pause he **rises**, with a screen shake and white flash, transformed into his burning
+   form — a new avatar at full health (150), with a new, stronger crit-carrying roster and his own
+   phase-2 AI and triple tuning. His reroll budget refills.
+3. The player's creatures all die too, and their bodies are cleared.
+4. The boss's new level-1 Archer, Tank and Mage are summoned onto the empty field.
+5. Play resumes with the player's turn, which this time *is* followed by a battle.
+
+Neither board wipe causes death-splash damage to either Hero. The round counter carries on; the
+player's energy and Hero health carry over unchanged.
+
+**Both phases must be won in one go.** The second phase has no map point of its own and is never saved
+as progress: a defeat, restart, or quit during phase 2 returns to the start of phase 1.
+
+---
+
+## 14. Pre-Battle Loadout
 
 Where enabled, the loadout picker opens on the map before the fight and lets the player rearrange
 their **9 equipped slots**: one Tank, one Archer, one Mage, three Nukes, three Spells.
@@ -570,90 +592,90 @@ their **9 equipped slots**: one Tank, one Archer, one Mage, three Nukes, three S
 The screen shows:
 
 - **Your deck** — the 9 currently equipped items.
-- **Available** — everything gathered this run that isn't currently equipped.
-- **A comparison panel** — side by side, what's currently in the chosen slot versus what would replace
-  it.
+- **Available** — everything gathered this run that isn't equipped.
+- **A comparison panel** — the item in the chosen slot (left) versus the chosen replacement (right),
+  each with name, type and description. Each side appears as soon as its half of the selection is made;
+  clicking it clears that half.
 
-Selection is **bidirectional**: the player can click an equipped slot first or a pool item first, and
-whichever is picked first greys out everything on the other side that couldn't match it. Clicking a
-greyed item does nothing; clicking the current selection again clears it. Nukes and Spells are
-interchangeable within their own three slots — any Nuke fits any Nuke slot — while creatures must
-match their class.
+Selection works **in either direction**: click an equipped slot or an Available item first, and the
+other side greys out anything that couldn't match. Clicking a greyed item does nothing; clicking the
+current selection again clears it. Nukes are interchangeable across the three Nuke slots, Spells across
+the three Spell slots; creatures must match their class. Swap applies the pair; **nothing is committed
+until Finish.**
 
-Swapping updates the pending loadout and refreshes the pool; **nothing is committed until the player
-presses Finish.** Browsing, comparing, and even swapping back and forth never advances the game on its
-own.
-
-A fresh run's own starting loadout is always available in its own picker, so nothing can lock the
-player out of what they started with.
+A fresh run's own starting loadout is always available, so nothing can lock the player out of it.
+Creatures unlocked from reward cards show up here.
 
 ---
 
-## 14. Post-Battle Rewards
+## 15. Post-Battle Rewards
 
-On victory, if the fight has a reward phase, it opens as an overlay right on the battle's game-over
-screen.
+On victory, if the fight has a reward phase, it opens as an overlay on the battle screen:
 
-Two things happen:
+1. **A guaranteed energy grant**, applied (and saved) immediately, amount set per fight.
+2. **A choice of one of three drawn reward cards** — click a card to select it, then **Claim**.
+   Selecting alone does nothing; the unchosen cards shrink away after claiming.
 
-1. **A guaranteed energy grant**, applied immediately on the screen opening, in an amount defined per
-   fight.
-2. **A choice of one of three drawn reward cards**, applied when the player presses Claim.
+Replays grant the full reward again, including once-only cards still unclaimed.
 
 ### How the three cards are drawn
 
-Cards already owned (for the once-only kinds) are excluded from the draw. Then:
+Once-only cards already owned are excluded. No card can appear twice in one draw. Then:
 
-- **Slot 1** is always a repeatable stat card — Vitality or Energy Cell.
-- **Slot 2** prefers a creature unlock, falls back to a boost, then to a stat card.
-- **Slot 3** prefers a boost, falls back to a creature unlock, then to a stat card.
+- **Slot 1** — a repeatable stat card: Vitality or Energy Cell.
+- **Slot 2** — a creature unlock if any remain, otherwise the other stat card.
+- **Slot 3** — a boost if any remain, otherwise a creature unlock, otherwise a stat card.
 
-The same once-only card can't appear twice in one draw. As the player claims things, the draw
-degrades gracefully — once all creature unlocks are claimed a draw becomes stat + boost + boost, and
-once boosts are gone too it becomes three stat cards.
+Once everything once-only is claimed, draws repeat stat cards.
 
 ### The card types
 
-- **Vitality** — +15 Max HP for the rest of the run. Repeatable and **stacking**.
-- **Energy Cell** — a one-off grant of reroll energy. Repeatable.
-- **Creature unlocks** — add a bigger variant (Bubka Big, Golem Big, Dragon Big) to the pool the
-  loadout picker draws from. Once each.
-- **Boosts** — a permanent **+20%** to one specific action's numbers for the rest of the run. Once
-  each. What "+20%" means depends on the action: creature damage *and* health, Nuke damage, Charm's
-  success chance, Battle Cry's buff (not its debuff), or the Shield's health (which covers summoning,
-  promoting, and healing it). Boosts don't touch crit chance or crit bonus.
+- **Vitality** — +15 Max HP for the rest of the run. Repeatable, stacking.
+- **Energy Cell** — +20 reroll energy, once per claim. Repeatable.
+- **Creature unlocks** (once each) — add Bulba, Lizard, or Healing Shroom to the loadout pool
+  (see [§5](#5-creatures)).
+- **Class boosts** (once each) — +20% damage *and* health for every player creature of one class
+  (Archers, Tanks, or Mages), including unlocked variants.
+- **Action boosts** (once each):
+  - Fire Magic: +20% damage.
+  - Shield: +20% barrier health and healing (summon, promote and heal).
+  - Battle Cry: +60% of its *bonus* (×1.24 → ×1.38 at level 1); the enemy debuff is unchanged.
+- **Improvements** (once each) — change how an action works:
+  - **Improve Shock** — bolts hit a standing enemy barrier for 10 each instead of fizzling; once it
+    breaks, the remaining bolts carry on and stun creatures normally.
+  - **Improve Starfall** — after the volley, one extra star strikes a random enemy that survived it.
+  - **Improve Charm** — a failed Charm has a 50% chance to stun its target instead.
 
-**Boosts apply to whichever side rolls that action** — they're attached to the action, not to the
-player — so a boosted creature or Nuke also hits harder if the enemy happens to field the same one.
-
-Only pressing Claim finalizes anything; merely selecting a card does not.
+**Every reward applies to the player only**, even where the enemy uses the same Nuke or Spell. A
+creature the player charms from the enemy gets the player's class damage boost while on the player's
+side, but keeps the health it was summoned with.
 
 ---
 
-## 15. What Persists Across a Run
+## 16. What Persists Across a Run
 
 Carried from fight to fight, and saved:
 
-- **The 9-slot loadout** — Tank, Archer, Mage, 3 Nukes, 3 Spells.
+- **The 9-slot loadout.**
 - **Max HP** — base 100 plus every claimed Vitality card.
-- **Reroll energy** — a single run-long pool, uncapped, including energy earned from triples in fights
-  the player went on to win.
-- **Gathered items** — everything unlocked and therefore available in the loadout picker.
-- **Claimed boosts** — each permanently improving its action by 20%.
-- **Current position in the run.**
+- **Reroll energy** — one uncapped run-long pool, including triple income from fights the player won.
+- **Gathered items** — everything available in the loadout picker.
+- **Claimed boosts and improvements.**
+- **Furthest fight reached.**
 
-Explicitly **not** persistent — reset at the start of every fight:
+Reset at the start of every fight (and not saved):
 
-- Creatures on the field, and their levels and experience.
+- Creatures on the field, their levels and experience.
 - Barriers.
 - Both Heroes' current health.
 - The AI's reroll budget.
 - All triple-rigging dial state.
-- Energy spent or earned during an attempt that was lost or restarted.
+- Energy spent or earned during an attempt that was lost, restarted or abandoned.
+- Progress into a boss's second phase.
 
 ---
 
-## 16. Balance Reference
+## 17. Balance Reference
 
 ### Starting loadout and stats
 
@@ -669,85 +691,73 @@ Explicitly **not** persistent — reset at the start of every fight:
 | Nukes | Fire Magic, Starfall, Shock |
 | Spells | Battle Cry, Charm, Shield |
 
-### Creature roster and traits
+### Creature roster
 
-| Creature | Class | Stat block (tables below) | Shield-breaking | Crit | Where it appears |
-|---|---|---|---|---|---|
-| Bubka | Archer | Standard archer | — | — | Player starter |
-| Golem | Tank | Standard tank | — | — | Player starter |
-| Dragon | Mage | Standard mage | — | — | Player starter |
-| Bubka Big | Archer | Standard archer | — | — | Reward unlock |
-| Golem Big | Tank | Standard tank | — | — | Reward unlock |
-| Dragon Big | Mage | Standard mage | — | — | Reward unlock |
-| Demon | Archer | Standard archer | — | — | Fights 1–2 |
-| Cyclop | Tank | Standard tank | — | — | Fight 1 |
-| Bat | Mage | Standard mage | — | — | Fights 1–2 |
-| Skeleton | Tank | Tough tank | — | — | Fight 2 |
-| Kodo | Archer | Tough archer | ×1.5 vs barriers | — | Fight 3 |
-| Ork Tank | Tank | Tough tank | ×1.5 vs barriers | — | Fight 3 |
-| Ork Mage | Mage | Tough mage | ×1.5 vs barriers | — | Fight 3 |
-| Ghost Archer | Archer | Standard archer | — | 20% for +50% | Fight 4 |
-| Ghost Tank | Tank | Standard tank | — | 20% for +50% | Fight 4 |
-| Ghost Mage | Mage | Standard mage | — | 20% for +50% | Fight 4 |
+| Creature | Class | Traits | Where it appears |
+|---|---|---|---|
+| Bubka | Archer | — | Player starter |
+| Golem | Tank | — | Player starter |
+| Dragon | Mage | — | Player starter |
+| Healing Shroom | Archer | Pre-battle heals (75% of damage per shot) | Reward unlock |
+| Bulba | Tank | Never attacks, taunt, counterattacks | Reward unlock |
+| Lizard | Mage | 35% crit for +100% | Reward unlock |
+| Demon | Archer | — | Fights 1–2 |
+| Cyclop | Tank | — | Fight 1 |
+| Bat | Mage | — | Fights 1–2 |
+| Skeleton | Tank | — | Fight 2 |
+| Kodo | Archer | Shield-breaking ×1.5 | Fight 3 |
+| Ork Tank | Tank | Shield-breaking ×1.5 | Fight 3 |
+| Ork Mage | Mage | Shield-breaking ×1.5 | Fight 3 |
+| Ghost Archer | Archer | 20% crit for +50% | Fight 4 |
+| Ghost Tank | Tank | 20% crit for +50% | Fight 4 |
+| Ghost Mage | Mage | 20% crit for +50% | Fight 4 |
+| Skull Mummy | Archer | — (stats = Bubka) | Fight 5, phase 1 |
+| Orc Warlord | Tank | — (stats = Golem) | Fight 5, phase 1 |
+| Cursed Grimoire | Mage | — (stats = Dragon) | Fight 5, phase 1 |
+| Blight Bloom | Archer | 20% crit for +50% | Fight 5, phase 2 |
+| Obsidian Warden | Tank | 20% crit for +50% | Fight 5, phase 2 |
+| Shadow Wyrm | Mage | 20% crit for +50% | Fight 5, phase 2 |
 
-### Creature stats by level (damage / health / attacks per turn)
+### Creature stats by level
 
-**Standard archer** — Bubka, Bubka Big, Demon, Ghost Archer:
+Each cell is **damage / health / attacks per turn**.
 
-| Level | Damage | Health | Attacks | Damage/turn |
+**Archers**
+
+| Creature | Level 1 | Level 2 | Level 3 | Level 4 |
 |---|---|---|---|---|
-| 1 | 3 | 28 | 2 | 6 |
-| 2 | 3 | 34 | 3 | 9 |
-| 3 | 5 | 42 | 3 | 15 |
-| 4 | 6 | 50 | 4 | 24 |
+| Bubka, Skull Mummy | 3 / 28 / 2 | 3 / 34 / 3 | 5 / 42 / 3 | 6 / 50 / 4 |
+| Healing Shroom | 2 / 21 / 2 | 2 / 26 / 3 | 3.25 / 32 / 3 | 3.9 / 38 / 4 |
+| Demon | 2 / 15 / 2 | 2 / 21 / 3 | 4 / 26 / 3 | 5 / 30 / 4 |
+| Kodo | 3 / 34 / 2 | 3 / 39 / 3 | 5 / 50 / 3 | 6 / 60 / 4 |
+| Ghost Archer | 4 / 28 / 2 | 3 / 34 / 4 | 4 / 42 / 4 | 6 / 50 / 5 |
+| Blight Bloom | 4 / 32 / 2 | 4 / 39 / 3 | 6 / 48 / 3 | 7 / 58 / 4 |
 
-**Tough archer** — Kodo:
+**Tanks** (one attack per turn)
 
-| Level | Damage | Health | Attacks | Damage/turn |
+| Creature | Level 1 | Level 2 | Level 3 | Level 4 |
 |---|---|---|---|---|
-| 1 | 3 | 34 | 2 | 6 |
-| 2 | 3 | 39 | 3 | 9 |
-| 3 | 5 | 50 | 3 | 15 |
-| 4 | 6 | 60 | 4 | 24 |
+| Golem, Orc Warlord | 4 / 36 | 6 / 46 | 8 / 56 | 10 / 66 |
+| Bulba | — / 36 | — / 46 | — / 56 | — / 66 |
+| Cyclop | 3 / 24 | 4 / 31 | 6 / 39 | 8 / 42 |
+| Skeleton, Ork Tank | 4 / 45 | 6 / 55 | 8 / 70 | 10 / 80 |
+| Ghost Tank | 6 / 36 | 8 / 46 | 11 / 56 | 14 / 66 |
+| Obsidian Warden | 5 / 41 | 7 / 53 | 10 / 64 | 12 / 76 |
 
-**Standard mage** — Dragon, Dragon Big, Bat, Ghost Mage:
+Bulba's counterattack: 50% / 60% / 70% / 80% of each hit it takes, by level.
 
-| Level | Damage | Health | Attacks |
-|---|---|---|---|
-| 1 | 9 | 24 | 1 |
-| 2 | 15 | 28 | 1 |
-| 3 | 22 | 32 | 1 |
-| 4 | 34 | 42 | 1 |
+**Mages** (one attack per turn)
 
-**Tough mage** — Ork Mage:
+| Creature | Level 1 | Level 2 | Level 3 | Level 4 |
+|---|---|---|---|---|
+| Dragon, Cursed Grimoire | 9 / 24 | 15 / 28 | 22 / 32 | 34 / 42 |
+| Lizard | 11.5 / 17 | 19 / 20 | 29 / 22 | 45 / 29 |
+| Bat | 7 / 15 | 11 / 16 | 16 / 21 | 26 / 23 |
+| Ork Mage | 9 / 28 | 15 / 35 | 22 / 40 | 34 / 52 |
+| Ghost Mage | 11 / 24 | 17 / 28 | 26 / 32 | 40 / 42 |
+| Shadow Wyrm | 11 / 28 | 18 / 32 | 26 / 37 | 40 / 48 |
 
-| Level | Damage | Health | Attacks |
-|---|---|---|---|
-| 1 | 9 | 28 | 1 |
-| 2 | 15 | 35 | 1 |
-| 3 | 22 | 40 | 1 |
-| 4 | 34 | 52 | 1 |
-
-**Standard tank** — Golem, Golem Big, Cyclop, Ghost Tank:
-
-| Level | Damage | Health | Attacks |
-|---|---|---|---|
-| 1 | 4 | 36 | 1 |
-| 2 | 6 | 46 | 1 |
-| 3 | 8 | 56 | 1 |
-| 4 | 10 | 66 | 1 |
-
-**Tough tank** — Skeleton, Ork Tank:
-
-| Level | Damage | Health | Attacks |
-|---|---|---|---|
-| 1 | 4 | 45 | 1 |
-| 2 | 6 | 55 | 1 |
-| 3 | 8 | 70 | 1 |
-| 4 | 10 | 80 | 1 |
-
-A crit-carrying creature's expected damage is its listed damage × 1.1 at 20% for +50% (a crit itself
-lands at × 1.5 — e.g. a level-1 Ghost Mage crit hits for 13.5).
+A 20% / +50% crit averages ×1.1 damage; Lizard's 35% / +100% averages ×1.35.
 
 **Experience, identical for every creature:**
 
@@ -758,16 +768,15 @@ lands at × 1.5 — e.g. a level-1 Ghost Mage crit hits for 13.5).
 | 3 | 320 | 120 | 10 |
 | 4 | 600 | 240 | 24 |
 
-Hitting a Hero grants 10× the damage dealt as XP, per hit (crit damage included).
+Hitting a Hero grants 10× the damage dealt as XP, per hit.
 
 ### Nukes by match level
 
 | Nuke | 1 reel | 2 reels | 3 reels | Notes |
 |---|---|---|---|---|
 | Fire Magic | 13 | 20 | 60 | Damage pool spread down the priority list |
-| Shock | 14 | 30 | 60 | Damage values unused — Shock only stuns |
-| Starfall | 5 | 11 | 17 | Ignores the barrier entirely |
-| Fireball | 14 | 30 | 60 | Not obtainable in a run today |
+| Starfall | 5 | 11 | 17 | Per target, hits every enemy creature and the Hero; ignores the barrier |
+| Shock | 1 bolt | 2 bolts | 3 bolts | Each bolt stuns one creature; fully blocked by a barrier |
 
 ### Spells by match level
 
@@ -779,126 +788,98 @@ Hitting a Hero grants 10× the damage dealt as XP, per hit (crit damage included
 | Shield — health when summoned | 15 | 27 | 56 |
 | Shield — heal when re-rolled | 7 | 13 | 27 |
 
-Charm's chance is multiplied by the number of living enemy creatures, capped at certain. Its target
-pick is weakest / median / strongest at levels 1 / 2 / 3, ranked by current health plus 100 per level.
+Charm's chance is × living enemy creatures (capped at 100%), then × (1 − 0.25 × the caster's creature
+lead), floored at 0.
 
 ### Fight-by-fight progression
 
-| # | Fight | Enemy Max HP | Enemy roster (Archer / Tank / Mage) | Roster trait | Loadout before? | Reward after? | Reward energy | AI stupidity | AI crit-fail | AI rerolls | AI desperation |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | Tutorial | 45 | Demon / Cyclop / Bat | — | No | Yes | +10 | 50% | 20% | 6 | 15% |
-| 2 | Skeleton | 80 | Demon / Skeleton / Bat | — | Yes | Yes | +15 | 35% | 15% | 7 | 39.7% |
-| 3 | Orks | 130 | Kodo / Ork Tank / Ork Mage | Shield-breaking | Yes | Yes | +30 | 25% | 10% | 10 | 39.7% |
-| 4 | Ghosts | 150 | Ghost Archer / Ghost Tank / Ghost Mage | 20% crit for +50% | Yes | Yes | +40 | 25% | 10% | 12 | 39.7% |
-| 5 | Final Boss | 1 *(placeholder)* | *none — mirrors the player* | — | Yes | No | — | 20% | 15% | 10 | 15% |
+| # | Fight | Enemy Max HP | Enemy roster (Archer / Tank / Mage) | Roster trait | Loadout before? | Reward energy | AI stupidity | AI crit-fail | AI rerolls | AI desperation |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Tutorial | 45 | Demon / Cyclop / Bat | Fragile | No | +10 | 80% | 30% | 6 | 15% |
+| 2 | Skeleton | 80 | Demon / Skeleton / Bat | Tough tank | Yes | +15 | 35% | 15% | 7 | 39.7% |
+| 3 | Orks | 130 | Kodo / Ork Tank / Ork Mage | Shield-breaking | Yes | +30 | 25% | 10% | 10 | 39.7% |
+| 4 | Ghosts | 150 | Ghost Archer / Ghost Tank / Ghost Mage | 20% crit for +50% | Yes | +40 | 20% | 10% | 13 | 55% |
+| 5 | Final Boss, phase 1 | 150 | Skull Mummy / Orc Warlord / Cursed Grimoire | — | Yes | none (final) | 50% | 15% | 13 | 16% |
+| 5 | Final Boss, phase 2 | 150 | Blight Bloom / Obsidian Warden / Shadow Wyrm | 20% crit for +50% | — | none (final) | 0% | 0% | 13 | 14.3% |
 
-Lower stupidity/critical-failure and a bigger reroll budget all mean a *sharper* enemy — the AI is at
-its clumsiest and most reroll-starved on the Tutorial and sharpest from Fight 3 on, with Fight 4
-adding the largest reroll budget and enemy Hero so far.
+Lower stupidity/critical failure and a bigger reroll budget mean a sharper enemy. The Tutorial enemy is
+very clumsy; the boss's first phase is deliberately sloppier than Fight 4, and his second phase plays
+perfectly.
 
 ### Triple-rigging tuning per fight
 
-| # | Fight | Neutral dirty dial | Round-1 dirty | Round-1 clean | Player clean base | Enemy clean base | Enemy streak stabilization | Reroll pity |
+| # | Fight | Neutral dirty dial | Round-1 dirty | Round-1 clean | Player clean base | Enemy clean base | Enemy clean stabilization | Reroll pity |
 |---|---|---|---|---|---|---|---|---|
-| 1 | Tutorial | 100 | 100 | 50 | 100 | 50 | — | +50 per reroll, rounds 1–3 |
+| 1 | Tutorial | 100 | 100 | 1 | 100 | 50 | −50 per bonus turn | +50 per reroll, rounds 1–3 |
 | 2 | Skeleton | 100 | 60 | 50 | 100 | 100 | −25 per bonus turn | — |
 | 3 | Orks | 100 | 110 | 50 | 100 | 100 | −25 per bonus turn | — |
-| 4 | Ghosts | 100 | 110 | 50 | 100 | 100 | −25 per bonus turn | — |
-| 5 | Final Boss | 100 | 50 | 50 | 100 | 100 | — | — |
+| 4 | Ghosts | 100 | 110 | 50 | 100 | 100 | −50 per bonus turn | — |
+| 5 | Final Boss (both phases) | 100 | 110 | 50 | 100 | 100 | −50 per bonus turn | — |
 
-Dirty-triple streak stabilization is 0 (off) on every fight today, and the player's clean-triple
-stabilization is 0 on every fight — only the enemy's is used, on fights 2–4.
+Dirty-dial streak stabilization and player clean-dial stabilization are 0 (off) in every fight.
+Comeback decay divides positive bonuses by 3 per bonus turn in every fight. A round-1 clean dial of 1
+means a fresh-spin triple is practically impossible on the Tutorial's opening turns.
 
 ### Comeback ladders per fight
 
-Every ladder has the same 5 rungs and the same advantage thresholds; only the three bonus tiers vary.
-Read each row as "at or below this health **or** out-gunned by at least this much → this adjustment,
+Read each column as "at or below this health **or** out-gunned by at least this much → this adjustment,
 biggest match wins."
 
-| Fight | Side | ≤100% HP (no adv.) | ≤60% HP (no adv.) | ≤25% HP or adv ≥30 | ≤15% HP or adv ≥40 | ≤10% HP or adv ≥50 |
+| Fight | Side | ≤100% HP | ≤60% HP | ≤25% HP or adv ≥30 | ≤15% HP or adv ≥40 | ≤10% HP or adv ≥50 |
 |---|---|---|---|---|---|---|
 | 1 Tutorial | Player | −20 | 0 | +30 | +70 | +80 |
-| 1 Tutorial | Enemy | −20 | 0 | +30 | +50 | +65 |
+| 1 Tutorial | Enemy | −40 | −20 | 0 | +30 | +30 |
 | 2 Skeleton | Player | −20 | 0 | +30 | +50 | +65 |
 | 2 Skeleton | Enemy | −20 | 0 | +30 | +60 | +70 |
-| 3 Orks | Player | −20 | 0 | +25 | +37 | +50 |
-| 3 Orks | Enemy | −20 | 0 | +30 | +60 | +70 |
-| 4 Ghosts | Player | −20 | 0 | +25 | +37 | +50 |
-| 4 Ghosts | Enemy | −20 | 0 | +30 | +60 | +70 |
-| 5 Final Boss (both phases) | Player | −20 | 0 | +25 | +37 | +50 |
-| 5 Final Boss (both phases) | Enemy | −20 | 0 | +30 | +60 | +70 |
-
-Adjustments are added to both triple dials (base 100 = neutral, 200 = guaranteed), and a positive one
-is divided by 3 on each bonus turn the side chains (every fight).
+| 3–5 (all) | Player | −20 | 0 | +25 | +37 | +50 |
+| 3–5 (all) | Enemy | −20 | 0 | +30 | +60 | +70 |
 
 ### Reward cards
 
 | Card | Type | Effect | Repeatable? |
 |---|---|---|---|
 | Vitality | Status | +15 Max HP for the rest of the run, stacking | Yes |
-| Energy Cell | Status | +20 reroll energy, once | Yes |
-| Bubka Big | Creature | Unlocks Bubka Big for the loadout | Once |
-| Golem Big | Creature | Unlocks Golem Big for the loadout | Once |
-| Dragon Big | Creature | Unlocks Dragon Big for the loadout | Once |
-| Boost Bubka | Boost | +20% Bubka damage and health | Once |
-| Boost Golem | Boost | +20% Golem damage and health | Once |
-| Boost Dragon | Boost | +20% Dragon damage and health | Once |
-| Boost Fire Magic | Boost | +20% Fire Magic damage | Once |
-| Boost Starfall | Boost | +20% Starfall damage | Once |
-| Boost Shock | Boost | No effect yet — Shock has no boostable number | Once |
-| Boost Battle Cry | Boost | +20% Battle Cry buff strength | Once |
-| Boost Charm | Boost | +20% Charm success chance | Once |
-| Boost Shield | Boost | +20% Shield health | Once |
+| Energy Cell | Status | +20 reroll energy | Yes |
+| Bulba | Creature | Unlocks Bulba (counter-tank) | Once |
+| Lizard | Creature | Unlocks Lizard (crit mage) | Once |
+| Healing Shroom | Creature | Unlocks Healing Shroom (healer archer) | Once |
+| Boost Archers | Boost | +20% damage and health, all player archers | Once |
+| Boost Tanks | Boost | +20% damage and health, all player tanks | Once |
+| Boost Mages | Boost | +20% damage and health, all player mages | Once |
+| Boost Fire Magic | Boost | +20% damage (≈16 / 24 / 72) | Once |
+| Boost Shield | Boost | +20% health and healing (≈18 / 32 / 67 health) | Once |
+| Boost Battle Cry | Boost | +60% of the ally bonus (×1.38 / ×1.64 / ×2.28) | Once |
+| Improve Shock | Boost | Bolts deal 10 to a barrier, leftovers pass through | Once |
+| Improve Starfall | Boost | +1 extra strike at a random survivor | Once |
+| Improve Charm | Boost | Failed Charm: 50% chance to stun the target | Once |
 
 ---
 
-## 17. Current Scope & Known Gaps
+## 18. Current Scope & Known Gaps
 
-Things that exist in the game's data/design but aren't fully live yet, or are intentionally
-placeholder — worth knowing before treating this document as describing a 100%-finished game:
+Things that exist in the design but aren't fully live, or are intentionally placeholder:
 
-- **Only 5 fights are authored, and the last one (Final Boss) is unfinished**: it has a placeholder
-  enemy Hero of **1 max HP** and no enemy roster of its own, so it currently mirrors whatever the
-  player has equipped and ends instantly.
-- **The campaign is a straight line, not a branching path** — the map visualizes a fixed order rather
-  than offering a choice of route.
-- **Completing the run has no dedicated ending screen yet** — it's currently a simple, unmistakable
-  stop rather than a victory celebration/summary.
-- **Critical strikes are enemy-only in practice** — every creature has the stat, but only the ghost
-  roster has it above zero, so no player-obtainable creature crits yet, and no reward card grants or
-  improves crit.
-- **The ghost roster's base stats are identical to the player's starter creatures** — their only
-  difference is the crit trait (their stats were seeded from the starters, not tuned separately).
-- **Normal hits have no hit feedback of their own** — only critical hits currently play one (the
-  screen shake).
-- **Boost Shock is inert** — Shock has no numeric stat a Boost card could improve, so the card exists
-  but does nothing.
-- **Shock carries unused damage numbers** (14/30/60) in its data. It only stuns; those numbers are
-  vestigial and are not dealt.
-- **Fireball (a 4th Nuke)** exists in the data with no unlock or reward path, so it can't be obtained.
-- **Energy Cell's description says "+50" but it grants +20.** The description is stale relative to
-  the actual value.
-- **The three "Big" creature unlocks are statistically identical to their base versions today** —
-  Bubka Big, Dragon Big, and Golem Big have exactly the same damage/health/attack numbers as Bubka,
-  Dragon, and Golem, despite their descriptions promising a stronger version. Claiming one currently
-  changes nothing but the art.
-- **Gathered creatures from reward cards can be equipped, but nothing else uses them** — they exist as
-  loadout options only.
-- **Boosts don't distinguish sides** — a boost improves its action for whoever rolls it, including the
-  enemy if it fields the same creature.
-- **A run offers only one difficulty path** — enemy toughness is fixed per fight.
-- **Energy has no hard cap** — nothing limits how high the reroll-energy pool can climb (triple income
-  included); the "capacity" value in the run's data is unenforced.
-- **Shield-breaking creatures are under-counted by the comeback system's firepower estimate**, so they
-  earn their opponent slightly less comeback assistance than their real threat warrants. (Crits are
-  counted, at their average.)
-- **A battle cannot yet be run without its animations.** Individual pieces (combat, Nukes, Spells,
-  rewards, loadout, XP) each have an instant-resolve path, but nothing composes them into a headless
-  loop, so automated large-scale balance testing isn't possible yet.
+- **The campaign is a straight line** — the map visualizes a fixed order; replays are the only choice.
+- **Completing the run has no ending screen yet** — the game simply stops.
+- **No Nukes or Spells can be unlocked.** Reward cards only unlock creatures, so the loadout picker's
+  Nuke/Spell slots have nothing to swap in today.
+- **Normal hits have no generic hit feedback** — only crits (screen shake) and the final boss (hurt
+  animation) react.
+- **Energy has no cap** — the run's "capacity" value is unenforced.
+- **Shield-breaking creatures are under-counted by the firepower estimate**, so they earn their opponent
+  slightly less comeback help (and push the AI's reroll spending slightly less) than their real threat.
+- **Some AI numbers are placeholders**: the 15% default summon chance, and "never repair a lone stunned
+  level-1/2 creature."
+- **Leaving via the pause menu while the reward overlay is open** abandons the fight: progress doesn't
+  advance, though the guaranteed energy grant may already have been saved.
+- **Only one difficulty path** — enemy toughness is fixed per fight.
+- **A full battle can't yet run without its animations.** Individual pieces (combat, Nukes, Spells,
+  rewards, loadout, XP, boss phase change) each have an instant path, but nothing composes them into a
+  headless loop, so large-scale automated balance testing isn't possible yet.
 
 ---
 
 *Compiled from `docs/GameLoop.md`, `docs/SlotMachine.md`, `docs/Battle.md`,
 `docs/ActionsAndSpells.md`, `docs/Experience.md`, `docs/Energy.md`, `docs/AI.md`, `docs/Campaign.md`,
-`docs/Encounters.md`, `docs/Loadout.md`, `docs/Rewards.md`, `docs/G.md`, and live balance data read
-from the game's creature/Nuke/Spell/fight/reward data assets.*
+`docs/Encounters.md`, `docs/Loadout.md`, `docs/Rewards.md`, `docs/G.md`, `docs/AnimationAPI.md`, and
+live balance data read from the game's creature/Nuke/Spell/fight/reward data assets.*

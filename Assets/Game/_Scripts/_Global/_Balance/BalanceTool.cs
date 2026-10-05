@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Game._Scripts.Creatures;
 using Game._Scripts.Global;
 using Game._Scripts.PlayerView;
@@ -273,7 +274,9 @@ public class BalanceTool : MonoBehaviour
                 });
             }
         }
-        return entries;
+        // Same order live play uses (RollStateManager.AnalyzeRoll): ascending NukeSO.resolutionOrder,
+        // stable, so Starfall → FireMagic → Shock regardless of which toggles were ticked.
+        return entries.OrderBy(e => e.Nuke.ResolutionOrder).ToList();
     }
 
     // === Spell Action testing ===

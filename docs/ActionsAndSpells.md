@@ -85,8 +85,8 @@ When one roll lands several *different* nukes, they resolve in ascending `NukeSO
 (`NukeState`) and the instant path (`NukeState.ResolveNukesInstant()`) can never disagree about
 order (rule 7). `OrderBy` is a stable sort, so nukes sharing a value keep their rolled order.
 
-Authored values: `FireMagic` 10, `Fireball` 10 (unused placeholder, no `animationPrefab`),
-`Starfall` 20, `Shock` 30 → live play order **FireMagic → Starfall → Shock**. Leave gaps when adding
+Authored values: `Starfall` 10, `FireMagic` 20,
+`Shock` 30 → live play order **Starfall → FireMagic → Shock**. Leave gaps when adding
 a nuke so it can be slotted between two existing ones without renumbering.
 
 Ordering is load-bearing for Shock specifically, because a shield blocks Shock outright (2c): Shock
@@ -125,7 +125,7 @@ Three details worth keeping:
   `Starfall` still actually uses `ignoresShield: true`.
 - **The check reads live shield state at the moment Shock resolves**, which is why resolution order
   (2b) matters: `ActionState.PlayEntry` calls `CreateAndResolve(BuildContext(), ...)` per entry
-  immediately before playing it, so a `FireMagic` (order 10) that broke the shield has already
+  immediately before playing it, so a `Starfall`/`FireMagic` (order 10/20) that broke the shield has already
   applied by the time Shock (order 30) resolves, and Shock then lands normally. The instant path
   builds `ActionContext` once but holds the same `Shield` reference, and `IsAlive` tests
   `Health.IsDead()` (plus Unity's fake-null for an already-destroyed shield), so both paths agree.

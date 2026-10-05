@@ -47,7 +47,7 @@ MonoBehaviour:
   - 10
   - 24
   counterDamageFractions:
-  - 0.35
-  - 0.38
-  - 0.41
-  - 0.45
+  - 0.5
+  - 0.6
+  - 0.7
+  - 0.8

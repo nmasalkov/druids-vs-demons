@@ -23,7 +23,10 @@ namespace Game._Scripts.Global
         public int CurrentRound { get; private set; } = 1;
 
         public int Generation { get; private set; }
-        public static bool IsStale(int capturedGeneration) => capturedGeneration != Instance.Generation;
+        // Instance == null covers closures that outlive BattleScene (DoAfterDelay's runner is
+        // DontDestroyOnLoad) — e.g. the 4s victory/defeat delay when the player hits "Go to map".
+        public static bool IsStale(int capturedGeneration) =>
+            Instance == null || capturedGeneration != Instance.Generation;
 
         /// <summary>Fired synchronously from <see cref="RestartBattle"/>, before the round loop
         /// restarts. Any script that spawns entities or holds battle-scoped state subscribes

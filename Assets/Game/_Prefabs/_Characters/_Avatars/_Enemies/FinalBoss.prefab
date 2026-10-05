@@ -239,6 +239,10 @@ PrefabInstance:
       propertyPath: skeletonAnimation
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 5194012990404643855, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5799159170124874121, guid: 0378272eb35ac0d469ec522ddb0dcd19, type: 3}
       propertyPath: managedReferences[4372380941405389032].PlayEvents.m_PersistentCalls.m_Calls.Array.size
       value: 1
